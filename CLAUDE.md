@@ -35,7 +35,7 @@ App web (PWA) de repetición espaciada, abrible en móvil y escritorio. Primer c
 - **Errores explícitos.** Prohibido `catch` vacío. Cada fallo posible se maneja visible y, donde toca, se comunica al usuario.
 - **Validación en la frontera con Zod.** Datos externos (imports, futura IA, datos de Firestore) se validan ANTES de tocarlos.
 - **Secretos en variables de entorno** desde el commit cero. `.env.example` versionado, `.env` real en `.gitignore`. NUNCA hardcodear claves.
-- **Git: commits atómicos**, pequeños, enfocados, con mensaje claro. Nunca un commit gigante.
+- **Git: commits atómicos**, pequeños, enfocados, con mensaje claro. Nunca un commit gigante. **Los mensajes de commit NO deben incluir el trailer `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` ni ningún otro `Co-Authored-By` de Claude.** Crea todos los commits sin esa línea.
 - **Documentación viva:** README actualizado; comentarios que explican el PORQUÉ (no el qué); ADRs para decisiones estructurales.
 - **Design tokens: prohibido el valor literal.** Ningún componente escribe un color o fuente a mano; siempre un token semántico en la config de Tailwind. Cambiar identidad = tocar un solo archivo.
 - **Consistencia por herramientas:** ESLint + Prettier + TS strict configurados desde el inicio.
