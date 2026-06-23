@@ -1,9 +1,9 @@
 // Inicialización de Firebase para la app. Es el único lugar que arranca el SDK; el resto
-// del código recibe `Firestore`/`Auth` por inyección (ver firebase.tokens.ts).
+// del código recibe `Firestore`/`Auth` por inyección (tokens en @infrastructure/firebase).
 //
-// Se usa el SDK web de Firebase directamente (decisión: ADR de integración / bitácora),
-// envuelto detrás de los puertos del dominio en `infrastructure/`. Nada fuera de esa capa
-// debería importar 'firebase/*'.
+// Se usa el SDK web de Firebase directamente (decisión en la bitácora), envuelto detrás de
+// los puertos del dominio en `infrastructure/`. Nada fuera de esa capa debería importar
+// 'firebase/*'.
 
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 import { getApp, getApps, initializeApp } from 'firebase/app';
@@ -11,7 +11,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 import { environment } from '../../../environments/environment';
-import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE } from './firebase.tokens';
+import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE } from '@infrastructure/firebase';
 
 /**
  * Registra la app de Firebase y sus servicios (Firestore, Auth) en el inyector de la

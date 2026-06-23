@@ -1,6 +1,6 @@
-// Tokens de inyección para las instancias de Firebase. Los adaptadores de
-// `infrastructure/` inyectan estos tokens en vez de inicializar Firebase ellos mismos:
-// el arranque vive en un solo sitio (la raíz de composición, `core/`).
+// Tokens de inyección para las instancias del SDK de Firebase. Viven en infrastructure
+// porque son un detalle de infraestructura: los adaptadores los inyectan, y la raíz de
+// composición (`core/`) los enlaza con las instancias concretas en el arranque.
 
 import { InjectionToken } from '@angular/core';
 import type { FirebaseApp } from 'firebase/app';
