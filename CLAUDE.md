@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> Instrucciones permanentes para Claude Code en este proyecto. Se leen en cada sesión. La especificación completa de producto vive en `Especificacion_App_Repaso.md`; este archivo destila lo que se necesita para escribir código correctamente. Ante conflicto, la especificación manda en *qué* construir; este archivo manda en *cómo*.
+> Instrucciones permanentes para Claude Code en este proyecto. Se leen en cada sesión. La especificación completa de producto vive en `/Users/yotfil/Documents/Yotfil/Programming/Claude/flash-cards/docs/especificacion-anki-mejorada.md`; este archivo destila lo que se necesita para escribir código correctamente. Ante conflicto, la especificación manda en *qué* construir; este archivo manda en *cómo*.
 
 ## Qué es el proyecto
 
