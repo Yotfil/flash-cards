@@ -1,0 +1,113 @@
+<main class="flex min-h-dvh items-center justify-center p-6">
+  <section
+    class="w-full max-w-sm rounded-2xl border border-border bg-surface-raised p-8 shadow-sm"
+    aria-labelledby="auth-title"
+  >
+    <h1 id="auth-title" class="text-2xl font-semibold text-text-primary">
+      @if (mode() === 'signIn') {
+        Bienvenido de vuelta
+      } @else {
+        Crea tu cuenta
+      }
+    </h1>
+    <p class="mt-1 text-sm text-text-secondary">
+      @if (mode() === 'signIn') {
+        Retoma tu repaso donde lo dejaste.
+      } @else {
+        Empieza a estudiar en minutos.
+      }
+    </p>
+
+    <form class="mt-6 flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+      @if (mode() === 'register') {
+        <div class="flex flex-col gap-1.5">
+          <label for="displayName" class="text-sm font-medium text-text-primary">Nombre</label>
+          <input
+            id="displayName"
+            type="text"
+            formControlName="displayName"
+            autocomplete="name"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary"
+          />
+        </div>
+      }
+
+      <div class="flex flex-col gap-1.5">
+        <label for="email" class="text-sm font-medium text-text-primary">Correo</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          required
+          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="password" class="text-sm font-medium text-text-primary">Contraseña</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          [autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'"
+          required
+          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+          class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary"
+        />
+        <p class="text-xs text-text-muted">Mínimo 6 caracteres.</p>
+      </div>
+
+      @if (errorMessage(); as message) {
+        <p role="alert" class="text-sm text-rating-again">{{ message }}</p>
+      }
+
+      <button
+        type="submit"
+        [disabled]="submitting()"
+        class="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-60"
+      >
+        @if (mode() === 'signIn') {
+          Iniciar sesión
+        } @else {
+          Crear cuenta
+        }
+      </button>
+    </form>
+
+    <div class="my-5 flex items-center gap-3" aria-hidden="true">
+      <span class="h-px flex-1 bg-border"></span>
+      <span class="text-xs text-text-muted">o</span>
+      <span class="h-px flex-1 bg-border"></span>
+    </div>
+
+    <button
+      type="button"
+      [disabled]="submitting()"
+      (click)="signInWithGoogle()"
+      class="w-full rounded-lg border border-border bg-surface px-4 py-2.5 font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-60"
+    >
+      Continuar con Google
+    </button>
+
+    <p class="mt-6 text-center text-sm text-text-secondary">
+      @if (mode() === 'signIn') {
+        ¿Aún no tienes cuenta?
+      } @else {
+        ¿Ya tienes cuenta?
+      }
+      <button
+        type="button"
+        (click)="toggleMode()"
+        class="font-medium text-accent underline-offset-2 hover:underline"
+      >
+        @if (mode() === 'signIn') {
+          Crear una
+        } @else {
+          Iniciar sesión
+        }
+      </button>
+    </p>
+  </section>
+</main>

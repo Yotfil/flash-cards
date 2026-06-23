@@ -1,10 +1,5 @@
 <!--
-  Placeholder mínimo del shell de la aplicación.
-  La UI real (navegación Hoy · Biblioteca · Progreso · Ajustes y los componentes
-  base que consumen los design tokens) se construye en pasos posteriores de la Fase 0.
-  No se escriben colores ni fuentes literales aquí: eso vive en los tokens de Tailwind.
+  Shell de la aplicación: solo el punto de montaje del router. Cada pantalla (login, inicio,
+  y a futuro Hoy · Biblioteca · Progreso · Ajustes) se renderiza completa vía router-outlet.
 -->
-<main>
-  <h1>{{ title() }}</h1>
-  <router-outlet />
-</main>
+<router-outlet />

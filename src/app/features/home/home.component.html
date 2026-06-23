@@ -1,0 +1,24 @@
+<main class="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 p-6">
+  <header class="flex items-center justify-between gap-4">
+    <div>
+      <p class="text-sm text-text-secondary">Hola,</p>
+      <h1 class="text-2xl font-semibold text-text-primary">
+        {{ user()?.displayName ?? 'Estudiante' }}
+      </h1>
+    </div>
+    <button
+      type="button"
+      (click)="signOut()"
+      class="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+    >
+      Cerrar sesión
+    </button>
+  </header>
+
+  <section class="rounded-2xl border border-border bg-surface-raised p-6">
+    <h2 class="text-lg font-medium text-text-primary">Todo listo por aquí</h2>
+    <p class="mt-1 text-sm text-text-secondary">
+      Tu sesión está activa. Pronto aparecerán aquí tu cola del día y tus libros.
+    </p>
+  </section>
+</main>
