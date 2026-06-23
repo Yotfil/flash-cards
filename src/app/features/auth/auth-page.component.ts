@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -27,6 +27,17 @@ export class AuthPageComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
+  constructor() {
+    // La sesión puede llegar por el observer y no por la promesa de cada método (p. ej. el
+    // popup de Google, que por COOP no siempre resuelve su promesa). Navegamos de forma
+    // reactiva en cuanto haya sesión: así no dependemos de que cada flujo "devuelva" el éxito.
+    effect(() => {
+      if (this.authService.isAuthenticated()) {
+        void this.router.navigate(['/']);
+      }
+    });
+  }
+
   protected toggleMode(): void {
     this.mode.update((current) => (current === 'signIn' ? 'register' : 'signIn'));
     this.errorMessage.set(null);
@@ -48,7 +59,7 @@ export class AuthPageComponent {
       } else {
         await this.authService.signInWithEmail(email, password);
       }
-      await this.router.navigate(['/']);
+      // La navegación la dispara el effect en cuanto la sesión queda activa.
     } catch (error) {
       this.errorMessage.set(this.toMessage(error));
     } finally {
@@ -60,8 +71,8 @@ export class AuthPageComponent {
     this.errorMessage.set(null);
     this.submitting.set(true);
     try {
+      // El popup puede no resolver su promesa por COOP; el effect navega al activarse la sesión.
       await this.authService.signInWithGoogle();
-      await this.router.navigate(['/']);
     } catch (error) {
       this.errorMessage.set(this.toMessage(error));
     } finally {

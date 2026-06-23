@@ -14,3 +14,15 @@ export const authGuard: CanActivateFn = async () => {
   await auth.whenInitialized();
   return auth.isAuthenticated() ? true : router.createUrlTree(['/login']);
 };
+
+/**
+ * Inverso de authGuard: mantiene fuera del login a quien ya tiene sesión (lo lleva a la
+ * pantalla de inicio en vez de mostrarle el formulario de acceso).
+ */
+export const guestGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  await auth.whenInitialized();
+  return auth.isAuthenticated() ? router.createUrlTree(['/']) : true;
+};

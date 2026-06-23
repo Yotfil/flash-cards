@@ -26,6 +26,10 @@ export abstract class AuthPort {
 
   abstract registerWithEmail(input: RegisterWithEmailInput): Promise<AuthIdentity>;
   abstract signInWithEmail(input: SignInWithEmailInput): Promise<AuthIdentity>;
-  abstract signInWithGoogle(): Promise<AuthIdentity>;
+  /**
+   * Inicia sesión con Google. No devuelve la identidad: la sesión se entrega después por
+   * `observeAuthState`.
+   */
+  abstract signInWithGoogle(): Promise<void>;
   abstract signOut(): Promise<void>;
 }

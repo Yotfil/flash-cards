@@ -49,9 +49,12 @@ export class FirebaseAuthAdapter extends AuthPort {
     return toAuthIdentity(credential.user);
   }
 
-  override async signInWithGoogle(): Promise<AuthIdentity> {
-    const credential = await signInWithPopup(this.auth, new GoogleAuthProvider());
-    return toAuthIdentity(credential.user);
+  override async signInWithGoogle(): Promise<void> {
+    // Popup (no redirección: esta rompe en navegadores con particionado de almacenamiento).
+    // El warning de Cross-Origin-Opener-Policy sobre `window.closed` se resuelve con la
+    // cabecera del dev-server `same-origin-allow-popups` (ver angular.json). La sesión llega
+    // por onAuthStateChanged y el observer carga el perfil.
+    await signInWithPopup(this.auth, new GoogleAuthProvider());
   }
 
   override async signOut(): Promise<void> {
