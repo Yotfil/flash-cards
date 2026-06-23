@@ -2,7 +2,8 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
+import { provideFirebase } from '@core/firebase';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideBrowserGlobalErrorListeners(), provideRouter(routes)],
+  providers: [provideBrowserGlobalErrorListeners(), provideRouter(routes), provideFirebase()],
 };
