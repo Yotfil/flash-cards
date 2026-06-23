@@ -7,11 +7,12 @@ import type { FirebaseOptions } from 'firebase/app';
 export const environment: { production: boolean; firebase: FirebaseOptions } = {
   production: true,
   firebase: {
-    apiKey: 'REEMPLAZAR_API_KEY',
-    authDomain: 'REEMPLAZAR_PROJECT_ID.firebaseapp.com',
-    projectId: 'REEMPLAZAR_PROJECT_ID',
-    storageBucket: 'REEMPLAZAR_PROJECT_ID.appspot.com',
-    messagingSenderId: 'REEMPLAZAR_SENDER_ID',
-    appId: 'REEMPLAZAR_APP_ID',
+    apiKey: 'AIzaSyAT0E3EOdiahojXsc77VcWoU1HCiCDcpBA',
+    authDomain: 'flash-cards-aca86.firebaseapp.com',
+    projectId: 'flash-cards-aca86',
+    storageBucket: 'flash-cards-aca86.firebasestorage.app',
+    messagingSenderId: '81589294819',
+    appId: '1:81589294819:web:2ee787fec13933b81f17d6',
+    measurementId: 'G-SHWLLCESP7',
   },
 };
