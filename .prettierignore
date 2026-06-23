@@ -1,0 +1,19 @@
+# Artefactos de build y dependencias
+/dist
+/out-tsc
+/node_modules
+
+# Caché local de npm (ver .gitignore)
+/.npm-cache
+
+# Caché de Angular y Firebase
+/.angular
+/.firebase
+
+# Lockfiles y assets generados
+package-lock.json
+/public/favicon.ico
+
+# Documentos de prosa (no reformatear la redacción del autor)
+CLAUDE.md
+/docs
