@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore (especificación §6, CLAUDE.md).
+// Principio: todo cuelga de /users/{uid} y cada quien SOLO accede a lo suyo. Lo que no se
+// permite explícitamente queda denegado por defecto.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ¿La petición es del dueño de ese árbol de usuario?
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      // Perfil y ajustes del propio usuario.
+      allow read, write: if isOwner(uid);
+
+      // Subcolecciones privadas: libros, capítulos, tarjetas y contadores del día.
+      match /books/{bookId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /chapters/{chapterId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /cards/{cardId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /dailyStats/{date} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Historial de repasos: APPEND-ONLY (§6.7). Se crea y se lee, nunca se modifica ni borra.
+      match /reviewLogs/{logId} {
+        allow read, create: if isOwner(uid);
+        allow update, delete: if false;
+      }
+    }
+  }
+}
