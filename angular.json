@@ -9,7 +9,11 @@
   "projects": {
     "flash-cards": {
       "projectType": "application",
-      "schematics": {},
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -19,13 +23,20 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": [
+              "@fontsource/source-sans-3/400.css",
+              "@fontsource/source-sans-3/500.css",
+              "@fontsource/source-sans-3/600.css",
+              "@fontsource/source-sans-3/700.css",
+              "src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {

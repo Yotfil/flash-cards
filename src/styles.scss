@@ -1,0 +1,123 @@
+// Hoja de estilos global y ARCHIVO DE TEMA ÚNICO (especificación §11.1, Principio 5).
+//
+// Punto único de verdad de los design tokens. Regla del contrato (CLAUDE.md):
+// PROHIBIDO el valor literal de color/fuente en los componentes. Siempre un token
+// semántico (bg-surface, text-text-primary, font-sans…). Cambiar la identidad = tocar
+// solo este archivo.
+//
+// Tailwind 4 se carga con `@use` (no `@import`, que está deprecado en Sass). El
+// compilador Sass procesa este archivo y luego el plugin @tailwindcss/postcss genera
+// las utilidades a partir de los tokens de @theme y de las clases usadas en las plantillas.
+
+@use 'tailwindcss';
+
+// ───────────────────────────────────────────────────────────────────────────
+// Design tokens. Valores PROVISIONALES (§10.6): se afinan sobre la app real.
+// Acento: teal profundo (§10.3, "índigo / teal profundo / terracota"), disciplinado
+// y distinto del azul corporativo y del verde-Duolingo. La escala rojo→verde queda
+// RESERVADA para la calificación.
+// ───────────────────────────────────────────────────────────────────────────
+@theme {
+  // Tipografía: una sola familia sans con buen soporte de acentos (§10.2).
+  --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+
+  // Base neutra cálida — modo claro por defecto (§10.3).
+  --color-surface: #faf9f7; // lienzo de la app
+  --color-surface-raised: #ffffff; // tarjetas y paneles elevados
+  --color-surface-sunken: #f1efea; // zonas hundidas / fondos sutiles
+
+  --color-text-primary: #2b2a27; // negro cálido, no puro
+  --color-text-secondary: #57544e;
+  --color-text-muted: #8a857c;
+
+  --color-border: #e6e2d9;
+
+  // Único acento, usado con disciplina (acción principal, estado activo).
+  --color-accent: #11806f;
+  --color-accent-hover: #0c6355;
+  --color-accent-contrast: #ffffff; // texto/íconos sobre el acento
+
+  --color-focus-ring: #11806f;
+
+  // Escala semántica de la calificación — RESERVADA (mal → bien).
+  --color-rating-again: #dc2626; // 1 · rojo · Again
+  --color-rating-hard: #d97b34; // 2 · naranja · Hard
+  --color-rating-good: #c79a1f; // 3 · amarillo · Good
+  --color-rating-easy: #1f9d52; // 4 · verde · Easy
+}
+
+// Paleta del modo oscuro (§10.3): mismos tokens semánticos, valores cálidos oscuros.
+// Mixin reutilizado para la preferencia del sistema y para el override manual, sin duplicar.
+@mixin dark-palette {
+  --color-surface: #161512;
+  --color-surface-raised: #201e1b;
+  --color-surface-sunken: #110f0d;
+
+  --color-text-primary: #ece8e0;
+  --color-text-secondary: #b3ada2;
+  --color-text-muted: #837d73;
+
+  --color-border: #322f29;
+
+  --color-accent: #1ba291;
+  --color-accent-hover: #25b6a3;
+  --color-accent-contrast: #07211d;
+
+  --color-focus-ring: #25b6a3;
+
+  --color-rating-again: #ef4444;
+  --color-rating-hard: #e08a44;
+  --color-rating-good: #d6ab33;
+  --color-rating-easy: #34b364;
+}
+
+// Override manual explícito (interruptor de tema, a futuro en Ajustes).
+:root[data-theme='dark'] {
+  @include dark-palette;
+}
+
+// Por defecto sigue la preferencia del sistema, salvo que el usuario fije "claro".
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-palette;
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Capa base: aplica los tokens al documento. Descansa sobre el preflight de Tailwind
+// y queda por debajo de las utilidades, de modo que cualquier clase utilitaria en una
+// plantilla pueda sobreescribir. Cero literales de color/fuente aquí tampoco.
+// ───────────────────────────────────────────────────────────────────────────
+@layer base {
+  html {
+    color-scheme: light dark; // controles nativos y scrollbars coherentes con el tema
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  // Anillo de foco visible y consistente para accesibilidad por teclado (CLAUDE.md).
+  :focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+// Respeto de "reducir movimiento" como base, no como retoque (§10.4 / CLAUDE.md).
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
