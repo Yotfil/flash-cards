@@ -7,7 +7,12 @@
 
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 import { environment } from '../../../environments/environment';
@@ -19,8 +24,18 @@ import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE } from '@infrastructure/firebase
  * inicialización en recargas en caliente).
  */
 export function provideFirebase(): EnvironmentProviders {
-  const app = getApps().length > 0 ? getApp() : initializeApp(environment.firebase);
-  const firestore = getFirestore(app);
+  const isFirstInit = getApps().length === 0;
+  const app = isFirstInit ? initializeApp(environment.firebase) : getApp();
+
+  // Persistencia offline (IndexedDB, multi-pestaña): "offline como modo", no error. Los datos
+  // leídos quedan en caché y las escrituras se encolan y sincronizan al recuperar conexión.
+  // initializeFirestore solo puede llamarse una vez; en recargas en caliente se reutiliza.
+  const firestore = isFirstInit
+    ? initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      })
+    : getFirestore(app);
+
   const auth = getAuth(app);
 
   return makeEnvironmentProviders([
