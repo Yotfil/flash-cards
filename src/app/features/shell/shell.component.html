@@ -1,0 +1,29 @@
+<!--
+  Layout responsive: en móvil la navegación va abajo (flex-col-reverse pone el <nav>, que está
+  primero en el DOM, al fondo); en escritorio pasa a barra lateral izquierda (md:flex-row).
+  El <main> es el área que hace scroll; el <nav> conserva su tamaño y queda siempre visible.
+-->
+<div class="flex h-dvh flex-col-reverse md:flex-row">
+  <nav
+    aria-label="Navegación principal"
+    class="flex shrink-0 border-t border-border bg-surface-raised md:h-dvh md:w-56 md:flex-col md:gap-1 md:border-t-0 md:border-r md:p-3"
+  >
+    <p class="hidden px-3 py-3 text-lg font-semibold text-text-primary md:block">Flash-cards</p>
+
+    @for (item of navItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="text-accent md:bg-surface-sunken"
+        ariaCurrentWhenActive="page"
+        class="flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-text-secondary transition-colors hover:text-text-primary md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:py-2.5 md:hover:bg-surface-sunken"
+      >
+        <app-icon [name]="item.icon" />
+        <span class="text-xs md:text-sm md:font-medium">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <main class="flex-1 overflow-y-auto">
+    <router-outlet />
+  </main>
+</div>
