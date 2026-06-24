@@ -120,13 +120,19 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     </section>
 
     @if (showForm()) {
-      <app-book-form-dialog [book]="editing()" (saved)="onSave($event)" (cancelled)="closeForm()" />
+      <app-book-form-dialog
+        [book]="editing()"
+        [pending]="saving()"
+        (saved)="onSave($event)"
+        (cancelled)="closeForm()"
+      />
     }
 
     @if (pendingDelete(); as book) {
       <app-confirm-dialog
         title="¿Borrar este libro?"
         [message]="'Se eliminará «' + book.name + '» y no se puede deshacer.'"
+        [pending]="deleting()"
         (confirmed)="confirmDelete(book)"
         (cancelled)="pendingDelete.set(null)"
       />
@@ -147,6 +153,9 @@ export class BibliotecaComponent implements OnInit {
   protected readonly editing = signal<Book | null>(null);
   protected readonly pendingDelete = signal<Book | null>(null);
   protected readonly actionError = signal<string | null>(null);
+  // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
+  protected readonly saving = signal(false);
+  protected readonly deleting = signal(false);
 
   ngOnInit(): void {
     void this.booksService.load();
@@ -172,7 +181,11 @@ export class BibliotecaComponent implements OnInit {
   }
 
   protected async onSave(draft: BookDraft): Promise<void> {
+    if (this.saving()) {
+      return;
+    }
     this.actionError.set(null);
+    this.saving.set(true);
     const editingBook = this.editing();
     try {
       if (editingBook) {
@@ -184,6 +197,8 @@ export class BibliotecaComponent implements OnInit {
     } catch (error) {
       console.error('No se pudo guardar el libro', error);
       this.actionError.set('No se pudo guardar el libro. Inténtalo de nuevo.');
+    } finally {
+      this.saving.set(false);
     }
   }
 
@@ -192,13 +207,18 @@ export class BibliotecaComponent implements OnInit {
   }
 
   protected async confirmDelete(book: Book): Promise<void> {
+    if (this.deleting()) {
+      return;
+    }
     this.actionError.set(null);
+    this.deleting.set(true);
     try {
       await this.booksService.remove(book.id);
     } catch (error) {
       console.error('No se pudo borrar el libro', error);
       this.actionError.set('No se pudo borrar el libro. Inténtalo de nuevo.');
     } finally {
+      this.deleting.set(false);
       this.pendingDelete.set(null);
     }
   }

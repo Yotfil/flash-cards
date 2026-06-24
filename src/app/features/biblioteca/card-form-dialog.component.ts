@@ -25,8 +25,9 @@ import type { Card, CardContentDraft } from '@domain/models';
         tabindex="-1"
         [attr.aria-label]="heading()"
         [formGroup]="form"
+        [attr.aria-busy]="pending()"
         (ngSubmit)="submit()"
-        (keydown.escape)="cancelled.emit()"
+        (keydown.escape)="pending() || cancelled.emit()"
         class="w-full max-w-md rounded-2xl border border-border bg-surface-raised p-6 shadow-xl"
       >
         <h2 class="text-lg font-semibold text-text-primary">{{ heading() }}</h2>
@@ -64,17 +65,22 @@ import type { Card, CardContentDraft } from '@domain/models';
         <div class="mt-6 flex justify-end gap-3">
           <button
             type="button"
+            [disabled]="pending()"
             (click)="cancelled.emit()"
-            class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+            class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            [disabled]="form.invalid"
+            [disabled]="form.invalid || pending()"
             class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
-            {{ submitLabel() }}
+            @if (pending()) {
+              Guardando…
+            } @else {
+              {{ submitLabel() }}
+            }
           </button>
         </div>
       </form>
@@ -84,6 +90,8 @@ import type { Card, CardContentDraft } from '@domain/models';
 export class CardFormDialogComponent implements OnInit {
   /** Tarjeta a editar; si no se pasa, el diálogo está en modo "crear". */
   readonly card = input<Card | null>(null);
+  /** El padre lo pone en true mientras persiste; bloquea botones y reenvíos. */
+  readonly pending = input(false);
   readonly saved = output<CardContentDraft>();
   readonly cancelled = output<void>();
 
@@ -110,6 +118,9 @@ export class CardFormDialogComponent implements OnInit {
   }
 
   protected submit(): void {
+    if (this.pending()) {
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
