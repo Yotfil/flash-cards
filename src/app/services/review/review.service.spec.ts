@@ -60,6 +60,9 @@ class FakeCardRepository extends CardRepository {
   override async listDue(): Promise<Card[]> {
     return [...this.cards];
   }
+  override async countByState(): Promise<{ newCards: number; learning: number; review: number }> {
+    return { newCards: 0, learning: 0, review: 0 };
+  }
   override async updateScheduling(
     _uid: string,
     cardId: string,
