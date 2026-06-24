@@ -5,7 +5,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { AuthPort, UserRepository } from '@domain/ports';
-import type { AuthIdentity, User } from '@domain/models';
+import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
+import type { AuthIdentity, User, UserSettings } from '@domain/models';
 
 /** Construye el perfil por defecto de un usuario nuevo a partir de su identidad de auth. */
 function buildDefaultUser(identity: AuthIdentity): User {
@@ -19,6 +20,7 @@ function buildDefaultUser(identity: AuthIdentity): User {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       dayStartHour: 4,
       theme: 'system',
+      defaultNewCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
     },
     isSearchable: false,
   };
@@ -74,6 +76,18 @@ export class AuthService {
 
   async signOut(): Promise<void> {
     await this.authPort.signOut();
+  }
+
+  /** Actualiza los ajustes del usuario actual (merge parcial), los persiste y refresca la sesión.
+   *  Sin sesión es un error explícito (no debería ocurrir tras el guard de rutas). */
+  async updateSettings(changes: Partial<UserSettings>): Promise<void> {
+    const current = this.currentUserSignal();
+    if (!current) {
+      throw new Error('No hay una sesión activa para actualizar los ajustes.');
+    }
+    const updated: User = { ...current, settings: { ...current.settings, ...changes } };
+    await this.userRepository.save(updated);
+    this.currentUserSignal.set(updated);
   }
 
   private async onAuthStateChanged(identity: AuthIdentity | null): Promise<void> {

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
+import { AuthService } from '@services/auth.service';
 import { BooksService } from '@services/books.service';
 import { BibliotecaComponent } from './biblioteca.component';
 
@@ -16,7 +17,11 @@ describe('BibliotecaComponent', () => {
       },
     };
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: BooksService, useValue: stub }],
+      providers: [
+        provideRouter([]),
+        { provide: BooksService, useValue: stub },
+        { provide: AuthService, useValue: { currentUser: signal(null) } },
+      ],
     });
 
     const fixture = TestBed.createComponent(BibliotecaComponent);

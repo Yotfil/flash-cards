@@ -6,6 +6,8 @@
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
+import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
+
 /** Un Timestamp de Firestore que se transforma a `Date` del dominio. */
 const firestoreTimestamp = z.instanceof(Timestamp).transform((value) => value.toDate());
 
@@ -13,6 +15,9 @@ const userSettingsSchema = z.object({
   timezone: z.string(),
   dayStartHour: z.number(),
   theme: z.enum(['light', 'dark', 'system']),
+  // Campo nuevo (PR control de nuevas): los perfiles creados antes no lo tienen, así que al leer
+  // se rellena con el default en vez de fallar. Se persistirá la próxima vez que se guarde.
+  defaultNewCardsPerDay: z.number().default(DEFAULT_NEW_CARDS_PER_DAY),
 });
 
 /**

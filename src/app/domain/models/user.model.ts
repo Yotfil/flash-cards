@@ -1,5 +1,12 @@
 // Perfil y ajustes del usuario (`/users/{uid}`). Especificación §6.3.
 
+/**
+ * Default global de tarjetas nuevas por día (espec. §6.4). Es la perilla principal del ritmo de
+ * estudio: cada nueva tarjeta genera ~5-9 repasos futuros, así que con backlog conviene bajarla.
+ * Vive en el dominio (no en un servicio) para ser fuente única sin crear dependencias entre capas.
+ */
+export const DEFAULT_NEW_CARDS_PER_DAY = 20;
+
 /** Tema de la interfaz elegido por el usuario. */
 export type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -13,6 +20,12 @@ export interface UserSettings {
   /** Hora a la que arranca el día de estudio, ej. 4 (un repaso a la 1am cuenta como ayer). */
   dayStartHour: number;
   theme: ThemePreference;
+  /**
+   * Tarjetas nuevas por día con las que se precarga un libro nuevo. Es solo el valor por defecto:
+   * cada libro guarda su propio `newCardsPerDay` y puede ajustarse aparte. Default
+   * {@link DEFAULT_NEW_CARDS_PER_DAY}.
+   */
+  defaultNewCardsPerDay: number;
 }
 
 export interface User {

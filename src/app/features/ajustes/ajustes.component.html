@@ -7,6 +7,50 @@
       <p class="font-medium text-text-primary">{{ currentUser.displayName }}</p>
       <p class="text-sm text-text-muted">{{ currentUser.email }}</p>
     </div>
+
+    <div class="mt-4 rounded-2xl border border-border bg-surface-raised p-5">
+      <h2 class="font-medium text-text-primary">Estudio</h2>
+      <label for="defaultNewCards" class="mt-3 block text-sm font-medium text-text-primary">
+        Tarjetas nuevas por día (por defecto)
+      </label>
+      <p class="mt-1 text-sm text-text-muted">
+        Con cuántas tarjetas nuevas se crea cada libro. Cada nueva genera varios repasos futuros: si
+        se te acumula trabajo, baja este número. Cada libro puede ajustarlo aparte.
+      </p>
+
+      <div class="mt-3 flex items-center gap-3">
+        <input
+          id="defaultNewCards"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          max="999"
+          [formControl]="newCardsControl"
+          (input)="saveState.set('idle')"
+          class="w-24 rounded-lg border border-border bg-surface px-3 py-2 text-text-primary focus:border-accent focus:outline-none"
+        />
+        <button
+          type="button"
+          [disabled]="saveState() === 'saving'"
+          (click)="saveDefaultNewCards()"
+          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
+        >
+          @if (saveState() === 'saving') {
+            Guardando…
+          } @else {
+            Guardar
+          }
+        </button>
+      </div>
+
+      @if (newCardsControl.invalid && newCardsControl.touched) {
+        <p class="mt-2 text-sm text-text-secondary">Escribe un número entre 0 y 999.</p>
+      } @else if (saveState() === 'saved') {
+        <p class="mt-2 text-sm text-text-secondary">Guardado.</p>
+      } @else if (saveState() === 'error') {
+        <p class="mt-2 text-sm text-text-secondary">No se pudo guardar. Inténtalo de nuevo.</p>
+      }
+    </div>
   }
 
   <button
