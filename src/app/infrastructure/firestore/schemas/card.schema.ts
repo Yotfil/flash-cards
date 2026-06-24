@@ -15,6 +15,8 @@ const cardSchedulingSchema = z.object({
   difficulty: z.number(),
   elapsedDays: z.number(),
   scheduledDays: z.number(),
+  // Compat: las tarjetas creadas antes de F1.5 no tienen `learningSteps`; por defecto 0.
+  learningSteps: z.number().default(0),
   reps: z.number(),
   lapses: z.number(),
   state: z.number().int().min(0).max(3),

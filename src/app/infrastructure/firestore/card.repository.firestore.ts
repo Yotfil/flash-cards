@@ -18,9 +18,9 @@ import {
 } from 'firebase/firestore';
 
 import { CardRepository, type CardCreateInput } from '@domain/ports';
-import { type Card, type CardContentDraft, CardState } from '@domain/models';
+import { type Card, type CardContentDraft, type CardScheduling, CardState } from '@domain/models';
 import { FIRESTORE } from '@infrastructure/firebase';
-import { cardToFirestoreDocument } from './card-document.mapper';
+import { cardToFirestoreDocument, schedulingToFirestore } from './card-document.mapper';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
 const USERS_COLLECTION = 'users';
@@ -41,6 +41,18 @@ export class FirestoreCardRepository extends CardRepository {
     return snapshot.docs
       .map((document) => {
         // Frontera: cada documento es externo, se valida antes de tocarlo. `parse` lanza si no cumple.
+        const data = cardDocumentSchema.parse(document.data());
+        return this.toCard(document.id, data);
+      })
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  override async listByBook(uid: string, bookId: string): Promise<Card[]> {
+    const cardsQuery = query(this.cardsCollection(uid), where('bookId', '==', bookId));
+    const snapshot = await getDocs(cardsQuery);
+
+    return snapshot.docs
+      .map((document) => {
         const data = cardDocumentSchema.parse(document.data());
         return this.toCard(document.id, data);
       })
@@ -84,6 +96,17 @@ export class FirestoreCardRepository extends CardRepository {
       data['back'] = changes.back;
     }
     await updateDoc(doc(this.cardsCollection(uid), cardId), data);
+  }
+
+  override async updateScheduling(
+    uid: string,
+    cardId: string,
+    scheduling: CardScheduling,
+  ): Promise<void> {
+    await updateDoc(doc(this.cardsCollection(uid), cardId), {
+      scheduling: schedulingToFirestore(scheduling),
+      updatedAt: Timestamp.fromDate(new Date()),
+    });
   }
 
   override async delete(uid: string, cardId: string): Promise<void> {

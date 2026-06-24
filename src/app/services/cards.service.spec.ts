@@ -13,6 +13,7 @@ const INITIAL_SCHEDULING: CardScheduling = {
   difficulty: 0,
   elapsedDays: 0,
   scheduledDays: 0,
+  learningSteps: 0,
   reps: 0,
   lapses: 0,
   state: CardState.New,
@@ -61,11 +62,23 @@ class FakeCardRepository extends CardRepository {
   override async delete(): Promise<void> {
     // No usado en estas pruebas.
   }
+
+  override async listByBook(): Promise<Card[]> {
+    return [];
+  }
+
+  override async updateScheduling(): Promise<void> {
+    // No usado en estas pruebas.
+  }
 }
 
 class FakeSchedulingPort extends SchedulingPort {
   override createInitialScheduling(): CardScheduling {
     return { ...INITIAL_SCHEDULING };
+  }
+
+  override schedule(): never {
+    throw new Error('no usado en estas pruebas');
   }
 }
 

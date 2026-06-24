@@ -55,5 +55,12 @@ export const routes: Routes = [
       },
     ],
   },
+  {
+    // Pantalla completa, fuera del shell (sin la navegación): la sesión de repaso (§8.6).
+    path: 'repaso',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('@features/review/review-session.component').then((m) => m.ReviewSessionComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

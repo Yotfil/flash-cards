@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
-export type IconName = 'calendar' | 'books' | 'chart' | 'sliders' | 'alert';
+export type IconName = 'calendar' | 'books' | 'chart' | 'sliders' | 'alert' | 'brain';
 export type IconSize = 'sm' | 'md';
 
 /** Icono SVG de trazo, presentacional. Toma el color del texto (currentColor), por lo que
@@ -38,6 +38,17 @@ export type IconSize = 'sm' | 'md';
             d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
           />
           <path d="M12 9v4M12 17h.01" />
+        }
+        @case ('brain') {
+          <path
+            d="M12 5a3 3 0 1 0-5.997.142 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"
+          />
+          <path
+            d="M12 5a3 3 0 1 1 5.997.142 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"
+          />
+          <path
+            d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4M6 18a4 4 0 0 1-1.967-.516M17.967 17.484A4 4 0 0 1 16 18"
+          />
         }
       }
     </svg>

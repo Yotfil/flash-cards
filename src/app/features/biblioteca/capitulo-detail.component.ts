@@ -1,9 +1,10 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import type { Card, CardContentDraft } from '@domain/models';
 import { CardsService } from '@services/cards.service';
 import { ChaptersService } from '@services/chapters.service';
+import { ReviewService } from '@services/review';
 import { findDuplicateCardIds, sortCardsForDisplay } from '@services/card-duplicates';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
@@ -58,6 +59,24 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
           </div>
         }
       </header>
+
+      @if (cardsStatus() === 'ready' && cards().length > 0) {
+        <button
+          type="button"
+          [disabled]="studying()"
+          (click)="studyChapter()"
+          class="mt-4 w-full rounded-xl border border-accent bg-surface px-4 py-3 text-sm font-medium text-accent transition-colors hover:bg-surface-sunken disabled:opacity-50"
+        >
+          @if (studying()) {
+            Preparando…
+          } @else {
+            Estudiar este capítulo
+          }
+        </button>
+        @if (studyMessage(); as message) {
+          <p class="mt-2 text-center text-sm text-text-muted">{{ message }}</p>
+        }
+      }
 
       @if (actionError(); as message) {
         <p
@@ -185,11 +204,15 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
 })
 export class CapituloDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly chaptersService = inject(ChaptersService);
   private readonly cardsService = inject(CardsService);
+  private readonly reviewService = inject(ReviewService);
 
   protected readonly bookId = this.route.snapshot.paramMap.get('bookId') ?? '';
   private readonly chapterId = this.route.snapshot.paramMap.get('chapterId') ?? '';
+  protected readonly studying = signal(false);
+  protected readonly studyMessage = signal<string | null>(null);
 
   protected readonly chapter = computed(() =>
     this.chaptersService.chapters().find((candidate) => candidate.id === this.chapterId),
@@ -225,6 +248,27 @@ export class CapituloDetailComponent implements OnInit {
 
   protected reload(): void {
     void this.cardsService.load(this.chapterId);
+  }
+
+  /** Inicia una sesión con las tarjetas listas del capítulo; si no hay, avisa sin entrar. */
+  protected async studyChapter(): Promise<void> {
+    if (this.studying()) {
+      return;
+    }
+    this.studyMessage.set(null);
+    this.studying.set(true);
+    try {
+      const count = await this.reviewService.startChapter(this.chapterId);
+      if (count === 0) {
+        this.studyMessage.set(
+          'Estás al día con este capítulo. No hay tarjetas para repasar ahora.',
+        );
+        return;
+      }
+      await this.router.navigate(['/repaso']);
+    } finally {
+      this.studying.set(false);
+    }
   }
 
   protected openCreate(): void {

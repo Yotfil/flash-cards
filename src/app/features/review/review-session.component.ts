@@ -1,0 +1,135 @@
+import { Component, type OnInit, HostListener, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+
+import type { Rating } from '@domain/models';
+import { ReviewService } from '@services/review';
+import { RatingComponent } from './rating.component';
+
+/** Sesión de repaso a pantalla completa (spec §8.6): Momento 1 (anverso + "Mostrar respuesta") →
+ *  Momento 2 (reverso + 4 cerebros). Sin la navegación del shell. La lógica vive en ReviewService;
+ *  este componente sólo pinta, captura toques y atajos (espacio = revelar, 1-4 = calificar). */
+@Component({
+  selector: 'app-review-session',
+  imports: [RouterLink, RatingComponent],
+  template: `
+    <div class="flex h-dvh flex-col bg-surface">
+      <!-- Barra superior: progreso tenue + salir. -->
+      <header class="flex items-center gap-4 px-6 py-4">
+        <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-sunken">
+          <div
+            class="h-full rounded-full bg-accent transition-[width]"
+            [style.width.%]="progressPercent()"
+          ></div>
+        </div>
+        <span class="text-sm text-text-muted">{{ position() }} / {{ total() }}</span>
+        <a
+          routerLink="/biblioteca"
+          class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+        >
+          Salir
+        </a>
+      </header>
+
+      @if (status() === 'finished') {
+        <div class="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <h1 class="text-2xl font-semibold text-text-primary">¡Sesión completada!</h1>
+          <p class="text-text-secondary">Repasaste {{ summary().reviewed }} tarjeta(s).</p>
+          <div class="flex gap-3 text-sm text-text-muted">
+            <span>🔴 {{ summary().ratingCounts.again }}</span>
+            <span>🟠 {{ summary().ratingCounts.hard }}</span>
+            <span>🟡 {{ summary().ratingCounts.good }}</span>
+            <span>🟢 {{ summary().ratingCounts.easy }}</span>
+          </div>
+          <a
+            routerLink="/biblioteca"
+            class="mt-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+          >
+            Volver a Biblioteca
+          </a>
+        </div>
+      } @else if (current(); as card) {
+        <!-- Momento 1/2: la tarjeta. Tocar el área revela la respuesta. -->
+        <button
+          type="button"
+          (click)="reveal()"
+          [disabled]="revealed()"
+          class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-6 px-6 text-center disabled:cursor-default"
+        >
+          <p class="text-2xl font-semibold text-text-primary">{{ card.front }}</p>
+          @if (revealed()) {
+            <div class="h-px w-16 bg-border"></div>
+            <p class="text-xl text-text-secondary">{{ card.back }}</p>
+          }
+        </button>
+
+        <footer class="px-6 pb-8 pt-2">
+          @if (errorMessage(); as message) {
+            <p role="alert" class="mb-3 text-center text-sm text-text-secondary">{{ message }}</p>
+          }
+          @if (revealed()) {
+            @if (previews(); as options) {
+              <app-rating [previews]="options" (graded)="grade($event)" />
+            }
+          } @else {
+            <button
+              type="button"
+              (click)="reveal()"
+              class="w-full rounded-lg bg-accent px-4 py-3 font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+            >
+              Mostrar respuesta
+            </button>
+          }
+        </footer>
+      }
+    </div>
+  `,
+})
+export class ReviewSessionComponent implements OnInit {
+  private readonly reviewService = inject(ReviewService);
+  private readonly router = inject(Router);
+
+  protected readonly status = this.reviewService.status;
+  protected readonly current = this.reviewService.current;
+  protected readonly revealed = this.reviewService.revealed;
+  protected readonly previews = this.reviewService.previews;
+  protected readonly errorMessage = this.reviewService.errorMessage;
+  protected readonly position = this.reviewService.position;
+  protected readonly total = this.reviewService.total;
+  protected readonly summary = this.reviewService.summary;
+
+  ngOnInit(): void {
+    // Sin sesión activa (p. ej. recarga directa de /repaso): no hay nada que mostrar.
+    if (this.reviewService.status() === 'idle') {
+      void this.router.navigate(['/biblioteca']);
+    }
+  }
+
+  protected progressPercent(): number {
+    const total = this.total();
+    return total === 0 ? 0 : (this.summary().reviewed / total) * 100;
+  }
+
+  protected reveal(): void {
+    this.reviewService.reveal();
+  }
+
+  protected grade(rating: Rating): void {
+    void this.reviewService.grade(rating);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  protected onKeydown(event: KeyboardEvent): void {
+    if (this.status() !== 'active') {
+      return;
+    }
+    if (event.key === ' ' && !this.revealed()) {
+      event.preventDefault();
+      this.reveal();
+      return;
+    }
+    if (this.revealed() && ['1', '2', '3', '4'].includes(event.key)) {
+      event.preventDefault();
+      this.grade(Number(event.key) as Rating);
+    }
+  }
+}
