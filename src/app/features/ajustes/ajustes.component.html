@@ -1,0 +1,28 @@
+<section class="mx-auto max-w-2xl px-6 py-6">
+  <h1 class="text-2xl font-semibold text-text-primary">Ajustes</h1>
+
+  @if (user(); as currentUser) {
+    <div class="mt-4 rounded-2xl border border-border bg-surface-raised p-5">
+      <p class="text-sm text-text-secondary">Sesión iniciada como</p>
+      <p class="font-medium text-text-primary">{{ currentUser.displayName }}</p>
+      <p class="text-sm text-text-muted">{{ currentUser.email }}</p>
+    </div>
+  }
+
+  <button
+    type="button"
+    [disabled]="signingOut()"
+    (click)="signOut()"
+    class="mt-4 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
+  >
+    @if (signingOut()) {
+      Cerrando sesión…
+    } @else {
+      Cerrar sesión
+    }
+  </button>
+
+  <p class="mt-8 text-sm text-text-muted">
+    Más ajustes (tema claro/oscuro, día de estudio, importación) llegarán pronto.
+  </p>
+</section>

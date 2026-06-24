@@ -4,15 +4,8 @@ import { Component, input } from '@angular/core';
  *  es un error. Presentacional. La acción opcional (CTA) se proyecta con <ng-content>. */
 @Component({
   selector: 'app-empty-state',
-  template: `
-    <div class="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <h2 class="text-lg font-medium text-text-primary">{{ title() }}</h2>
-      @if (message(); as text) {
-        <p class="max-w-sm text-sm text-text-secondary">{{ text }}</p>
-      }
-      <ng-content />
-    </div>
-  `,
+  templateUrl: './empty-state.component.html',
+  styleUrl: './empty-state.component.scss',
 })
 export class EmptyStateComponent {
   readonly title = input.required<string>();
