@@ -24,3 +24,15 @@ export interface Book {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Campos que el usuario controla al crear o editar un libro. El `id`, `order`, `cardCount` y los
+ * timestamps los gestiona el sistema (repositorio/servicio), no el formulario.
+ */
+export interface BookDraft {
+  name: string;
+  subject: string;
+  studyDirection: StudyDirection;
+  newCardsPerDay: number;
+  maxReviewsPerDay: number;
+}
