@@ -1,0 +1,114 @@
+<div class="flex h-dvh flex-col bg-surface">
+  <!-- Barra superior: progreso + salir. -->
+  <header class="flex items-center gap-4 px-6 py-4">
+    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-sunken">
+      <div
+        class="h-full rounded-full bg-accent transition-[width]"
+        [style.width.%]="progressPercent()"
+      ></div>
+    </div>
+    <span class="text-sm text-text-muted">{{ position() }} / {{ total() }}</span>
+    <a
+      routerLink="/biblioteca"
+      class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+    >
+      Salir
+    </a>
+  </header>
+
+  @if (status() === 'finished') {
+    <div class="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+      <h1 class="text-2xl font-semibold text-text-primary">¡Práctica completada!</h1>
+      <p class="text-text-secondary">Acertaste {{ summary().correct }} de {{ summary().total }}.</p>
+      <a
+        routerLink="/biblioteca"
+        class="mt-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+      >
+        Volver a Biblioteca
+      </a>
+    </div>
+  } @else if (current(); as question) {
+    <main class="mx-auto flex w-full max-w-lg flex-1 flex-col px-6 py-4">
+      <p class="mt-4 text-center text-2xl font-semibold text-text-primary">{{ question.prompt }}</p>
+
+      @if (question.type === 'multiple-choice') {
+        <div class="mt-8 flex flex-col gap-3">
+          @for (option of question.options; track option) {
+            <button
+              type="button"
+              [disabled]="answered()"
+              (click)="answerMultiple(option)"
+              [class]="optionClasses(option)"
+            >
+              <span>{{ option }}</span>
+              @if (optionState(option) === 'correct') {
+                <app-icon name="check" size="sm" class="shrink-0 text-accent" />
+              } @else if (optionState(option) === 'wrong') {
+                <app-icon name="x" size="sm" class="shrink-0 text-text-muted" />
+              }
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="mt-8 flex flex-col gap-3">
+          <label for="written-answer" class="sr-only">Tu respuesta</label>
+          <input
+            id="written-answer"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            [value]="writtenInput()"
+            [disabled]="answered()"
+            (input)="onWrittenInput($event)"
+            (keydown.enter)="submitWritten()"
+            placeholder="Escribe la respuesta…"
+            class="rounded-lg border border-border bg-surface-raised px-4 py-3 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring disabled:opacity-70"
+          />
+          @if (!answered()) {
+            <button
+              type="button"
+              [disabled]="writtenInput().trim() === ''"
+              (click)="submitWritten()"
+              class="rounded-lg bg-accent px-4 py-3 font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
+            >
+              Comprobar
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Feedback tras responder. Acento + iconos (no la escala rojo→verde, reservada al repaso). -->
+      @if (answered()) {
+        <div class="mt-6 flex items-start gap-2">
+          @if (lastCorrect()) {
+            <app-icon name="check" size="sm" class="mt-0.5 shrink-0 text-accent" />
+            <p class="text-sm font-medium text-text-primary">¡Correcto!</p>
+          } @else {
+            <app-icon name="x" size="sm" class="mt-0.5 shrink-0 text-text-muted" />
+            <p class="text-sm text-text-secondary">
+              La respuesta era
+              <span class="font-medium text-text-primary">{{ question.answer }}</span>
+              .
+            </p>
+          }
+        </div>
+      }
+
+      <div class="mt-auto pb-8 pt-6">
+        @if (answered()) {
+          <button
+            type="button"
+            (click)="next()"
+            class="w-full rounded-lg bg-accent px-4 py-3 font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+          >
+            @if (isLastQuestion()) {
+              Ver resultado
+            } @else {
+              Siguiente
+            }
+          </button>
+        }
+      </div>
+    </main>
+  }
+</div>

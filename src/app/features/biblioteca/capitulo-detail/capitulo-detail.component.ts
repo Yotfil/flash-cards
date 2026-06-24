@@ -5,6 +5,7 @@ import type { Card, CardContentDraft } from '@domain/models';
 import { CardsService } from '@services/cards.service';
 import { ChaptersService } from '@services/chapters.service';
 import { ReviewService } from '@services/review';
+import { QuizService } from '@services/quiz';
 import { clozeQuestion } from '@services/cloze';
 import { findDuplicateCardIds, sortCardsForDisplay } from '@services/card-duplicates';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
@@ -37,11 +38,14 @@ export class CapituloDetailComponent implements OnInit {
   private readonly chaptersService = inject(ChaptersService);
   private readonly cardsService = inject(CardsService);
   private readonly reviewService = inject(ReviewService);
+  private readonly quizService = inject(QuizService);
 
   protected readonly bookId = this.route.snapshot.paramMap.get('bookId') ?? '';
   private readonly chapterId = this.route.snapshot.paramMap.get('chapterId') ?? '';
   protected readonly studying = signal(false);
   protected readonly studyMessage = signal<string | null>(null);
+  protected readonly practicing = signal(false);
+  protected readonly practiceMessage = signal<string | null>(null);
 
   protected readonly chapter = computed(() =>
     this.chaptersService.chapters().find((candidate) => candidate.id === this.chapterId),
@@ -107,6 +111,27 @@ export class CapituloDetailComponent implements OnInit {
       await this.router.navigate(['/repaso']);
     } finally {
       this.studying.set(false);
+    }
+  }
+
+  /** Inicia un mini-quiz con las tarjetas del capítulo; si no se puede armar, avisa sin entrar. */
+  protected async practiceChapter(): Promise<void> {
+    if (this.practicing()) {
+      return;
+    }
+    this.practiceMessage.set(null);
+    this.practicing.set(true);
+    try {
+      const count = await this.quizService.startChapter(this.chapterId);
+      if (count === 0) {
+        this.practiceMessage.set(
+          'Necesitas algunas tarjetas básicas en este capítulo para practicar.',
+        );
+        return;
+      }
+      await this.router.navigate(['/practicar']);
+    } finally {
+      this.practicing.set(false);
     }
   }
 

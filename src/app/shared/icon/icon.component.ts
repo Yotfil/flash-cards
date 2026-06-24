@@ -1,6 +1,14 @@
 import { Component, computed, input } from '@angular/core';
 
-export type IconName = 'calendar' | 'books' | 'chart' | 'sliders' | 'alert' | 'brain';
+export type IconName =
+  | 'calendar'
+  | 'books'
+  | 'chart'
+  | 'sliders'
+  | 'alert'
+  | 'brain'
+  | 'check'
+  | 'x';
 export type IconSize = 'sm' | 'md';
 
 /** Icono SVG de trazo, presentacional. Toma el color del texto (currentColor), por lo que

@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { CardsService } from '@services/cards.service';
 import { ChaptersService } from '@services/chapters.service';
 import { ReviewService } from '@services/review';
+import { QuizService } from '@services/quiz';
 import { CapituloDetailComponent } from './capitulo-detail.component';
 
 describe('CapituloDetailComponent', () => {
@@ -29,6 +30,7 @@ describe('CapituloDetailComponent', () => {
         { provide: CardsService, useValue: cardsStub },
         { provide: ChaptersService, useValue: chaptersStub },
         { provide: ReviewService, useValue: {} },
+        { provide: QuizService, useValue: {} },
       ],
     });
 
