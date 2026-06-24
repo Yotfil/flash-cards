@@ -9,6 +9,7 @@ import {
   BookRepository,
   CardRepository,
   ChapterRepository,
+  ImportRepository,
   SchedulingPort,
   UserRepository,
 } from '@domain/ports';
@@ -17,6 +18,7 @@ import {
   FirestoreBookRepository,
   FirestoreCardRepository,
   FirestoreChapterRepository,
+  FirestoreImportRepository,
   FirestoreUserRepository,
 } from '@infrastructure/firestore';
 import { TsFsrsSchedulingAdapter } from '@infrastructure/scheduling';
@@ -27,6 +29,7 @@ export function provideDataAccess(): EnvironmentProviders {
     { provide: BookRepository, useClass: FirestoreBookRepository },
     { provide: CardRepository, useClass: FirestoreCardRepository },
     { provide: ChapterRepository, useClass: FirestoreChapterRepository },
+    { provide: ImportRepository, useClass: FirestoreImportRepository },
     { provide: SchedulingPort, useClass: TsFsrsSchedulingAdapter },
     { provide: UserRepository, useClass: FirestoreUserRepository },
   ]);
