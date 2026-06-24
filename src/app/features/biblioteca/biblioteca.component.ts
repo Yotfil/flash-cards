@@ -24,13 +24,21 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
       <header class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-text-primary">Biblioteca</h1>
         @if (status() === 'ready' && books().length > 0) {
-          <button
-            type="button"
-            (click)="openCreate()"
-            class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-          >
-            Nuevo libro
-          </button>
+          <div class="flex shrink-0 gap-2">
+            <a
+              routerLink="/importar"
+              class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+            >
+              Importar libro
+            </a>
+            <button
+              type="button"
+              (click)="openCreate()"
+              class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+            >
+              Nuevo libro
+            </button>
+          </div>
         }
       </header>
 
@@ -66,13 +74,21 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
               title="Aún no tienes libros"
               message="Crea tu primer libro para empezar a organizar tus tarjetas por tema."
             >
-              <button
-                type="button"
-                (click)="openCreate()"
-                class="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-              >
-                Crear libro
-              </button>
+              <div class="mt-2 flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  (click)="openCreate()"
+                  class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+                >
+                  Crear libro
+                </button>
+                <a
+                  routerLink="/importar"
+                  class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+                >
+                  Importar libro
+                </a>
+              </div>
             </app-empty-state>
           } @else {
             <ul class="mt-6 flex flex-col gap-3">

@@ -88,6 +88,19 @@ export class BooksService {
     );
   }
 
+  /** Añade un libro ya creado (p. ej. por importación) a la lista local, para que la Biblioteca lo
+   *  muestre sin recargar. Si la lista aún no se ha cargado, no hace nada (la carga inicial lo traerá). */
+  addLocal(book: Book): void {
+    if (this.statusSignal() === 'ready') {
+      this.booksSignal.update((books) => [...books, book]);
+    }
+  }
+
+  /** Siguiente orden disponible para un libro nuevo (máximo actual + 1). */
+  nextBookOrder(): number {
+    return this.nextOrder();
+  }
+
   private nextOrder(): number {
     const orders = this.booksSignal().map((book) => book.order);
     return orders.length === 0 ? 0 : Math.max(...orders) + 1;
