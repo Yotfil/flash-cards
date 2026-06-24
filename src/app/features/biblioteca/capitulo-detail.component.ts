@@ -7,6 +7,7 @@ import { ChaptersService } from '@services/chapters.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { CardFormDialogComponent } from './card-form-dialog.component';
+import { CardImportDialogComponent } from './card-import-dialog.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
 /** Pantalla "detalle de un capítulo": cabecera del capítulo + CRUD de sus tarjetas (vista compacta
@@ -19,6 +20,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     EmptyStateComponent,
     ErrorStateComponent,
     CardFormDialogComponent,
+    CardImportDialogComponent,
     ConfirmDialogComponent,
   ],
   template: `
@@ -35,13 +37,22 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
           {{ chapter()?.name ?? 'Capítulo' }}
         </h1>
         @if (cardsStatus() === 'ready') {
-          <button
-            type="button"
-            (click)="openCreate()"
-            class="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-          >
-            Nueva tarjeta
-          </button>
+          <div class="flex shrink-0 gap-2">
+            <button
+              type="button"
+              (click)="openImport()"
+              class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+            >
+              Importar
+            </button>
+            <button
+              type="button"
+              (click)="openCreate()"
+              class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+            >
+              Nueva tarjeta
+            </button>
+          </div>
         }
       </header>
 
@@ -139,6 +150,15 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
         (cancelled)="pendingDelete.set(null)"
       />
     }
+
+    @if (showImport()) {
+      <app-card-import-dialog
+        [defaultChapterName]="chapter()?.name ?? 'Importadas'"
+        [pending]="importing()"
+        (imported)="onImport($event)"
+        (cancelled)="showImport.set(false)"
+      />
+    }
   `,
 })
 export class CapituloDetailComponent implements OnInit {
@@ -162,10 +182,12 @@ export class CapituloDetailComponent implements OnInit {
   protected readonly showForm = signal(false);
   protected readonly editing = signal<Card | null>(null);
   protected readonly pendingDelete = signal<Card | null>(null);
+  protected readonly showImport = signal(false);
   protected readonly actionError = signal<string | null>(null);
   // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
+  protected readonly importing = signal(false);
 
   ngOnInit(): void {
     // Carga los capítulos del libro (para el nombre en la cabecera) y las tarjetas del capítulo.
@@ -180,6 +202,27 @@ export class CapituloDetailComponent implements OnInit {
   protected openCreate(): void {
     this.editing.set(null);
     this.showForm.set(true);
+  }
+
+  protected openImport(): void {
+    this.showImport.set(true);
+  }
+
+  protected async onImport(drafts: CardContentDraft[]): Promise<void> {
+    if (this.importing()) {
+      return;
+    }
+    this.actionError.set(null);
+    this.importing.set(true);
+    try {
+      await this.cardsService.createMany(this.bookId, this.chapterId, drafts);
+      this.showImport.set(false);
+    } catch (error) {
+      console.error('No se pudieron importar las tarjetas', error);
+      this.actionError.set('No se pudieron importar las tarjetas. Inténtalo de nuevo.');
+    } finally {
+      this.importing.set(false);
+    }
   }
 
   protected openEdit(card: Card): void {
