@@ -5,9 +5,23 @@
       <button
         type="button"
         (click)="graded.emit(option.rating)"
-        [attr.aria-label]="option.label + ', vuelve en ' + interval(option.rating)"
-        class="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface-raised px-2 py-3 transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        [attr.aria-label]="
+          option.label +
+          ', vuelve en ' +
+          interval(option.rating) +
+          (option.rating === suggested() ? ' (sugerido)' : '')
+        "
+        [class.ring-2]="option.rating === suggested()"
+        [class.ring-accent]="option.rating === suggested()"
+        class="relative flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface-raised px-2 py-3 transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
       >
+        @if (option.rating === suggested()) {
+          <span
+            class="absolute -top-2 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium leading-none text-accent-contrast"
+          >
+            sugerido
+          </span>
+        }
         <span class="flex gap-0.5" aria-hidden="true">
           @for (slot of slots; track slot) {
             <app-icon

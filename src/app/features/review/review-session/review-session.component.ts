@@ -21,6 +21,7 @@ export class ReviewSessionComponent implements OnInit {
   protected readonly status = this.reviewService.status;
   protected readonly current = this.reviewService.current;
   protected readonly revealed = this.reviewService.revealed;
+  protected readonly suggestedRating = this.reviewService.suggestedRating;
   protected readonly previews = this.reviewService.previews;
   protected readonly errorMessage = this.reviewService.errorMessage;
   protected readonly position = this.reviewService.position;
@@ -47,6 +48,14 @@ export class ReviewSessionComponent implements OnInit {
     void this.reviewService.grade(rating);
   }
 
+  /** Acepta el grado sugerido (si hay). Es el "confirmar" del auto-grading: Enter/Espacio al revelar. */
+  protected acceptSuggestion(): void {
+    const suggested = this.suggestedRating();
+    if (suggested !== null) {
+      this.grade(suggested);
+    }
+  }
+
   @HostListener('document:keydown', ['$event'])
   protected onKeydown(event: KeyboardEvent): void {
     if (this.status() !== 'active') {
@@ -60,6 +69,12 @@ export class ReviewSessionComponent implements OnInit {
     if (this.revealed() && ['1', '2', '3', '4'].includes(event.key)) {
       event.preventDefault();
       this.grade(Number(event.key) as Rating);
+      return;
+    }
+    // Confirmar la sugerencia: Enter (o Espacio, ya revelado) acepta el grado resaltado.
+    if (this.revealed() && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      this.acceptSuggestion();
     }
   }
 }

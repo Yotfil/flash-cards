@@ -12,6 +12,7 @@ describe('ReviewSessionComponent', () => {
       status: signal('active' as const).asReadonly(),
       current: signal(null).asReadonly(),
       revealed: signal(false).asReadonly(),
+      suggestedRating: signal(null).asReadonly(),
       previews: signal(null).asReadonly(),
       errorMessage: signal<string | null>(null).asReadonly(),
       position: signal(0).asReadonly(),

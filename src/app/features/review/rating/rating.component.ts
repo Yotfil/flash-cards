@@ -24,6 +24,9 @@ interface RatingOption {
 })
 export class RatingComponent {
   readonly previews = input.required<Record<Rating, RatingOutcome>>();
+  /** Grado sugerido por velocidad de recuerdo (null = sin sugerencia). Sólo resalta; el usuario sigue
+   *  decidiendo. Usa el token de acento, no la escala rojo→verde. */
+  readonly suggested = input<Rating | null>(null);
   readonly graded = output<Rating>();
 
   protected readonly slots = [1, 2, 3, 4];
