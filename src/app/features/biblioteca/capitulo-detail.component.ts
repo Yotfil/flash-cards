@@ -4,8 +4,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { Card, CardContentDraft } from '@domain/models';
 import { CardsService } from '@services/cards.service';
 import { ChaptersService } from '@services/chapters.service';
+import { findDuplicateCardIds, sortCardsForDisplay } from '@services/card-duplicates';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { CardFormDialogComponent } from './card-form-dialog.component';
 import { CardImportDialogComponent } from './card-import-dialog.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
@@ -19,6 +21,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     RouterLink,
     EmptyStateComponent,
     ErrorStateComponent,
+    IconComponent,
     CardFormDialogComponent,
     CardImportDialogComponent,
     ConfirmDialogComponent,
@@ -98,7 +101,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
             </app-empty-state>
           } @else {
             <ul class="mt-6 flex flex-col gap-3">
-              @for (card of cards(); track card.id) {
+              @for (card of sortedCards(); track card.id) {
                 <li
                   class="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-4"
                 >
@@ -107,7 +110,26 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
                     <span class="shrink-0 text-text-muted" aria-hidden="true">→</span>
                     <span class="truncate text-text-secondary">{{ card.back }}</span>
                   </div>
-                  <div class="flex shrink-0 gap-2">
+                  <div class="flex shrink-0 items-center gap-2">
+                    @if (duplicateIds().has(card.id)) {
+                      <span class="group relative flex items-center">
+                        <button
+                          type="button"
+                          aria-label="Tarjeta repetida"
+                          (click)="toggleTooltip(card.id)"
+                          class="flex items-center rounded-md p-1 text-accent outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                        >
+                          <app-icon name="alert" size="sm" />
+                        </button>
+                        <span
+                          role="tooltip"
+                          class="pointer-events-none absolute bottom-full right-0 mb-1 whitespace-nowrap rounded-md bg-text-primary px-2 py-1 text-xs font-medium text-surface opacity-0 transition-opacity group-hover:opacity-100"
+                          [class.opacity-100]="openTooltipId() === card.id"
+                        >
+                          Repetida
+                        </span>
+                      </span>
+                    }
                     <button
                       type="button"
                       (click)="openEdit(card)"
@@ -177,6 +199,12 @@ export class CapituloDetailComponent implements OnInit {
   protected readonly cardsStatus = this.cardsService.status;
   protected readonly cardsError = this.cardsService.errorMessage;
 
+  // Lista ordenada por anverso (agrupa misma palabra) e ids de las tarjetas repetidas (idénticas).
+  protected readonly sortedCards = computed(() => sortCardsForDisplay(this.cards()));
+  protected readonly duplicateIds = computed(() => findDuplicateCardIds(this.cards()));
+  // Tooltip "Repetida" abierto (para móvil, donde no hay hover): id de la tarjeta o null.
+  protected readonly openTooltipId = signal<string | null>(null);
+
   protected readonly skeletons = [0, 1, 2];
 
   protected readonly showForm = signal(false);
@@ -206,6 +234,12 @@ export class CapituloDetailComponent implements OnInit {
 
   protected openImport(): void {
     this.showImport.set(true);
+  }
+
+  /** Alterna el tooltip "Repetida" de una tarjeta (en móvil se abre con tap; en escritorio basta el
+   *  hover, pero esto no estorba). */
+  protected toggleTooltip(cardId: string): void {
+    this.openTooltipId.update((current) => (current === cardId ? null : cardId));
   }
 
   protected async onImport(drafts: CardContentDraft[]): Promise<void> {
