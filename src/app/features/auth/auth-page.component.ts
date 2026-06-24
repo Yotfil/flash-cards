@@ -44,6 +44,9 @@ export class AuthPageComponent {
   }
 
   protected async submit(): Promise<void> {
+    if (this.submitting()) {
+      return;
+    }
     this.errorMessage.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
