@@ -1,9 +1,10 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import type { Chapter, ChapterDraft } from '@domain/models';
 import { BooksService } from '@services/books.service';
 import { ChaptersService } from '@services/chapters.service';
+import { ReviewService } from '@services/review';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { ChapterFormDialogComponent } from './chapter-form-dialog.component';
@@ -52,6 +53,24 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
             </button>
           }
         </header>
+
+        @if (chaptersStatus() === 'ready') {
+          <button
+            type="button"
+            [disabled]="studying()"
+            (click)="studyBook()"
+            class="mt-4 w-full rounded-xl border border-accent bg-surface px-4 py-3 text-sm font-medium text-accent transition-colors hover:bg-surface-sunken disabled:opacity-50"
+          >
+            @if (studying()) {
+              Preparando…
+            } @else {
+              Estudiar este libro
+            }
+          </button>
+          @if (studyMessage(); as message) {
+            <p class="mt-2 text-center text-sm text-text-muted">{{ message }}</p>
+          }
+        }
       } @else if (booksReady()) {
         <app-empty-state
           title="Libro no encontrado"
@@ -160,10 +179,14 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
 })
 export class LibroDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly booksService = inject(BooksService);
   private readonly chaptersService = inject(ChaptersService);
+  private readonly reviewService = inject(ReviewService);
 
   protected readonly bookId = this.route.snapshot.paramMap.get('bookId') ?? '';
+  protected readonly studying = signal(false);
+  protected readonly studyMessage = signal<string | null>(null);
 
   protected readonly book = computed(() =>
     this.booksService.books().find((candidate) => candidate.id === this.bookId),
@@ -191,6 +214,25 @@ export class LibroDetailComponent implements OnInit {
 
   protected reload(): void {
     void this.chaptersService.load(this.bookId);
+  }
+
+  /** Inicia una sesión de repaso con las tarjetas listas del libro; si no hay, avisa sin entrar. */
+  protected async studyBook(): Promise<void> {
+    if (this.studying()) {
+      return;
+    }
+    this.studyMessage.set(null);
+    this.studying.set(true);
+    try {
+      const count = await this.reviewService.startBook(this.bookId);
+      if (count === 0) {
+        this.studyMessage.set('Estás al día con este libro. No hay tarjetas para repasar ahora.');
+        return;
+      }
+      await this.router.navigate(['/repaso']);
+    } finally {
+      this.studying.set(false);
+    }
   }
 
   protected openCreate(): void {
