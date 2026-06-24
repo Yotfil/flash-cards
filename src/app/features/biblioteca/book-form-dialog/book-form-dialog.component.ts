@@ -23,6 +23,9 @@ import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@service
 export class BookFormDialogComponent implements OnInit {
   /** Libro a editar; si no se pasa, el diálogo está en modo "crear". */
   readonly book = input<Book | null>(null);
+  /** Default de tarjetas nuevas/día con el que se precarga un libro nuevo (ajuste global del
+   *  usuario). En modo editar no aplica: gana el valor guardado del libro. */
+  readonly defaultNewCardsPerDay = input(DEFAULT_NEW_CARDS_PER_DAY);
   /** El padre lo pone en true mientras persiste; bloquea botones y reenvíos. */
   readonly pending = input(false);
   readonly saved = output<BookDraft>();
@@ -51,6 +54,9 @@ export class BookFormDialogComponent implements OnInit {
         newCardsPerDay: existing.newCardsPerDay,
         maxReviewsPerDay: existing.maxReviewsPerDay,
       });
+    } else {
+      // Modo crear: precarga las nuevas/día con el default global del usuario (Ajustes).
+      this.form.get('newCardsPerDay')?.setValue(this.defaultNewCardsPerDay());
     }
   }
 

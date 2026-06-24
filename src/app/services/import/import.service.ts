@@ -5,13 +5,10 @@
 import { Injectable, inject } from '@angular/core';
 
 import { ImportRepository, SchedulingPort, type ImportBookInput } from '@domain/ports';
+import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
 import type { Book } from '@domain/models';
 import { AuthService } from '@services/auth.service';
-import {
-  BooksService,
-  DEFAULT_MAX_REVIEWS_PER_DAY,
-  DEFAULT_NEW_CARDS_PER_DAY,
-} from '@services/books.service';
+import { BooksService, DEFAULT_MAX_REVIEWS_PER_DAY } from '@services/books.service';
 import type { ParseResult } from './flashcard-parser';
 
 export interface ImportSummary {
@@ -40,7 +37,9 @@ export class ImportService {
       name,
       subject: 'general',
       studyDirection: 'forward',
-      newCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
+      // Igual que un libro creado a mano: arranca con el default global del usuario (Ajustes).
+      newCardsPerDay:
+        this.authService.currentUser()?.settings.defaultNewCardsPerDay ?? DEFAULT_NEW_CARDS_PER_DAY,
       maxReviewsPerDay: DEFAULT_MAX_REVIEWS_PER_DAY,
       order,
       cardCount,

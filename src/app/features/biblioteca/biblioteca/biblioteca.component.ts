@@ -1,7 +1,9 @@
-import { Component, type OnInit, inject, signal } from '@angular/core';
+import { Component, type OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
 import type { Book, BookDraft } from '@domain/models';
+import { AuthService } from '@services/auth.service';
 import { BooksService } from '@services/books.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
@@ -24,10 +26,17 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
 })
 export class BibliotecaComponent implements OnInit {
   private readonly booksService = inject(BooksService);
+  private readonly authService = inject(AuthService);
 
   protected readonly books = this.booksService.books;
   protected readonly status = this.booksService.status;
   protected readonly errorMessage = this.booksService.errorMessage;
+
+  /** Default global del usuario para precargar el form de un libro nuevo (Ajustes). */
+  protected readonly defaultNewCardsPerDay = computed(
+    () =>
+      this.authService.currentUser()?.settings.defaultNewCardsPerDay ?? DEFAULT_NEW_CARDS_PER_DAY,
+  );
 
   protected readonly skeletons = [0, 1, 2];
 

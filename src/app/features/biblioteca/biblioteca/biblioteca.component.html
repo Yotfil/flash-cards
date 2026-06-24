@@ -114,6 +114,7 @@
 @if (showForm()) {
   <app-book-form-dialog
     [book]="editing()"
+    [defaultNewCardsPerDay]="defaultNewCardsPerDay()"
     [pending]="saving()"
     (saved)="onSave($event)"
     (cancelled)="closeForm()"
