@@ -9,6 +9,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDocs,
   query,
   setDoc,
@@ -17,7 +18,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
-import { CardRepository, type CardCreateInput } from '@domain/ports';
+import { CardRepository, type CardCreateInput, type CardStateCounts } from '@domain/ports';
 import { type Card, type CardContentDraft, type CardScheduling, CardState } from '@domain/models';
 import { FIRESTORE } from '@infrastructure/firebase';
 import { cardToFirestoreDocument, schedulingToFirestore } from './card-document.mapper';
@@ -71,6 +72,22 @@ export class FirestoreCardRepository extends CardRepository {
       const data = cardDocumentSchema.parse(document.data());
       return this.toCard(document.id, data);
     });
+  }
+
+  override async countByState(uid: string): Promise<CardStateCounts> {
+    const cards = this.cardsCollection(uid);
+    // Conteo agregado en el servidor (no se leen los documentos). Estados: 0=New, 1=Learning,
+    // 2=Review, 3=Relearning. "En aprendizaje" agrupa Learning + Relearning.
+    const [newCards, learning, review] = await Promise.all([
+      getCountFromServer(query(cards, where('scheduling.state', '==', 0))),
+      getCountFromServer(query(cards, where('scheduling.state', 'in', [1, 3]))),
+      getCountFromServer(query(cards, where('scheduling.state', '==', 2))),
+    ]);
+    return {
+      newCards: newCards.data().count,
+      learning: learning.data().count,
+      review: review.data().count,
+    };
   }
 
   override async create(uid: string, input: CardCreateInput): Promise<Card> {

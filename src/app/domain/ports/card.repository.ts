@@ -11,6 +11,16 @@ import type { Card, CardContentDraft, CardScheduling } from '../models';
  */
 export type CardCreateInput = Omit<Card, 'id' | 'createdAt' | 'updatedAt'>;
 
+/** Conteo de tarjetas por estado, para el panel de progreso (§8.7). */
+export interface CardStateCounts {
+  /** Estado New: aún no estudiadas. */
+  newCards: number;
+  /** Estados Learning + Relearning: en aprendizaje. */
+  learning: number;
+  /** Estado Review: dominadas (graduadas del aprendizaje). */
+  review: number;
+}
+
 export abstract class CardRepository {
   /** Lista las tarjetas de un capítulo ordenadas por antigüedad (orden de creación). */
   abstract listByChapter(uid: string, chapterId: string): Promise<Card[]>;
@@ -21,6 +31,9 @@ export abstract class CardRepository {
   /** Lista las tarjetas con `scheduling.due ≤ endOfDay` (candidatas de la cola diaria: vencidas y
    *  nuevas, ya que las nuevas tienen `due` en el pasado). */
   abstract listDue(uid: string, endOfDay: Date): Promise<Card[]>;
+
+  /** Cuenta las tarjetas del usuario por estado (conteo agregado, sin leer cada documento). */
+  abstract countByState(uid: string): Promise<CardStateCounts>;
 
   /** Crea una tarjeta y devuelve el modelo resultante (con `id` y timestamps ya asignados). */
   abstract create(uid: string, input: CardCreateInput): Promise<Card>;
