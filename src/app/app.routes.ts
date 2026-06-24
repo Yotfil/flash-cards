@@ -7,7 +7,7 @@ export const routes: Routes = [
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('@features/auth/auth-page.component').then((m) => m.AuthPageComponent),
+      import('@features/auth-page/auth-page.component').then((m) => m.AuthPageComponent),
   },
   {
     path: '',
@@ -22,24 +22,28 @@ export const routes: Routes = [
       {
         path: 'biblioteca',
         loadComponent: () =>
-          import('@features/biblioteca/biblioteca.component').then((m) => m.BibliotecaComponent),
+          import('@features/biblioteca/biblioteca/biblioteca.component').then(
+            (m) => m.BibliotecaComponent,
+          ),
       },
       {
         path: 'importar',
         loadComponent: () =>
-          import('@features/biblioteca/importar-libro.component').then(
+          import('@features/biblioteca/importar-libro/importar-libro.component').then(
             (m) => m.ImportarLibroComponent,
           ),
       },
       {
         path: 'biblioteca/:bookId',
         loadComponent: () =>
-          import('@features/biblioteca/libro-detail.component').then((m) => m.LibroDetailComponent),
+          import('@features/biblioteca/libro-detail/libro-detail.component').then(
+            (m) => m.LibroDetailComponent,
+          ),
       },
       {
         path: 'biblioteca/:bookId/:chapterId',
         loadComponent: () =>
-          import('@features/biblioteca/capitulo-detail.component').then(
+          import('@features/biblioteca/capitulo-detail/capitulo-detail.component').then(
             (m) => m.CapituloDetailComponent,
           ),
       },
@@ -60,7 +64,9 @@ export const routes: Routes = [
     path: 'repaso',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('@features/review/review-session.component').then((m) => m.ReviewSessionComponent),
+      import('@features/review/review-session/review-session.component').then(
+        (m) => m.ReviewSessionComponent,
+      ),
   },
   { path: '**', redirectTo: '' },
 ];

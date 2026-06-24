@@ -1,0 +1,30 @@
+<div role="group" aria-label="Calificación">
+  <p class="mb-3 text-center text-sm text-text-secondary">¿Qué tan bien la recordaste?</p>
+  <div class="grid grid-cols-4 gap-2">
+    @for (option of options; track option.rating) {
+      <button
+        type="button"
+        (click)="graded.emit(option.rating)"
+        [attr.aria-label]="option.label + ', vuelve en ' + interval(option.rating)"
+        class="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface-raised px-2 py-3 transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      >
+        <span class="flex gap-0.5" aria-hidden="true">
+          @for (slot of slots; track slot) {
+            <app-icon
+              name="brain"
+              size="sm"
+              [class]="slot <= option.rating ? option.activeClass : 'text-text-muted opacity-30'"
+            />
+          }
+        </span>
+        <span class="text-sm font-medium text-text-primary">{{ option.label }}</span>
+        <span class="text-xs text-text-muted">{{ interval(option.rating) }}</span>
+        <kbd
+          class="rounded border border-border px-1.5 text-xs text-text-muted"
+          aria-hidden="true"
+          >{{ option.rating }}</kbd
+        >
+      </button>
+    }
+  </div>
+</div>
