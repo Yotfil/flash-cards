@@ -50,6 +50,25 @@
       } @else if (saveState() === 'error') {
         <p class="mt-2 text-sm text-text-secondary">No se pudo guardar. Inténtalo de nuevo.</p>
       }
+
+      <label class="mt-5 flex items-start gap-3">
+        <input
+          type="checkbox"
+          [checked]="currentUser.settings.autoGradeByTime"
+          [disabled]="autoGradeSaving()"
+          (change)="setAutoGradeByTime($any($event.target).checked)"
+          class="mt-0.5 h-4 w-4 shrink-0 accent-accent disabled:opacity-50"
+        />
+        <span>
+          <span class="block text-sm font-medium text-text-primary">
+            Sugerir calificación por tiempo
+          </span>
+          <span class="mt-0.5 block text-sm text-text-muted">
+            Al revelar la respuesta, resalta un cerebro según tu velocidad de recuerdo. Tú confirmas
+            (toque, número o Enter) o eliges otro; nunca califica solo.
+          </span>
+        </span>
+      </label>
     </div>
   }
 

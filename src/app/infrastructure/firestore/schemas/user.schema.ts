@@ -18,6 +18,8 @@ const userSettingsSchema = z.object({
   // Campo nuevo (PR control de nuevas): los perfiles creados antes no lo tienen, así que al leer
   // se rellena con el default en vez de fallar. Se persistirá la próxima vez que se guarde.
   defaultNewCardsPerDay: z.number().default(DEFAULT_NEW_CARDS_PER_DAY),
+  // Igual: perfiles antiguos sin el campo se leen con el default (sugerencia activada).
+  autoGradeByTime: z.boolean().default(true),
 });
 
 /**
