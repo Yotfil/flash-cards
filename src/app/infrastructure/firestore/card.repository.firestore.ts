@@ -14,6 +14,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 
 import { CardRepository, type CardCreateInput } from '@domain/ports';
@@ -23,6 +24,8 @@ import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
 const USERS_COLLECTION = 'users';
 const CARDS_COLLECTION = 'cards';
+// Firestore admite hasta 500 operaciones por batch; se deja margen.
+const MAX_BATCH_SIZE = 450;
 
 @Injectable()
 export class FirestoreCardRepository extends CardRepository {
@@ -46,29 +49,25 @@ export class FirestoreCardRepository extends CardRepository {
   override async create(uid: string, input: CardCreateInput): Promise<Card> {
     const reference = doc(this.cardsCollection(uid));
     const now = new Date();
-
-    const document: Record<string, unknown> = {
-      bookId: input.bookId,
-      chapterId: input.chapterId,
-      noteId: input.noteId,
-      direction: input.direction,
-      front: input.front,
-      back: input.back,
-      scheduling: this.toSchedulingDocument(input.scheduling),
-      suspended: input.suspended,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-    };
-    // Firestore rechaza `undefined`: los opcionales de contenido sólo se incluyen si están presentes.
-    this.assignOptional(document, 'pronunciation', input.pronunciation);
-    this.assignOptional(document, 'example', input.example);
-    this.assignOptional(document, 'audioUrl', input.audioUrl);
-    this.assignOptional(document, 'notes', input.notes);
-    this.assignOptional(document, 'tags', input.tags);
-
-    await setDoc(reference, document);
-
+    await setDoc(reference, this.toCardDocument(input, now));
     return { ...input, id: reference.id, createdAt: now, updatedAt: now };
+  }
+
+  override async createMany(uid: string, inputs: CardCreateInput[]): Promise<Card[]> {
+    const now = new Date();
+    const created: Card[] = [];
+
+    // Firestore limita cada batch a 500 operaciones; se trocea por si la importación es grande.
+    for (const chunk of this.chunk(inputs, MAX_BATCH_SIZE)) {
+      const batch = writeBatch(this.firestore);
+      for (const input of chunk) {
+        const reference = doc(this.cardsCollection(uid));
+        batch.set(reference, this.toCardDocument(input, now));
+        created.push({ ...input, id: reference.id, createdAt: now, updatedAt: now });
+      }
+      await batch.commit();
+    }
+    return created;
   }
 
   override async update(
@@ -98,6 +97,37 @@ export class FirestoreCardRepository extends CardRepository {
     if (value !== undefined) {
       target[key] = value;
     }
+  }
+
+  /** Documento Firestore de una tarjeta (Dates → Timestamp, opcionales sólo si presentes). */
+  private toCardDocument(input: CardCreateInput, now: Date): Record<string, unknown> {
+    const document: Record<string, unknown> = {
+      bookId: input.bookId,
+      chapterId: input.chapterId,
+      noteId: input.noteId,
+      direction: input.direction,
+      front: input.front,
+      back: input.back,
+      scheduling: this.toSchedulingDocument(input.scheduling),
+      suspended: input.suspended,
+      createdAt: Timestamp.fromDate(now),
+      updatedAt: Timestamp.fromDate(now),
+    };
+    this.assignOptional(document, 'pronunciation', input.pronunciation);
+    this.assignOptional(document, 'example', input.example);
+    this.assignOptional(document, 'audioUrl', input.audioUrl);
+    this.assignOptional(document, 'notes', input.notes);
+    this.assignOptional(document, 'tags', input.tags);
+    return document;
+  }
+
+  /** Trocea un arreglo en lotes de tamaño máximo `size`. */
+  private chunk<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let start = 0; start < items.length; start += size) {
+      chunks.push(items.slice(start, start + size));
+    }
+    return chunks;
   }
 
   /** El bloque `scheduling` con las fechas convertidas a Timestamp para Firestore. */

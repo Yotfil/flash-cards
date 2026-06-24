@@ -43,6 +43,17 @@ class FakeCardRepository extends CardRepository {
     return card;
   }
 
+  override async createMany(_uid: string, inputs: CardCreateInput[]): Promise<Card[]> {
+    const created = inputs.map((input, offset) => ({
+      ...input,
+      id: `card-${this.cards.length + offset + 1}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    this.cards.push(...created);
+    return created;
+  }
+
   override async update(): Promise<void> {
     // No usado en estas pruebas.
   }
@@ -115,6 +126,31 @@ describe('CardsService', () => {
     expect(repository.lastCreateInput?.noteId).toBeTruthy();
     expect(service.cards()).toHaveLength(1);
     expect(books.cardCountCalls).toEqual([{ bookId: 'book-1', delta: 1 }]);
+  });
+
+  it('createMany crea n tarjetas forward y sube el conteo del libro por n', async () => {
+    const service = configure('u1');
+    await service.load('chapter-1');
+
+    await service.createMany('book-1', 'chapter-1', [
+      { front: 'a', back: '1' },
+      { front: 'b', back: '2' },
+      { front: 'c', back: '3' },
+    ]);
+
+    expect(service.cards()).toHaveLength(3);
+    expect(service.cards().every((card) => card.direction === 'forward')).toBe(true);
+    expect(books.cardCountCalls).toEqual([{ bookId: 'book-1', delta: 3 }]);
+  });
+
+  it('createMany no hace nada con una lista vacía', async () => {
+    const service = configure('u1');
+    await service.load('chapter-1');
+
+    await service.createMany('book-1', 'chapter-1', []);
+
+    expect(service.cards()).toHaveLength(0);
+    expect(books.cardCountCalls).toEqual([]);
   });
 
   it('al borrar, baja el conteo del libro', async () => {
