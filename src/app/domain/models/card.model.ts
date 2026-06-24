@@ -7,6 +7,13 @@
  */
 export type CardDirection = 'forward' | 'reverse';
 
+/**
+ * Tipo de tarjeta. `basic` = anverso/reverso. `cloze` = "rellenar el hueco": `front` guarda el texto
+ * plantilla con marcadores `{{...}}` y `back` queda vacío. Ausencia = `basic` (Principio 2: campo
+ * nuevo opcional; las tarjetas previas no lo tienen y se tratan como básicas).
+ */
+export type CardType = 'basic' | 'cloze';
+
 /** Estado FSRS de la tarjeta. Espeja el enum `State` de ts-fsrs. */
 export enum CardState {
   New = 0,
@@ -45,6 +52,8 @@ export interface Card {
   direction: CardDirection;
 
   // --- Contenido (lo que se ve) ---
+  /** Tipo de tarjeta; ausente = `basic` (Principio 2). En `cloze`, `front` es la plantilla `{{...}}`. */
+  cardType?: CardType;
   front: string;
   back: string;
   // Opcionales: Principio 2 (esquema listo / UI después). El MVP solo pinta front/back.
@@ -73,6 +82,7 @@ export interface Card {
  * (pronunciation, example, …) pero la UI del MVP sólo expone anverso/reverso.
  */
 export interface CardContentDraft {
+  cardType: CardType;
   front: string;
   back: string;
 }

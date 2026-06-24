@@ -3,12 +3,13 @@
 // tiene su propio puerto en vez de encadenar los repos sueltos. La implementación (Firestore) usa un
 // batch. El servicio arma el contenido; el repositorio asigna ids y relaciones.
 
-import type { Book, CardDirection, CardScheduling } from '../models';
+import type { Book, CardDirection, CardScheduling, CardType } from '../models';
 
 /** Una tarjeta a importar, sin ids ni relaciones (el repositorio les pone `bookId`/`chapterId`). */
 export interface ImportCardInput {
   noteId: string;
   direction: CardDirection;
+  cardType: CardType;
   front: string;
   back: string;
   scheduling: CardScheduling;

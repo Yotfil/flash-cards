@@ -58,11 +58,11 @@ const PARSE_RESULT: ParseResult = {
     {
       name: 'Cap 1',
       cards: [
-        { front: 'a', back: '1' },
-        { front: 'b', back: '2' },
+        { cardType: 'basic', front: 'a', back: '1' },
+        { cardType: 'basic', front: 'b', back: '2' },
       ],
     },
-    { name: 'Cap 2', cards: [{ front: 'c', back: '3' }] },
+    { name: 'Cap 2', cards: [{ cardType: 'basic', front: 'c', back: '3' }] },
   ],
   errors: [],
   validCardCount: 3,

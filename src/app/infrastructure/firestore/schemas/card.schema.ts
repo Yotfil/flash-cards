@@ -32,6 +32,8 @@ export const cardDocumentSchema = z.object({
   chapterId: z.string(),
   noteId: z.string(),
   direction: z.enum(['forward', 'reverse']),
+  // Campo nuevo (cloze): las tarjetas previas no lo tienen → ausente, que se trata como 'basic'.
+  cardType: z.enum(['basic', 'cloze']).optional(),
   front: z.string(),
   back: z.string(),
   pronunciation: z.string().optional(),

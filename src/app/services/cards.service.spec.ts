@@ -145,7 +145,11 @@ describe('CardsService', () => {
     const service = configure('u1');
     await service.load('chapter-1');
 
-    await service.create('book-1', 'chapter-1', { front: 'to give up', back: 'rendirse' });
+    await service.create('book-1', 'chapter-1', {
+      cardType: 'basic',
+      front: 'to give up',
+      back: 'rendirse',
+    });
 
     expect(repository.lastCreateInput?.direction).toBe('forward');
     expect(repository.lastCreateInput?.suspended).toBe(false);
@@ -160,9 +164,9 @@ describe('CardsService', () => {
     await service.load('chapter-1');
 
     await service.createMany('book-1', 'chapter-1', [
-      { front: 'a', back: '1' },
-      { front: 'b', back: '2' },
-      { front: 'c', back: '3' },
+      { cardType: 'basic', front: 'a', back: '1' },
+      { cardType: 'basic', front: 'b', back: '2' },
+      { cardType: 'basic', front: 'c', back: '3' },
     ]);
 
     expect(service.cards()).toHaveLength(3);
@@ -183,7 +187,7 @@ describe('CardsService', () => {
   it('al borrar, baja el conteo del libro', async () => {
     const service = configure('u1');
     await service.load('chapter-1');
-    await service.create('book-1', 'chapter-1', { front: 'a', back: 'b' });
+    await service.create('book-1', 'chapter-1', { cardType: 'basic', front: 'a', back: 'b' });
     const [created] = service.cards();
     if (!created) {
       throw new Error('la tarjeta creada debería existir');

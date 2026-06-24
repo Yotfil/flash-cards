@@ -57,6 +57,6 @@ export class CardFormDialogComponent implements OnInit {
       return;
     }
     const value = this.form.getRawValue();
-    this.saved.emit({ front: value.front.trim(), back: value.back.trim() });
+    this.saved.emit({ cardType: 'basic', front: value.front.trim(), back: value.back.trim() });
   }
 }
