@@ -99,6 +99,32 @@ describe('QueueService', () => {
     expect(service.perBook()).toEqual([{ bookId: 'b1', name: 'b1', due: 1, new: 1 }]);
   });
 
+  it('applyNewLimit recomputa la cola sin re-consultar', async () => {
+    const service = configure(
+      [
+        buildCard('due', 'b1', CardState.Review),
+        buildCard('n1', 'b1', CardState.New),
+        buildCard('n2', 'b1', CardState.New),
+        buildCard('n3', 'b1', CardState.New),
+      ],
+      [buildBook('b1', 1)],
+      null,
+    );
+    await service.load();
+    expect(service.newCount()).toBe(1); // tope por libro
+    expect(service.availableNew()).toBe(3);
+
+    service.applyNewLimit(3); // empujar más
+
+    expect(service.newCount()).toBe(3);
+    expect(service.queue()).toHaveLength(4); // 1 vencida + 3 nuevas
+
+    service.applyNewLimit(0); // ninguna nueva
+
+    expect(service.newCount()).toBe(0);
+    expect(service.queue()).toHaveLength(1);
+  });
+
   it('descuenta las nuevas ya introducidas hoy (de dailyStats)', async () => {
     const today: DailyStats = {
       id: '2026-06-23',
