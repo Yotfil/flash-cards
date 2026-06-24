@@ -59,6 +59,20 @@ export class FirestoreCardRepository extends CardRepository {
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
+  override async listDue(uid: string, endOfDay: Date): Promise<Card[]> {
+    // Rango sobre un solo campo (`scheduling.due`): auto-indexado, sin índice compuesto.
+    const cardsQuery = query(
+      this.cardsCollection(uid),
+      where('scheduling.due', '<=', Timestamp.fromDate(endOfDay)),
+    );
+    const snapshot = await getDocs(cardsQuery);
+
+    return snapshot.docs.map((document) => {
+      const data = cardDocumentSchema.parse(document.data());
+      return this.toCard(document.id, data);
+    });
+  }
+
   override async create(uid: string, input: CardCreateInput): Promise<Card> {
     const reference = doc(this.cardsCollection(uid));
     const now = new Date();

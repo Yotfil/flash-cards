@@ -4,11 +4,12 @@
 // estadísticas (futuro) debe tratar las ausentes como 0.
 
 import { Injectable, inject } from '@angular/core';
-import { doc, increment, setDoc } from 'firebase/firestore';
+import { doc, getDoc, increment, setDoc } from 'firebase/firestore';
 
 import { DailyStatsRepository, type ReviewStatInput } from '@domain/ports';
-import type { Rating } from '@domain/models';
+import type { DailyStats, Rating } from '@domain/models';
 import { FIRESTORE } from '@infrastructure/firebase';
+import { dailyStatsDocumentSchema } from './schemas/daily-stats.schema';
 
 const USERS_COLLECTION = 'users';
 const DAILY_STATS_COLLECTION = 'dailyStats';
@@ -37,5 +38,17 @@ export class FirestoreDailyStatsRepository extends DailyStatsRepository {
     }
 
     await setDoc(reference, data, { merge: true });
+  }
+
+  override async getToday(uid: string, dateId: string): Promise<DailyStats | null> {
+    const snapshot = await getDoc(
+      doc(this.firestore, USERS_COLLECTION, uid, DAILY_STATS_COLLECTION, dateId),
+    );
+    if (!snapshot.exists()) {
+      return null;
+    }
+    // Frontera: dato externo; los conteos dispersos se completan a 0 (schema con defaults).
+    const data = dailyStatsDocumentSchema.parse(snapshot.data());
+    return { id: dateId, ...data };
   }
 }

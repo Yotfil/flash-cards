@@ -2,7 +2,7 @@
 // alimenta las estadísticas y, vía `newCardsIntroduced`, hace cumplir el tope de nuevas/día (la cola
 // de F1.6 lo leerá). El id del documento ES la fecha del día de estudio.
 
-import type { Rating } from '../models';
+import type { DailyStats, Rating } from '../models';
 
 export interface ReviewStatInput {
   rating: Rating;
@@ -16,4 +16,7 @@ export abstract class DailyStatsRepository {
   /** Registra un repaso del día: incrementa `reviewsCompleted`, `ratingCounts` y, si es nueva,
    *  `newCardsIntroduced[bookId]`. */
   abstract recordReview(uid: string, dateId: string, input: ReviewStatInput): Promise<void>;
+
+  /** Lee el contador del día indicado, o null si aún no existe. */
+  abstract getToday(uid: string, dateId: string): Promise<DailyStats | null>;
 }
