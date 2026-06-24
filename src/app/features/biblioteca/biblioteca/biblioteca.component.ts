@@ -7,7 +7,9 @@ import { AuthService } from '@services/auth.service';
 import { BooksService } from '@services/books.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { BookFormDialogComponent } from '../book-form-dialog/book-form-dialog.component';
+import { BookSettingsDialogComponent } from '../book-settings-dialog/book-settings-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 /** Pantalla "Biblioteca": CRUD de libros (Fase 1). Sólo pinta y captura eventos; toda la lógica y
@@ -18,7 +20,9 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
     RouterLink,
     EmptyStateComponent,
     ErrorStateComponent,
+    IconComponent,
     BookFormDialogComponent,
+    BookSettingsDialogComponent,
     ConfirmDialogComponent,
   ],
   templateUrl: './biblioteca.component.html',
@@ -43,10 +47,12 @@ export class BibliotecaComponent implements OnInit {
   // Estado local de los diálogos (sólo de la vista).
   protected readonly showForm = signal(false);
   protected readonly editing = signal<Book | null>(null);
+  protected readonly configuring = signal<Book | null>(null);
   protected readonly pendingDelete = signal<Book | null>(null);
   protected readonly actionError = signal<string | null>(null);
   // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
   protected readonly saving = signal(false);
+  protected readonly savingSettings = signal(false);
   protected readonly deleting = signal(false);
 
   ngOnInit(): void {
@@ -70,6 +76,35 @@ export class BibliotecaComponent implements OnInit {
   protected closeForm(): void {
     this.showForm.set(false);
     this.editing.set(null);
+  }
+
+  protected openSettings(book: Book): void {
+    this.configuring.set(book);
+  }
+
+  protected closeSettings(): void {
+    this.configuring.set(null);
+  }
+
+  protected async onSaveSettings(changes: Partial<BookDraft>): Promise<void> {
+    if (this.savingSettings()) {
+      return;
+    }
+    const book = this.configuring();
+    if (!book) {
+      return;
+    }
+    this.actionError.set(null);
+    this.savingSettings.set(true);
+    try {
+      await this.booksService.update(book.id, changes);
+      this.closeSettings();
+    } catch (error) {
+      console.error('No se pudieron guardar los ajustes del libro', error);
+      this.actionError.set('No se pudieron guardar los ajustes. Inténtalo de nuevo.');
+    } finally {
+      this.savingSettings.set(false);
+    }
   }
 
   protected async onSave(draft: BookDraft): Promise<void> {

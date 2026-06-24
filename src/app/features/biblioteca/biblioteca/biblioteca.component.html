@@ -89,6 +89,15 @@
               <div class="flex shrink-0 gap-2">
                 <button
                   type="button"
+                  [attr.aria-label]="'Ajustes de ' + book.name"
+                  title="Ajustes del libro"
+                  (click)="openSettings(book)"
+                  class="rounded-lg border border-border bg-surface p-1.5 text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text-primary"
+                >
+                  <app-icon name="sliders" size="sm" />
+                </button>
+                <button
+                  type="button"
                   (click)="openEdit(book)"
                   class="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
                 >
@@ -118,6 +127,15 @@
     [pending]="saving()"
     (saved)="onSave($event)"
     (cancelled)="closeForm()"
+  />
+}
+
+@if (configuring(); as book) {
+  <app-book-settings-dialog
+    [book]="book"
+    [pending]="savingSettings()"
+    (saved)="onSaveSettings($event)"
+    (cancelled)="closeSettings()"
   />
 }
 

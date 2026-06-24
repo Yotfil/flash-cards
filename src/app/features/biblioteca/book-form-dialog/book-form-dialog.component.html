@@ -54,34 +54,6 @@
           </label>
         </div>
       </fieldset>
-
-      <div class="flex gap-4">
-        <div class="flex flex-1 flex-col gap-1.5">
-          <label for="book-new" class="text-sm font-medium text-text-secondary">
-            Nuevas por día
-          </label>
-          <input
-            id="book-new"
-            type="number"
-            min="0"
-            formControlName="newCardsPerDay"
-            class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-          />
-        </div>
-        <div class="flex flex-1 flex-col gap-1.5">
-          <label for="book-max" class="text-sm font-medium text-text-secondary">
-            Máx. repasos/día
-          </label>
-          <input
-            id="book-max"
-            type="number"
-            min="0"
-            formControlName="maxReviewsPerDay"
-            class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-          />
-          <p class="text-xs text-text-muted">0 = sin tope.</p>
-        </div>
-      </div>
     </div>
 
     <div class="mt-6 flex justify-end gap-3">
