@@ -23,6 +23,7 @@ export class AjustesComponent implements OnInit {
 
   protected readonly user = this.authService.currentUser;
   protected readonly signingOut = signal(false);
+  protected readonly autoGradeSaving = signal(false);
 
   // Default global de tarjetas nuevas por día.
   protected readonly newCardsControl = new FormControl<number>(DEFAULT_NEW_CARDS_PER_DAY, {
@@ -55,6 +56,22 @@ export class AjustesComponent implements OnInit {
     } catch (error) {
       console.error('No se pudo guardar el default de tarjetas nuevas', error);
       this.saveState.set('error');
+    }
+  }
+
+  /** Activa/desactiva la sugerencia de calificación por tiempo. Revierte la UI si falla el guardado
+   *  (el checkbox refleja `user().settings`, así que basta con no haber persistido el cambio). */
+  protected async setAutoGradeByTime(enabled: boolean): Promise<void> {
+    if (this.autoGradeSaving()) {
+      return;
+    }
+    this.autoGradeSaving.set(true);
+    try {
+      await this.authService.updateSettings({ autoGradeByTime: enabled });
+    } catch (error) {
+      console.error('No se pudo guardar la preferencia de calificación por tiempo', error);
+    } finally {
+      this.autoGradeSaving.set(false);
     }
   }
 

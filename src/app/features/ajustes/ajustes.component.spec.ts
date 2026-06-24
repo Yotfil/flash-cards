@@ -12,7 +12,13 @@ function fakeUser(defaultNewCardsPerDay: number): User {
     displayName: 'Ada',
     email: 'ada@example.com',
     createdAt: new Date(),
-    settings: { timezone: 'UTC', dayStartHour: 4, theme: 'system', defaultNewCardsPerDay },
+    settings: {
+      timezone: 'UTC',
+      dayStartHour: 4,
+      theme: 'system',
+      defaultNewCardsPerDay,
+      autoGradeByTime: true,
+    },
     isSearchable: false,
   };
 }

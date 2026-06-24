@@ -26,6 +26,11 @@ export interface UserSettings {
    * {@link DEFAULT_NEW_CARDS_PER_DAY}.
    */
   defaultNewCardsPerDay: number;
+  /**
+   * Si está activo, al revelar la respuesta se SUGIERE un grado según la velocidad de recuerdo (el
+   * usuario sigue confirmando; nunca califica solo). Asiste, no automatiza. Default true.
+   */
+  autoGradeByTime: boolean;
 }
 
 export interface User {

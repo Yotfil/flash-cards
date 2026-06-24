@@ -12,7 +12,13 @@ const USER: User = {
   displayName: 'Test',
   email: 't@e.com',
   createdAt: new Date(),
-  settings: { timezone: 'UTC', dayStartHour: 4, theme: 'system', defaultNewCardsPerDay: 20 },
+  settings: {
+    timezone: 'UTC',
+    dayStartHour: 4,
+    theme: 'system',
+    defaultNewCardsPerDay: 20,
+    autoGradeByTime: true,
+  },
   isSearchable: false,
 };
 

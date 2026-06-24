@@ -21,6 +21,7 @@ function buildDefaultUser(identity: AuthIdentity): User {
       dayStartHour: 4,
       theme: 'system',
       defaultNewCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
+      autoGradeByTime: true,
     },
     isSearchable: false,
   };

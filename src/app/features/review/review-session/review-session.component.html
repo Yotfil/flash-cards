@@ -54,7 +54,11 @@
       }
       @if (revealed()) {
         @if (previews(); as options) {
-          <app-rating [previews]="options" (graded)="grade($event)" />
+          <app-rating
+            [previews]="options"
+            [suggested]="suggestedRating()"
+            (graded)="grade($event)"
+          />
         }
       } @else {
         <button
