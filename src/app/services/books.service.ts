@@ -1,0 +1,89 @@
+// Lógica de negocio de los libros: orquesta el puerto BookRepository y la sesión (AuthService) y
+// expone el estado de la biblioteca como signals para que la UI lo consuma. No conoce Firestore.
+// El `uid` se resuelve aquí (desde la sesión), no en los componentes.
+
+import { Injectable, inject, signal } from '@angular/core';
+
+import { BookRepository } from '@domain/ports';
+import type { Book, BookDraft } from '@domain/models';
+import { AuthService } from './auth.service';
+
+/** Valores por defecto de un libro nuevo (espec. §6.4). Reutilizables por el formulario. */
+export const DEFAULT_NEW_CARDS_PER_DAY = 20;
+export const DEFAULT_MAX_REVIEWS_PER_DAY = 200;
+
+/** Estado de carga de la biblioteca, para que la UI elija qué pintar (skeleton/error/lista). */
+export type BooksStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+@Injectable({ providedIn: 'root' })
+export class BooksService {
+  private readonly bookRepository = inject(BookRepository);
+  private readonly authService = inject(AuthService);
+
+  private readonly booksSignal = signal<Book[]>([]);
+  private readonly statusSignal = signal<BooksStatus>('idle');
+  private readonly errorMessageSignal = signal<string | null>(null);
+
+  readonly books = this.booksSignal.asReadonly();
+  readonly status = this.statusSignal.asReadonly();
+  readonly errorMessage = this.errorMessageSignal.asReadonly();
+
+  /** Carga los libros del usuario actual. Maneja el error de forma visible (contrato). */
+  async load(): Promise<void> {
+    this.statusSignal.set('loading');
+    this.errorMessageSignal.set(null);
+    try {
+      const uid = this.requireUid();
+      this.booksSignal.set(await this.bookRepository.listByUser(uid));
+      this.statusSignal.set('ready');
+    } catch (error) {
+      this.fail('No se pudieron cargar tus libros.', error);
+    }
+  }
+
+  /** Crea un libro al final de la biblioteca (orden = máximo actual + 1) y lo añade a la lista. */
+  async create(draft: BookDraft): Promise<void> {
+    const uid = this.requireUid();
+    const order = this.nextOrder();
+    const created = await this.bookRepository.create(uid, { ...draft, order });
+    this.booksSignal.update((books) => [...books, created]);
+  }
+
+  /** Aplica cambios a un libro existente y refleja el cambio en la lista local. */
+  async update(bookId: string, changes: Partial<BookDraft>): Promise<void> {
+    const uid = this.requireUid();
+    await this.bookRepository.update(uid, bookId, changes);
+    this.booksSignal.update((books) =>
+      books.map((book) =>
+        book.id === bookId ? { ...book, ...changes, updatedAt: new Date() } : book,
+      ),
+    );
+  }
+
+  /** Borra un libro y lo quita de la lista local. */
+  async remove(bookId: string): Promise<void> {
+    const uid = this.requireUid();
+    await this.bookRepository.delete(uid, bookId);
+    this.booksSignal.update((books) => books.filter((book) => book.id !== bookId));
+  }
+
+  private nextOrder(): number {
+    const orders = this.booksSignal().map((book) => book.order);
+    return orders.length === 0 ? 0 : Math.max(...orders) + 1;
+  }
+
+  /** El uid de la sesión actual; sin sesión es un error explícito (no debería pasar tras el guard). */
+  private requireUid(): string {
+    const uid = this.authService.currentUser()?.id;
+    if (!uid) {
+      throw new Error('No hay una sesión activa para operar sobre los libros.');
+    }
+    return uid;
+  }
+
+  private fail(message: string, error: unknown): void {
+    console.error(message, error);
+    this.errorMessageSignal.set(message);
+    this.statusSignal.set('error');
+  }
+}
