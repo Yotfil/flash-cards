@@ -8,8 +8,10 @@ import { BookRepository } from '@domain/ports';
 import type { Book, BookDraft } from '@domain/models';
 import { AuthService } from './auth.service';
 
-/** Valores por defecto de un libro nuevo (espec. §6.4). Reutilizables por el formulario. */
-export const DEFAULT_NEW_CARDS_PER_DAY = 20;
+/** Valores por defecto de un libro nuevo (espec. §6.4). Reutilizables por el formulario. El default
+ *  de tarjetas nuevas vive en el dominio (fuente única, también seed del perfil) y se re-exporta aquí
+ *  para no romper los imports existentes desde `@services/books.service`. */
+export { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
 export const DEFAULT_MAX_REVIEWS_PER_DAY = 200;
 
 /** Estado de carga de la biblioteca, para que la UI elija qué pintar (skeleton/error/lista). */

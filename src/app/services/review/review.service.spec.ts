@@ -142,7 +142,7 @@ describe('ReviewService', () => {
       displayName: 'Test',
       email: 't@e.com',
       createdAt: new Date(),
-      settings: { timezone: 'UTC', dayStartHour: 4, theme: 'system' },
+      settings: { timezone: 'UTC', dayStartHour: 4, theme: 'system', defaultNewCardsPerDay: 20 },
       isSearchable: false,
     };
     TestBed.configureTestingModule({
