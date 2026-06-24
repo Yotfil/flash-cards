@@ -59,6 +59,28 @@ export class CardsService {
     await this.booksService.changeCardCount(bookId, 1);
   }
 
+  /** Crea muchas tarjetas `forward` de golpe (importación) y actualiza el conteo del libro por el
+   *  número realmente creado. */
+  async createMany(bookId: string, chapterId: string, drafts: CardContentDraft[]): Promise<void> {
+    if (drafts.length === 0) {
+      return;
+    }
+    const uid = this.requireUid();
+    const inputs = drafts.map((draft) => ({
+      bookId,
+      chapterId,
+      noteId: crypto.randomUUID(),
+      direction: 'forward' as const,
+      front: draft.front,
+      back: draft.back,
+      scheduling: this.schedulingPort.createInitialScheduling(),
+      suspended: false,
+    }));
+    const created = await this.cardRepository.createMany(uid, inputs);
+    this.cardsSignal.update((cards) => [...cards, ...created]);
+    await this.booksService.changeCardCount(bookId, created.length);
+  }
+
   /** Edita el contenido (anverso/reverso) de una tarjeta y refleja el cambio en la lista local. */
   async update(cardId: string, draft: CardContentDraft): Promise<void> {
     const uid = this.requireUid();

@@ -4,9 +4,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { Card, CardContentDraft } from '@domain/models';
 import { CardsService } from '@services/cards.service';
 import { ChaptersService } from '@services/chapters.service';
+import { findDuplicateCardIds, sortCardsForDisplay } from '@services/card-duplicates';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { CardFormDialogComponent } from './card-form-dialog.component';
+import { CardImportDialogComponent } from './card-import-dialog.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
 /** Pantalla "detalle de un capítulo": cabecera del capítulo + CRUD de sus tarjetas (vista compacta
@@ -18,7 +21,9 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     RouterLink,
     EmptyStateComponent,
     ErrorStateComponent,
+    IconComponent,
     CardFormDialogComponent,
+    CardImportDialogComponent,
     ConfirmDialogComponent,
   ],
   template: `
@@ -35,13 +40,22 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
           {{ chapter()?.name ?? 'Capítulo' }}
         </h1>
         @if (cardsStatus() === 'ready') {
-          <button
-            type="button"
-            (click)="openCreate()"
-            class="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-          >
-            Nueva tarjeta
-          </button>
+          <div class="flex shrink-0 gap-2">
+            <button
+              type="button"
+              (click)="openImport()"
+              class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+            >
+              Importar
+            </button>
+            <button
+              type="button"
+              (click)="openCreate()"
+              class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+            >
+              Nueva tarjeta
+            </button>
+          </div>
         }
       </header>
 
@@ -87,7 +101,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
             </app-empty-state>
           } @else {
             <ul class="mt-6 flex flex-col gap-3">
-              @for (card of cards(); track card.id) {
+              @for (card of sortedCards(); track card.id) {
                 <li
                   class="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-4"
                 >
@@ -96,7 +110,26 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
                     <span class="shrink-0 text-text-muted" aria-hidden="true">→</span>
                     <span class="truncate text-text-secondary">{{ card.back }}</span>
                   </div>
-                  <div class="flex shrink-0 gap-2">
+                  <div class="flex shrink-0 items-center gap-2">
+                    @if (duplicateIds().has(card.id)) {
+                      <span class="group relative flex items-center">
+                        <button
+                          type="button"
+                          aria-label="Tarjeta repetida"
+                          (click)="toggleTooltip(card.id)"
+                          class="flex items-center rounded-md p-1 text-accent outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                        >
+                          <app-icon name="alert" size="sm" />
+                        </button>
+                        <span
+                          role="tooltip"
+                          class="pointer-events-none absolute bottom-full right-0 mb-1 whitespace-nowrap rounded-md bg-text-primary px-2 py-1 text-xs font-medium text-surface opacity-0 transition-opacity group-hover:opacity-100"
+                          [class.opacity-100]="openTooltipId() === card.id"
+                        >
+                          Repetida
+                        </span>
+                      </span>
+                    }
                     <button
                       type="button"
                       (click)="openEdit(card)"
@@ -139,6 +172,15 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
         (cancelled)="pendingDelete.set(null)"
       />
     }
+
+    @if (showImport()) {
+      <app-card-import-dialog
+        [defaultChapterName]="chapter()?.name ?? 'Importadas'"
+        [pending]="importing()"
+        (imported)="onImport($event)"
+        (cancelled)="showImport.set(false)"
+      />
+    }
   `,
 })
 export class CapituloDetailComponent implements OnInit {
@@ -157,15 +199,23 @@ export class CapituloDetailComponent implements OnInit {
   protected readonly cardsStatus = this.cardsService.status;
   protected readonly cardsError = this.cardsService.errorMessage;
 
+  // Lista ordenada por anverso (agrupa misma palabra) e ids de las tarjetas repetidas (idénticas).
+  protected readonly sortedCards = computed(() => sortCardsForDisplay(this.cards()));
+  protected readonly duplicateIds = computed(() => findDuplicateCardIds(this.cards()));
+  // Tooltip "Repetida" abierto (para móvil, donde no hay hover): id de la tarjeta o null.
+  protected readonly openTooltipId = signal<string | null>(null);
+
   protected readonly skeletons = [0, 1, 2];
 
   protected readonly showForm = signal(false);
   protected readonly editing = signal<Card | null>(null);
   protected readonly pendingDelete = signal<Card | null>(null);
+  protected readonly showImport = signal(false);
   protected readonly actionError = signal<string | null>(null);
   // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
+  protected readonly importing = signal(false);
 
   ngOnInit(): void {
     // Carga los capítulos del libro (para el nombre en la cabecera) y las tarjetas del capítulo.
@@ -180,6 +230,33 @@ export class CapituloDetailComponent implements OnInit {
   protected openCreate(): void {
     this.editing.set(null);
     this.showForm.set(true);
+  }
+
+  protected openImport(): void {
+    this.showImport.set(true);
+  }
+
+  /** Alterna el tooltip "Repetida" de una tarjeta (en móvil se abre con tap; en escritorio basta el
+   *  hover, pero esto no estorba). */
+  protected toggleTooltip(cardId: string): void {
+    this.openTooltipId.update((current) => (current === cardId ? null : cardId));
+  }
+
+  protected async onImport(drafts: CardContentDraft[]): Promise<void> {
+    if (this.importing()) {
+      return;
+    }
+    this.actionError.set(null);
+    this.importing.set(true);
+    try {
+      await this.cardsService.createMany(this.bookId, this.chapterId, drafts);
+      this.showImport.set(false);
+    } catch (error) {
+      console.error('No se pudieron importar las tarjetas', error);
+      this.actionError.set('No se pudieron importar las tarjetas. Inténtalo de nuevo.');
+    } finally {
+      this.importing.set(false);
+    }
   }
 
   protected openEdit(card: Card): void {

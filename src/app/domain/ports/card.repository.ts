@@ -18,6 +18,9 @@ export abstract class CardRepository {
   /** Crea una tarjeta y devuelve el modelo resultante (con `id` y timestamps ya asignados). */
   abstract create(uid: string, input: CardCreateInput): Promise<Card>;
 
+  /** Crea muchas tarjetas de una vez (importación). Devuelve las tarjetas creadas. */
+  abstract createMany(uid: string, inputs: CardCreateInput[]): Promise<Card[]>;
+
   /** Aplica cambios de contenido (anverso/reverso) a una tarjeta existente. */
   abstract update(uid: string, cardId: string, changes: Partial<CardContentDraft>): Promise<void>;
 
