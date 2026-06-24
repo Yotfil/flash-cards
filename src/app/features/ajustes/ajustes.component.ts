@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { AuthService } from '@services/auth.service';
@@ -22,10 +22,15 @@ import { AuthService } from '@services/auth.service';
 
       <button
         type="button"
+        [disabled]="signingOut()"
         (click)="signOut()"
-        class="mt-4 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+        class="mt-4 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
       >
-        Cerrar sesión
+        @if (signingOut()) {
+          Cerrando sesión…
+        } @else {
+          Cerrar sesión
+        }
       </button>
 
       <p class="mt-8 text-sm text-text-muted">
@@ -39,9 +44,18 @@ export class AjustesComponent {
   private readonly router = inject(Router);
 
   protected readonly user = this.authService.currentUser;
+  protected readonly signingOut = signal(false);
 
   protected async signOut(): Promise<void> {
-    await this.authService.signOut();
-    await this.router.navigate(['/login']);
+    if (this.signingOut()) {
+      return;
+    }
+    this.signingOut.set(true);
+    try {
+      await this.authService.signOut();
+      await this.router.navigate(['/login']);
+    } finally {
+      this.signingOut.set(false);
+    }
   }
 }

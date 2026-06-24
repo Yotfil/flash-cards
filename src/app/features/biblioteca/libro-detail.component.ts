@@ -141,6 +141,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     @if (showForm()) {
       <app-chapter-form-dialog
         [chapter]="editing()"
+        [pending]="saving()"
         (saved)="onSave($event)"
         (cancelled)="closeForm()"
       />
@@ -150,6 +151,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
       <app-confirm-dialog
         title="¿Borrar este capítulo?"
         [message]="'Se eliminará «' + chapter.name + '» y no se puede deshacer.'"
+        [pending]="deleting()"
         (confirmed)="confirmDelete(chapter)"
         (cancelled)="pendingDelete.set(null)"
       />
@@ -178,6 +180,9 @@ export class LibroDetailComponent implements OnInit {
   protected readonly editing = signal<Chapter | null>(null);
   protected readonly pendingDelete = signal<Chapter | null>(null);
   protected readonly actionError = signal<string | null>(null);
+  // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
+  protected readonly saving = signal(false);
+  protected readonly deleting = signal(false);
 
   ngOnInit(): void {
     void this.booksService.ensureLoaded();
@@ -204,7 +209,11 @@ export class LibroDetailComponent implements OnInit {
   }
 
   protected async onSave(draft: ChapterDraft): Promise<void> {
+    if (this.saving()) {
+      return;
+    }
     this.actionError.set(null);
+    this.saving.set(true);
     const editingChapter = this.editing();
     try {
       if (editingChapter) {
@@ -216,6 +225,8 @@ export class LibroDetailComponent implements OnInit {
     } catch (error) {
       console.error('No se pudo guardar el capítulo', error);
       this.actionError.set('No se pudo guardar el capítulo. Inténtalo de nuevo.');
+    } finally {
+      this.saving.set(false);
     }
   }
 
@@ -224,13 +235,18 @@ export class LibroDetailComponent implements OnInit {
   }
 
   protected async confirmDelete(chapter: Chapter): Promise<void> {
+    if (this.deleting()) {
+      return;
+    }
     this.actionError.set(null);
+    this.deleting.set(true);
     try {
       await this.chaptersService.remove(chapter.id);
     } catch (error) {
       console.error('No se pudo borrar el capítulo', error);
       this.actionError.set('No se pudo borrar el capítulo. Inténtalo de nuevo.');
     } finally {
+      this.deleting.set(false);
       this.pendingDelete.set(null);
     }
   }

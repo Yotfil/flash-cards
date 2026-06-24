@@ -18,7 +18,12 @@
       }
     </p>
 
-    <form class="mt-6 flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+    <form
+      class="mt-6 flex flex-col gap-4"
+      [formGroup]="form"
+      [attr.aria-busy]="submitting()"
+      (ngSubmit)="submit()"
+    >
       @if (mode() === 'register') {
         <div class="flex flex-col gap-1.5">
           <label for="displayName" class="text-sm font-medium text-text-primary">Nombre</label>
@@ -68,10 +73,18 @@
         [disabled]="submitting()"
         class="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-60"
       >
-        @if (mode() === 'signIn') {
-          Iniciar sesión
+        @if (submitting()) {
+          @if (mode() === 'signIn') {
+            Iniciando sesión…
+          } @else {
+            Creando cuenta…
+          }
         } @else {
-          Crear cuenta
+          @if (mode() === 'signIn') {
+            Iniciar sesión
+          } @else {
+            Crear cuenta
+          }
         }
       </button>
     </form>
@@ -88,7 +101,11 @@
       (click)="signInWithGoogle()"
       class="w-full rounded-lg border border-border bg-surface px-4 py-2.5 font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-60"
     >
-      Continuar con Google
+      @if (submitting()) {
+        Conectando…
+      } @else {
+        Continuar con Google
+      }
     </button>
 
     <p class="mt-6 text-center text-sm text-text-secondary">
@@ -99,8 +116,9 @@
       }
       <button
         type="button"
+        [disabled]="submitting()"
         (click)="toggleMode()"
-        class="font-medium text-accent underline-offset-2 hover:underline"
+        class="font-medium text-accent underline-offset-2 hover:underline disabled:opacity-60"
       >
         @if (mode() === 'signIn') {
           Crear una

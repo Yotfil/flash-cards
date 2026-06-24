@@ -13,7 +13,8 @@ import { Component, input, output } from '@angular/core';
         tabindex="-1"
         [attr.aria-label]="title()"
         class="w-full max-w-sm rounded-2xl border border-border bg-surface-raised p-6 shadow-xl"
-        (keydown.escape)="cancelled.emit()"
+        [attr.aria-busy]="pending()"
+        (keydown.escape)="pending() || cancelled.emit()"
       >
         <h2 class="text-lg font-semibold text-text-primary">{{ title() }}</h2>
         @if (message(); as text) {
@@ -22,17 +23,23 @@ import { Component, input, output } from '@angular/core';
         <div class="mt-6 flex justify-end gap-3">
           <button
             type="button"
+            [disabled]="pending()"
             (click)="cancelled.emit()"
-            class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+            class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
           >
             {{ cancelLabel() }}
           </button>
           <button
             type="button"
+            [disabled]="pending()"
             (click)="confirmed.emit()"
-            class="rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-surface transition-opacity hover:opacity-90"
+            class="rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {{ confirmLabel() }}
+            @if (pending()) {
+              {{ pendingLabel() }}
+            } @else {
+              {{ confirmLabel() }}
+            }
           </button>
         </div>
       </div>
@@ -43,7 +50,11 @@ export class ConfirmDialogComponent {
   readonly title = input.required<string>();
   readonly message = input<string>();
   readonly confirmLabel = input('Borrar');
+  /** Texto del botón de confirmar mientras la acción está en vuelo. */
+  readonly pendingLabel = input('Borrando…');
   readonly cancelLabel = input('Cancelar');
+  /** El padre lo pone en true mientras procesa; bloquea botones y el cierre por Escape. */
+  readonly pending = input(false);
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
 }

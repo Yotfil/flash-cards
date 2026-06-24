@@ -122,13 +122,19 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     </section>
 
     @if (showForm()) {
-      <app-card-form-dialog [card]="editing()" (saved)="onSave($event)" (cancelled)="closeForm()" />
+      <app-card-form-dialog
+        [card]="editing()"
+        [pending]="saving()"
+        (saved)="onSave($event)"
+        (cancelled)="closeForm()"
+      />
     }
 
     @if (pendingDelete(); as card) {
       <app-confirm-dialog
         title="¿Borrar esta tarjeta?"
         [message]="'Se eliminará «' + card.front + '» y no se puede deshacer.'"
+        [pending]="deleting()"
         (confirmed)="confirmDelete(card)"
         (cancelled)="pendingDelete.set(null)"
       />
@@ -157,6 +163,9 @@ export class CapituloDetailComponent implements OnInit {
   protected readonly editing = signal<Card | null>(null);
   protected readonly pendingDelete = signal<Card | null>(null);
   protected readonly actionError = signal<string | null>(null);
+  // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
+  protected readonly saving = signal(false);
+  protected readonly deleting = signal(false);
 
   ngOnInit(): void {
     // Carga los capítulos del libro (para el nombre en la cabecera) y las tarjetas del capítulo.
@@ -184,7 +193,11 @@ export class CapituloDetailComponent implements OnInit {
   }
 
   protected async onSave(draft: CardContentDraft): Promise<void> {
+    if (this.saving()) {
+      return;
+    }
     this.actionError.set(null);
+    this.saving.set(true);
     const editingCard = this.editing();
     try {
       if (editingCard) {
@@ -196,6 +209,8 @@ export class CapituloDetailComponent implements OnInit {
     } catch (error) {
       console.error('No se pudo guardar la tarjeta', error);
       this.actionError.set('No se pudo guardar la tarjeta. Inténtalo de nuevo.');
+    } finally {
+      this.saving.set(false);
     }
   }
 
@@ -204,13 +219,18 @@ export class CapituloDetailComponent implements OnInit {
   }
 
   protected async confirmDelete(card: Card): Promise<void> {
+    if (this.deleting()) {
+      return;
+    }
     this.actionError.set(null);
+    this.deleting.set(true);
     try {
       await this.cardsService.remove(this.bookId, card.id);
     } catch (error) {
       console.error('No se pudo borrar la tarjeta', error);
       this.actionError.set('No se pudo borrar la tarjeta. Inténtalo de nuevo.');
     } finally {
+      this.deleting.set(false);
       this.pendingDelete.set(null);
     }
   }
