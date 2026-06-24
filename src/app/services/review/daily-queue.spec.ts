@@ -1,14 +1,19 @@
 import { type Book, type Card, CardState } from '@domain/models';
 import { buildDailyQueue } from './daily-queue';
 
-function buildBook(id: string, newCardsPerDay: number, order: number): Book {
+function buildBook(
+  id: string,
+  newCardsPerDay: number,
+  order: number,
+  maxReviewsPerDay = 200,
+): Book {
   return {
     id,
     name: id,
     subject: 'general',
     studyDirection: 'forward',
     newCardsPerDay,
-    maxReviewsPerDay: 200,
+    maxReviewsPerDay,
     order,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -55,7 +60,7 @@ describe('buildDailyQueue', () => {
       buildCard('new3', 'b1', CardState.New, t('2026-06-20'), t('2026-06-12')),
     ];
 
-    const queue = buildDailyQueue(candidates, books, {});
+    const queue = buildDailyQueue(candidates, books, {}, {});
 
     expect(queue.dueCount).toBe(2);
     expect(queue.newCount).toBe(2); // tope newCardsPerDay = 2
@@ -71,7 +76,7 @@ describe('buildDailyQueue', () => {
       buildCard('n2', 'b1', CardState.New, t('2026-06-20'), t('2026-06-11')),
     ];
 
-    const queue = buildDailyQueue(candidates, books, { b1: 2 });
+    const queue = buildDailyQueue(candidates, books, { b1: 2 }, {});
 
     expect(queue.newCount).toBe(1); // 3 - 2 ya introducidas = 1
   });
@@ -80,7 +85,7 @@ describe('buildDailyQueue', () => {
     const books = [buildBook('b1', 2, 0)];
     const candidates = [buildCard('n1', 'b1', CardState.New, t('2026-06-20'), t('2026-06-10'))];
 
-    const queue = buildDailyQueue(candidates, books, { b1: 2 });
+    const queue = buildDailyQueue(candidates, books, { b1: 2 }, {});
 
     expect(queue.newCount).toBe(0);
     expect(queue.cards).toHaveLength(0);
@@ -95,7 +100,7 @@ describe('buildDailyQueue', () => {
       buildCard('n4', 'b1', CardState.New, t('2026-06-20'), t('2026-06-13')),
     ];
 
-    const queue = buildDailyQueue(candidates, books, {}, 3);
+    const queue = buildDailyQueue(candidates, books, {}, {}, 3);
 
     expect(queue.newCount).toBe(3); // override > tope por libro
     expect(queue.availableNewCount).toBe(4);
@@ -106,7 +111,7 @@ describe('buildDailyQueue', () => {
     const books = [buildBook('b1', 5, 0)];
     const candidates = [buildCard('n1', 'b1', CardState.New, t('2026-06-20'), t('2026-06-10'))];
 
-    const queue = buildDailyQueue(candidates, books, {}, 0);
+    const queue = buildDailyQueue(candidates, books, {}, {}, 0);
 
     expect(queue.newCount).toBe(0);
     expect(queue.availableNewCount).toBe(1);
@@ -119,8 +124,48 @@ describe('buildDailyQueue', () => {
       buildCard('n', 'b2', CardState.New, t('2026-06-20'), t('2026-06-10')),
     ];
 
-    const queue = buildDailyQueue(candidates, books, {});
+    const queue = buildDailyQueue(candidates, books, {}, {});
 
     expect(queue.perBook.map((book) => book.bookId)).toEqual(['b2', 'b1']);
+  });
+
+  it('topa las vencidas a maxReviewsPerDay por libro, conservando las más atrasadas', () => {
+    const books = [buildBook('b1', 0, 0, 2)]; // maxReviewsPerDay = 2
+    const candidates = [
+      buildCard('due3', 'b1', CardState.Review, t('2026-06-23T08:00:00Z'), t('2026-06-01')),
+      buildCard('due1', 'b1', CardState.Review, t('2026-06-23T06:00:00Z'), t('2026-06-01')),
+      buildCard('due2', 'b1', CardState.Review, t('2026-06-23T07:00:00Z'), t('2026-06-01')),
+    ];
+
+    const queue = buildDailyQueue(candidates, books, {}, {});
+
+    expect(queue.dueCount).toBe(2);
+    expect(queue.cards.map((card) => card.id)).toEqual(['due1', 'due2']); // las 2 más atrasadas
+  });
+
+  it('descuenta del tope de repasos los ya completados hoy', () => {
+    const books = [buildBook('b1', 0, 0, 3)]; // maxReviewsPerDay = 3
+    const candidates = [
+      buildCard('due1', 'b1', CardState.Review, t('2026-06-23T06:00:00Z'), t('2026-06-01')),
+      buildCard('due2', 'b1', CardState.Review, t('2026-06-23T07:00:00Z'), t('2026-06-01')),
+    ];
+
+    const queue = buildDailyQueue(candidates, books, {}, { b1: 2 });
+
+    expect(queue.dueCount).toBe(1); // 3 - 2 ya repasadas = 1
+    expect(queue.cards.map((card) => card.id)).toEqual(['due1']);
+  });
+
+  it('maxReviewsPerDay = 0 significa sin tope de repasos', () => {
+    const books = [buildBook('b1', 0, 0, 0)];
+    const candidates = [
+      buildCard('due1', 'b1', CardState.Review, t('2026-06-23T06:00:00Z'), t('2026-06-01')),
+      buildCard('due2', 'b1', CardState.Review, t('2026-06-23T07:00:00Z'), t('2026-06-01')),
+      buildCard('due3', 'b1', CardState.Review, t('2026-06-23T08:00:00Z'), t('2026-06-01')),
+    ];
+
+    const queue = buildDailyQueue(candidates, books, {}, { b1: 100 });
+
+    expect(queue.dueCount).toBe(3);
   });
 });

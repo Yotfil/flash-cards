@@ -46,6 +46,7 @@ describe('ProgressService', () => {
       reviewsCompleted: 7,
       ratingCounts: { again: 1, hard: 1, good: 4, easy: 1 },
       newCardsIntroduced: {},
+      reviewsCompletedByBook: {},
     };
     const service = configure({ newCards: 3, learning: 2, review: 5 }, today);
 

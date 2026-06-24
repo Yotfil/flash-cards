@@ -15,6 +15,7 @@ export const dailyStatsDocumentSchema = z.object({
     })
     .default({ again: 0, hard: 0, good: 0, easy: 0 }),
   newCardsIntroduced: z.record(z.string(), z.number()).default({}),
+  reviewsCompletedByBook: z.record(z.string(), z.number()).default({}),
 });
 
 export type DailyStatsDocument = z.infer<typeof dailyStatsDocumentSchema>;

@@ -17,5 +17,11 @@ export interface DailyStats {
   /** Nuevas introducidas hoy por libro (clave = bookId), para hacer cumplir newCardsPerDay. */
   newCardsIntroduced: Record<string, number>;
   reviewsCompleted: number;
+  /**
+   * Repasos REALES completados hoy por libro (clave = bookId), para hacer cumplir maxReviewsPerDay.
+   * Cuenta sólo tarjetas que NO estaban en estado New (la introducción de una nueva va en
+   * `newCardsIntroduced`), igual que el tope sólo aplica a las vencidas.
+   */
+  reviewsCompletedByBook: Record<string, number>;
   ratingCounts: RatingCounts;
 }

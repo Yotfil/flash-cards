@@ -37,7 +37,11 @@ export class QueueService {
   readonly errorMessage = this.errorMessageSignal.asReadonly();
 
   // Datos de la última carga, para recomputar la cola al cambiar el límite de nuevas sin re-consultar.
-  private cache: { candidates: Card[]; introducedByBook: Record<string, number> } | null = null;
+  private cache: {
+    candidates: Card[];
+    introducedByBook: Record<string, number>;
+    reviewedByBook: Record<string, number>;
+  } | null = null;
 
   /** Carga y arma la cola del día. Maneja el error de forma visible (contrato). */
   async load(): Promise<void> {
@@ -55,9 +59,18 @@ export class QueueService {
         this.dailyStatsRepository.getToday(user.id, dateId),
       ]);
 
-      this.cache = { candidates, introducedByBook: todayStats?.newCardsIntroduced ?? {} };
+      this.cache = {
+        candidates,
+        introducedByBook: todayStats?.newCardsIntroduced ?? {},
+        reviewedByBook: todayStats?.reviewsCompletedByBook ?? {},
+      };
       this.applyQueue(
-        buildDailyQueue(candidates, this.booksService.books(), this.cache.introducedByBook),
+        buildDailyQueue(
+          candidates,
+          this.booksService.books(),
+          this.cache.introducedByBook,
+          this.cache.reviewedByBook,
+        ),
       );
       this.statusSignal.set('ready');
     } catch (error) {
@@ -77,6 +90,7 @@ export class QueueService {
         this.cache.candidates,
         this.booksService.books(),
         this.cache.introducedByBook,
+        this.cache.reviewedByBook,
         Math.max(0, newLimit),
       ),
     );
