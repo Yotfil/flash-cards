@@ -9,3 +9,11 @@ export interface Chapter {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Campos que el usuario controla al crear o renombrar un capítulo. El `id`, `bookId`, `order` y los
+ * timestamps los gestiona el sistema (repositorio/servicio), no el formulario.
+ */
+export interface ChapterDraft {
+  name: string;
+}

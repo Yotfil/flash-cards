@@ -4,14 +4,19 @@
 
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 
-import { AuthPort, BookRepository, UserRepository } from '@domain/ports';
+import { AuthPort, BookRepository, ChapterRepository, UserRepository } from '@domain/ports';
 import { FirebaseAuthAdapter } from '@infrastructure/auth';
-import { FirestoreBookRepository, FirestoreUserRepository } from '@infrastructure/firestore';
+import {
+  FirestoreBookRepository,
+  FirestoreChapterRepository,
+  FirestoreUserRepository,
+} from '@infrastructure/firestore';
 
 export function provideDataAccess(): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: AuthPort, useClass: FirebaseAuthAdapter },
     { provide: BookRepository, useClass: FirestoreBookRepository },
+    { provide: ChapterRepository, useClass: FirestoreChapterRepository },
     { provide: UserRepository, useClass: FirestoreUserRepository },
   ]);
 }
