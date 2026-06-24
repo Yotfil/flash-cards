@@ -15,6 +15,7 @@ export function schedulingToFirestore(scheduling: CardScheduling): Record<string
     difficulty: scheduling.difficulty,
     elapsedDays: scheduling.elapsedDays,
     scheduledDays: scheduling.scheduledDays,
+    learningSteps: scheduling.learningSteps,
     reps: scheduling.reps,
     lapses: scheduling.lapses,
     state: scheduling.state,

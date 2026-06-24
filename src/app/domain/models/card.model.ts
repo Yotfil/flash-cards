@@ -26,6 +26,8 @@ export interface CardScheduling {
   difficulty: number;
   elapsedDays: number;
   scheduledDays: number;
+  /** Pasos de aprendizaje pendientes (ts-fsrs v5). Necesario para el round-trip de calificación. */
+  learningSteps: number;
   reps: number;
   lapses: number;
   state: CardState;
