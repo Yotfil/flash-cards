@@ -18,8 +18,9 @@ import {
 } from 'firebase/firestore';
 
 import { CardRepository, type CardCreateInput } from '@domain/ports';
-import { type Card, type CardContentDraft, type CardScheduling, CardState } from '@domain/models';
+import { type Card, type CardContentDraft, CardState } from '@domain/models';
 import { FIRESTORE } from '@infrastructure/firebase';
+import { cardToFirestoreDocument } from './card-document.mapper';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
 const USERS_COLLECTION = 'users';
@@ -49,7 +50,7 @@ export class FirestoreCardRepository extends CardRepository {
   override async create(uid: string, input: CardCreateInput): Promise<Card> {
     const reference = doc(this.cardsCollection(uid));
     const now = new Date();
-    await setDoc(reference, this.toCardDocument(input, now));
+    await setDoc(reference, cardToFirestoreDocument(input, now));
     return { ...input, id: reference.id, createdAt: now, updatedAt: now };
   }
 
@@ -62,7 +63,7 @@ export class FirestoreCardRepository extends CardRepository {
       const batch = writeBatch(this.firestore);
       for (const input of chunk) {
         const reference = doc(this.cardsCollection(uid));
-        batch.set(reference, this.toCardDocument(input, now));
+        batch.set(reference, cardToFirestoreDocument(input, now));
         created.push({ ...input, id: reference.id, createdAt: now, updatedAt: now });
       }
       await batch.commit();
@@ -93,34 +94,6 @@ export class FirestoreCardRepository extends CardRepository {
     return collection(this.firestore, USERS_COLLECTION, uid, CARDS_COLLECTION);
   }
 
-  private assignOptional(target: Record<string, unknown>, key: string, value: unknown): void {
-    if (value !== undefined) {
-      target[key] = value;
-    }
-  }
-
-  /** Documento Firestore de una tarjeta (Dates → Timestamp, opcionales sólo si presentes). */
-  private toCardDocument(input: CardCreateInput, now: Date): Record<string, unknown> {
-    const document: Record<string, unknown> = {
-      bookId: input.bookId,
-      chapterId: input.chapterId,
-      noteId: input.noteId,
-      direction: input.direction,
-      front: input.front,
-      back: input.back,
-      scheduling: this.toSchedulingDocument(input.scheduling),
-      suspended: input.suspended,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-    };
-    this.assignOptional(document, 'pronunciation', input.pronunciation);
-    this.assignOptional(document, 'example', input.example);
-    this.assignOptional(document, 'audioUrl', input.audioUrl);
-    this.assignOptional(document, 'notes', input.notes);
-    this.assignOptional(document, 'tags', input.tags);
-    return document;
-  }
-
   /** Trocea un arreglo en lotes de tamaño máximo `size`. */
   private chunk<T>(items: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -128,21 +101,6 @@ export class FirestoreCardRepository extends CardRepository {
       chunks.push(items.slice(start, start + size));
     }
     return chunks;
-  }
-
-  /** El bloque `scheduling` con las fechas convertidas a Timestamp para Firestore. */
-  private toSchedulingDocument(scheduling: CardScheduling): Record<string, unknown> {
-    return {
-      due: Timestamp.fromDate(scheduling.due),
-      stability: scheduling.stability,
-      difficulty: scheduling.difficulty,
-      elapsedDays: scheduling.elapsedDays,
-      scheduledDays: scheduling.scheduledDays,
-      reps: scheduling.reps,
-      lapses: scheduling.lapses,
-      state: scheduling.state,
-      lastReview: scheduling.lastReview === null ? null : Timestamp.fromDate(scheduling.lastReview),
-    };
   }
 
   /** Construye el modelo del dominio. Con `exactOptionalPropertyTypes`, los opcionales se asignan
