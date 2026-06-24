@@ -13,33 +13,85 @@
     <h2 class="text-lg font-semibold text-text-primary">{{ heading() }}</h2>
 
     <div class="mt-5 flex flex-col gap-4">
-      <div class="flex flex-col gap-1.5">
-        <label for="card-front" class="text-sm font-medium text-text-secondary">Anverso</label>
-        <textarea
-          id="card-front"
-          formControlName="front"
-          rows="2"
-          placeholder="Ej. to give up"
-          class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-        ></textarea>
-        @if (showError('front')) {
-          <p class="text-sm text-text-muted">El anverso es obligatorio.</p>
-        }
-      </div>
+      <!-- Tipo: sólo al crear; al editar el tipo queda fijo (cambiarlo perdería contenido). -->
+      @if (!isEditing()) {
+        <fieldset class="flex flex-col gap-1.5">
+          <legend class="text-sm font-medium text-text-secondary">Tipo</legend>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 text-sm text-text-primary">
+              <input
+                type="radio"
+                name="cardType"
+                [checked]="cardType() === 'basic'"
+                (change)="setCardType('basic')"
+              />
+              Básica
+            </label>
+            <label class="flex items-center gap-2 text-sm text-text-primary">
+              <input
+                type="radio"
+                name="cardType"
+                [checked]="cardType() === 'cloze'"
+                (change)="setCardType('cloze')"
+              />
+              Cloze (rellenar el hueco)
+            </label>
+          </div>
+        </fieldset>
+      }
 
-      <div class="flex flex-col gap-1.5">
-        <label for="card-back" class="text-sm font-medium text-text-secondary">Reverso</label>
-        <textarea
-          id="card-back"
-          formControlName="back"
-          rows="2"
-          placeholder="Ej. rendirse"
-          class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-        ></textarea>
-        @if (showError('back')) {
-          <p class="text-sm text-text-muted">El reverso es obligatorio.</p>
-        }
-      </div>
+      @if (cardType() === 'cloze') {
+        <div class="flex flex-col gap-1.5">
+          <label for="card-front" class="text-sm font-medium text-text-secondary">
+            Texto con huecos
+          </label>
+          <textarea
+            id="card-front"
+            formControlName="front"
+            rows="3"
+            [placeholder]="clozePlaceholder"
+            class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
+          ></textarea>
+          <p class="text-xs text-text-muted">
+            Marca lo que quieras ocultar entre llaves dobles
+            <code class="rounded bg-surface-sunken px-1">{{ clozeMarker }}</code>
+            . Puedes ocultar varias palabras.
+          </p>
+          @if (showError('front')) {
+            <p class="text-sm text-text-muted">
+              Escribe un texto con al menos un hueco marcado con {{ clozeMarker }}.
+            </p>
+          }
+        </div>
+      } @else {
+        <div class="flex flex-col gap-1.5">
+          <label for="card-front" class="text-sm font-medium text-text-secondary">Anverso</label>
+          <textarea
+            id="card-front"
+            formControlName="front"
+            rows="2"
+            placeholder="Ej. to give up"
+            class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
+          ></textarea>
+          @if (showError('front')) {
+            <p class="text-sm text-text-muted">El anverso es obligatorio.</p>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="card-back" class="text-sm font-medium text-text-secondary">Reverso</label>
+          <textarea
+            id="card-back"
+            formControlName="back"
+            rows="2"
+            placeholder="Ej. rendirse"
+            class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
+          ></textarea>
+          @if (showError('back')) {
+            <p class="text-sm text-text-muted">El reverso es obligatorio.</p>
+          }
+        </div>
+      }
     </div>
 
     <div class="mt-6 flex justify-end gap-3">

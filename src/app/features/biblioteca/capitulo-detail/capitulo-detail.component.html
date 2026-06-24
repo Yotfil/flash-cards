@@ -93,9 +93,20 @@
               class="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-4"
             >
               <div class="flex min-w-0 items-center gap-2 text-sm">
-                <span class="truncate font-medium text-text-primary">{{ card.front }}</span>
-                <span class="shrink-0 text-text-muted" aria-hidden="true">→</span>
-                <span class="truncate text-text-secondary">{{ card.back }}</span>
+                @if (isCloze(card)) {
+                  <span
+                    class="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-secondary"
+                  >
+                    cloze
+                  </span>
+                  <span class="truncate font-medium text-text-primary">{{
+                    clozePreview(card)
+                  }}</span>
+                } @else {
+                  <span class="truncate font-medium text-text-primary">{{ card.front }}</span>
+                  <span class="shrink-0 text-text-muted" aria-hidden="true">→</span>
+                  <span class="truncate text-text-secondary">{{ card.back }}</span>
+                }
               </div>
               <div class="flex shrink-0 items-center gap-2">
                 @if (duplicateIds().has(card.id)) {

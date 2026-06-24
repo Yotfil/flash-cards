@@ -8,6 +8,7 @@ import {
   Timestamp,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getCountFromServer,
   getDocs,
@@ -125,6 +126,10 @@ export class FirestoreCardRepository extends CardRepository {
     }
     if (changes.back !== undefined) {
       data['back'] = changes.back;
+    }
+    if (changes.cardType !== undefined) {
+      // Básica = sin campo (deleteField evita dejar un 'basic' residual si alguna vez se convirtiera).
+      data['cardType'] = changes.cardType === 'basic' ? deleteField() : changes.cardType;
     }
     await updateDoc(doc(this.cardsCollection(uid), cardId), data);
   }

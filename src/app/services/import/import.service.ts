@@ -53,6 +53,7 @@ export class ImportService {
         cards: chapter.cards.map((card) => ({
           noteId: crypto.randomUUID(),
           direction: 'forward' as const,
+          cardType: card.cardType,
           front: card.front,
           back: card.back,
           scheduling: this.schedulingPort.createInitialScheduling(),

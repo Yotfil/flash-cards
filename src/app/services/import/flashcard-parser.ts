@@ -5,7 +5,11 @@
 // Regla de oro (§5.4): NINGUNA línea mala aborta la importación; se procesa todo lo válido y se
 // devuelven los errores con su número de línea (1-based) para mostrarlos en la previsualización.
 
+import type { CardType } from '@domain/models';
+import { hasCloze } from '@services/cloze';
+
 export interface ParsedCard {
+  cardType: CardType;
   front: string;
   back: string;
 }
@@ -43,7 +47,7 @@ function splitCardLine(line: string): ParsedCard | null {
   // Se parte sólo en el primer separador: el reverso puede contener más pipes (§5.3).
   const front = line.slice(0, separatorIndex).trim();
   const back = line.slice(separatorIndex + 1).trim();
-  return { front, back };
+  return { cardType: 'basic', front, back };
 }
 
 /**
@@ -84,6 +88,13 @@ export function parseFlashcards(text: string, defaultChapterName: string): Parse
       }
       currentChapter = { name, cards: [] };
       chapters.push(currentChapter);
+      return;
+    }
+
+    // Tarjeta cloze: la línea trae marcadores `{{...}}`. No necesita separador; el texto completo es
+    // la plantilla y el reverso queda vacío. Tiene prioridad sobre el formato anverso|reverso.
+    if (hasCloze(line)) {
+      chapterForCards().cards.push({ cardType: 'cloze', front: line, back: '' });
       return;
     }
 

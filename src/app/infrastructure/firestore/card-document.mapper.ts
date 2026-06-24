@@ -47,6 +47,8 @@ export function cardToFirestoreDocument(
     updatedAt: Timestamp.fromDate(now),
   };
   // Firestore rechaza `undefined`: los opcionales de contenido sólo se incluyen si están presentes.
+  // `cardType` se omite en las básicas (ausencia = basic) y se escribe 'cloze' en las cloze.
+  assignOptional(document, 'cardType', input.cardType === 'basic' ? undefined : input.cardType);
   assignOptional(document, 'pronunciation', input.pronunciation);
   assignOptional(document, 'example', input.example);
   assignOptional(document, 'audioUrl', input.audioUrl);

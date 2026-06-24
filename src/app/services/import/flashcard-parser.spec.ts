@@ -20,8 +20,8 @@ describe('parseFlashcards', () => {
     expect(result.chapters[0]).toEqual({
       name: 'Movement & Direction',
       cards: [
-        { front: 'to give up', back: 'rendirse, darse por vencido' },
-        { front: 'to look forward to', back: 'esperar con ansias' },
+        { cardType: 'basic', front: 'to give up', back: 'rendirse, darse por vencido' },
+        { cardType: 'basic', front: 'to look forward to', back: 'esperar con ansias' },
       ],
     });
     expect(result.chapters[1]?.name).toBe('Present Perfect');
@@ -43,7 +43,7 @@ describe('parseFlashcards', () => {
     expect(result.chapters).toHaveLength(2);
     expect(result.chapters[0]).toEqual({
       name: 'Defecto',
-      cards: [{ front: 'suelta', back: 'tarjeta' }],
+      cards: [{ cardType: 'basic', front: 'suelta', back: 'tarjeta' }],
     });
     expect(result.chapters[1]?.name).toBe('Capítulo 1');
   });
@@ -59,13 +59,18 @@ describe('parseFlashcards', () => {
     const result = parseFlashcards('hola\tworld', 'L');
 
     expect(result.errors).toEqual([]);
-    expect(result.chapters[0]?.cards[0]).toEqual({ front: 'hola', back: 'world' });
+    expect(result.chapters[0]?.cards[0]).toEqual({
+      cardType: 'basic',
+      front: 'hola',
+      back: 'world',
+    });
   });
 
   it('parte sólo en el primer separador: el reverso conserva pipes posteriores (§5.3)', () => {
     const result = parseFlashcards('to look forward to | esperar con ansias | tener ganas de', 'L');
 
     expect(result.chapters[0]?.cards[0]).toEqual({
+      cardType: 'basic',
       front: 'to look forward to',
       back: 'esperar con ansias | tener ganas de',
     });
@@ -74,7 +79,11 @@ describe('parseFlashcards', () => {
   it('recorta espacios alrededor del anverso y del reverso', () => {
     const result = parseFlashcards('   to give up   |   rendirse   ', 'L');
 
-    expect(result.chapters[0]?.cards[0]).toEqual({ front: 'to give up', back: 'rendirse' });
+    expect(result.chapters[0]?.cards[0]).toEqual({
+      cardType: 'basic',
+      front: 'to give up',
+      back: 'rendirse',
+    });
   });
 
   it('reporta líneas sin separador con su número (1-based) y sigue procesando', () => {
@@ -84,6 +93,17 @@ describe('parseFlashcards', () => {
 
     expect(result.validCardCount).toBe(2);
     expect(result.errors).toEqual([{ line: 2, reason: 'Línea sin separador ("|" o tabulador).' }]);
+  });
+
+  it('una línea con {{...}} es una tarjeta cloze (sin separador, reverso vacío)', () => {
+    const result = parseFlashcards('El {{gato}} es {{negro}}', 'L');
+
+    expect(result.errors).toEqual([]);
+    expect(result.chapters[0]?.cards[0]).toEqual({
+      cardType: 'cloze',
+      front: 'El {{gato}} es {{negro}}',
+      back: '',
+    });
   });
 
   it('reporta anverso o reverso vacío como inválido', () => {

@@ -50,6 +50,7 @@ export class CardsService {
       // En el MVP cada tarjeta es independiente (solo `forward`, spec §6.10); su `noteId` es propio.
       noteId: crypto.randomUUID(),
       direction: 'forward',
+      cardType: draft.cardType,
       front: draft.front,
       back: draft.back,
       scheduling: this.schedulingPort.createInitialScheduling(),
@@ -71,6 +72,7 @@ export class CardsService {
       chapterId,
       noteId: crypto.randomUUID(),
       direction: 'forward' as const,
+      cardType: draft.cardType,
       front: draft.front,
       back: draft.back,
       scheduling: this.schedulingPort.createInitialScheduling(),
