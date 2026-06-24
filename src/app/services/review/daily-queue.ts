@@ -19,13 +19,22 @@ export interface DailyQueue {
   cards: Card[];
   dueCount: number;
   newCount: number;
+  /** Total de tarjetas nuevas candidatas (sin aplicar topes); el máximo que el usuario podría elegir. */
+  availableNewCount: number;
   perBook: BookPending[];
 }
 
+/**
+ * Arma la cola. Si `newLimit` se omite, las nuevas se topan **por libro** con `newCardsPerDay` menos
+ * las introducidas hoy (comportamiento por defecto). Si se indica, es un override de SESIÓN: toma
+ * hasta `newLimit` nuevas en TOTAL (más antiguas primero), ignorando el tope por libro (para empujar
+ * más, o 0 para no añadir).
+ */
 export function buildDailyQueue(
   candidates: Card[],
   books: Book[],
   introducedByBook: Record<string, number>,
+  newLimit?: number,
 ): DailyQueue {
   const bookById = new Map(books.map((book) => [book.id, book]));
 
@@ -33,26 +42,14 @@ export function buildDailyQueue(
     .filter((card) => card.scheduling.state !== CardState.New)
     .sort((a, b) => a.scheduling.due.getTime() - b.scheduling.due.getTime());
 
-  // Nuevas candidatas agrupadas por libro, en orden de creación (la "tanda" es estable).
-  const newByBook = new Map<string, Card[]>();
-  for (const card of candidates) {
-    if (card.scheduling.state === CardState.New) {
-      const list = newByBook.get(card.bookId) ?? [];
-      list.push(card);
-      newByBook.set(card.bookId, list);
-    }
-  }
+  const newCandidates = candidates
+    .filter((card) => card.scheduling.state === CardState.New && bookById.has(card.bookId))
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-  const selectedNew: Card[] = [];
-  for (const [bookId, cards] of newByBook) {
-    const book = bookById.get(bookId);
-    if (book === undefined) {
-      continue; // tarjeta de un libro desconocido (no debería pasar); se ignora.
-    }
-    const remaining = Math.max(0, book.newCardsPerDay - (introducedByBook[bookId] ?? 0));
-    const ordered = [...cards].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    selectedNew.push(...ordered.slice(0, remaining));
-  }
+  const selectedNew =
+    newLimit === undefined
+      ? selectByBookCap(newCandidates, bookById, introducedByBook)
+      : newCandidates.slice(0, Math.max(0, newLimit));
 
   const perBook = buildPerBook(due, selectedNew, bookById);
 
@@ -60,8 +57,32 @@ export function buildDailyQueue(
     cards: [...due, ...selectedNew],
     dueCount: due.length,
     newCount: selectedNew.length,
+    availableNewCount: newCandidates.length,
     perBook,
   };
+}
+
+/** Selección por defecto: por libro, `newCardsPerDay` menos las ya introducidas hoy. */
+function selectByBookCap(
+  newCandidates: Card[],
+  bookById: Map<string, Book>,
+  introducedByBook: Record<string, number>,
+): Card[] {
+  const takenByBook = new Map<string, number>();
+  const selected: Card[] = [];
+  for (const card of newCandidates) {
+    const book = bookById.get(card.bookId);
+    if (book === undefined) {
+      continue;
+    }
+    const remaining = Math.max(0, book.newCardsPerDay - (introducedByBook[card.bookId] ?? 0));
+    const taken = takenByBook.get(card.bookId) ?? 0;
+    if (taken < remaining) {
+      selected.push(card);
+      takenByBook.set(card.bookId, taken + 1);
+    }
+  }
+  return selected;
 }
 
 function buildPerBook(

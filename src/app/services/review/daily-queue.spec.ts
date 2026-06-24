@@ -86,6 +86,32 @@ describe('buildDailyQueue', () => {
     expect(queue.cards).toHaveLength(0);
   });
 
+  it('newLimit (override de sesión) ignora el tope por libro y limita el total', () => {
+    const books = [buildBook('b1', 2, 0)]; // tope por libro = 2
+    const candidates = [
+      buildCard('n1', 'b1', CardState.New, t('2026-06-20'), t('2026-06-10')),
+      buildCard('n2', 'b1', CardState.New, t('2026-06-20'), t('2026-06-11')),
+      buildCard('n3', 'b1', CardState.New, t('2026-06-20'), t('2026-06-12')),
+      buildCard('n4', 'b1', CardState.New, t('2026-06-20'), t('2026-06-13')),
+    ];
+
+    const queue = buildDailyQueue(candidates, books, {}, 3);
+
+    expect(queue.newCount).toBe(3); // override > tope por libro
+    expect(queue.availableNewCount).toBe(4);
+    expect(queue.cards.map((card) => card.id)).toEqual(['n1', 'n2', 'n3']);
+  });
+
+  it('newLimit = 0 no incluye nuevas', () => {
+    const books = [buildBook('b1', 5, 0)];
+    const candidates = [buildCard('n1', 'b1', CardState.New, t('2026-06-20'), t('2026-06-10'))];
+
+    const queue = buildDailyQueue(candidates, books, {}, 0);
+
+    expect(queue.newCount).toBe(0);
+    expect(queue.availableNewCount).toBe(1);
+  });
+
   it('omite del desglose los libros sin pendiente y ordena por order del libro', () => {
     const books = [buildBook('b1', 5, 1), buildBook('b2', 5, 0), buildBook('vacío', 5, 2)];
     const candidates = [

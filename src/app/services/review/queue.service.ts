@@ -24,6 +24,7 @@ export class QueueService {
   private readonly queueSignal = signal<Card[]>([]);
   private readonly dueCountSignal = signal(0);
   private readonly newCountSignal = signal(0);
+  private readonly availableNewSignal = signal(0);
   private readonly perBookSignal = signal<BookPending[]>([]);
   private readonly errorMessageSignal = signal<string | null>(null);
 
@@ -31,8 +32,12 @@ export class QueueService {
   readonly queue = this.queueSignal.asReadonly();
   readonly dueCount = this.dueCountSignal.asReadonly();
   readonly newCount = this.newCountSignal.asReadonly();
+  readonly availableNew = this.availableNewSignal.asReadonly();
   readonly perBook = this.perBookSignal.asReadonly();
   readonly errorMessage = this.errorMessageSignal.asReadonly();
+
+  // Datos de la última carga, para recomputar la cola al cambiar el límite de nuevas sin re-consultar.
+  private cache: { candidates: Card[]; introducedByBook: Record<string, number> } | null = null;
 
   /** Carga y arma la cola del día. Maneja el error de forma visible (contrato). */
   async load(): Promise<void> {
@@ -50,22 +55,39 @@ export class QueueService {
         this.dailyStatsRepository.getToday(user.id, dateId),
       ]);
 
-      const queue = buildDailyQueue(
-        candidates,
-        this.booksService.books(),
-        todayStats?.newCardsIntroduced ?? {},
+      this.cache = { candidates, introducedByBook: todayStats?.newCardsIntroduced ?? {} };
+      this.applyQueue(
+        buildDailyQueue(candidates, this.booksService.books(), this.cache.introducedByBook),
       );
-
-      this.queueSignal.set(queue.cards);
-      this.dueCountSignal.set(queue.dueCount);
-      this.newCountSignal.set(queue.newCount);
-      this.perBookSignal.set(queue.perBook);
       this.statusSignal.set('ready');
     } catch (error) {
       console.error('No se pudo armar la cola del día', error);
       this.errorMessageSignal.set('No se pudo cargar tu cola de hoy.');
       this.statusSignal.set('error');
     }
+  }
+
+  /** Override de sesión: recomputa la cola con un límite total de nuevas (sin re-consultar). */
+  applyNewLimit(newLimit: number): void {
+    if (this.cache === null) {
+      return;
+    }
+    this.applyQueue(
+      buildDailyQueue(
+        this.cache.candidates,
+        this.booksService.books(),
+        this.cache.introducedByBook,
+        Math.max(0, newLimit),
+      ),
+    );
+  }
+
+  private applyQueue(queue: ReturnType<typeof buildDailyQueue>): void {
+    this.queueSignal.set(queue.cards);
+    this.dueCountSignal.set(queue.dueCount);
+    this.newCountSignal.set(queue.newCount);
+    this.availableNewSignal.set(queue.availableNewCount);
+    this.perBookSignal.set(queue.perBook);
   }
 
   private requireUser(): User {

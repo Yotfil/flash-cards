@@ -34,7 +34,7 @@ import { ErrorStateComponent } from '@shared/error-state/error-state.component';
           />
         }
         @case ('ready') {
-          @if (total() === 0) {
+          @if (!hasStudyMaterial()) {
             <app-empty-state
               title="Estás al día"
               message="No tienes tarjetas para repasar ahora. Agrega o importa más cuando quieras."
@@ -54,9 +54,45 @@ import { ErrorStateComponent } from '@shared/error-state/error-state.component';
               <p class="mt-1 text-sm text-text-secondary">
                 {{ dueCount() }} por repasar · {{ newCount() }} nuevas
               </p>
+
+              @if (availableNew() > 0) {
+                <div class="mt-4 flex items-center justify-between gap-3">
+                  <span class="text-sm text-text-secondary">Tarjetas nuevas hoy</span>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Menos nuevas"
+                      [disabled]="sessionNew() === 0"
+                      (click)="adjustNew(-1)"
+                      class="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-40"
+                    >
+                      −
+                    </button>
+                    <span class="w-8 text-center text-sm font-medium text-text-primary">
+                      {{ sessionNew() }}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Más nuevas"
+                      [disabled]="sessionNew() >= availableNew()"
+                      (click)="adjustNew(1)"
+                      class="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                @if (showNudge()) {
+                  <p class="mt-2 text-xs text-text-muted">
+                    Tienes muchos repasos hoy; considera menos tarjetas nuevas para no acumular
+                    carga.
+                  </p>
+                }
+              }
+
               <button
                 type="button"
-                [disabled]="starting()"
+                [disabled]="starting() || total() === 0"
                 (click)="study()"
                 class="mt-4 w-full rounded-xl bg-accent px-4 py-3 font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
               >
@@ -108,17 +144,42 @@ export class HoyComponent implements OnInit {
   protected readonly status = this.queueService.status;
   protected readonly dueCount = this.queueService.dueCount;
   protected readonly newCount = this.queueService.newCount;
+  protected readonly availableNew = this.queueService.availableNew;
   protected readonly perBook = this.queueService.perBook;
   protected readonly errorMessage = this.queueService.errorMessage;
   protected readonly total = computed(() => this.dueCount() + this.newCount());
+  // Hay material de estudio (independiente del override de sesión): vencidas o nuevas disponibles.
+  protected readonly hasStudyMaterial = computed(() => this.dueCount() + this.availableNew() > 0);
   protected readonly starting = signal(false);
 
+  // Nuevas que el usuario eligió para esta sesión, y el default con que llegó la cola (para el nudge).
+  protected readonly sessionNew = signal(0);
+  private readonly defaultNew = signal(0);
+
+  /** Sugerir reducir nuevas cuando hay muchos repasos hoy (carga de repasos alta vs. la tanda). */
+  protected readonly showNudge = computed(
+    () => this.availableNew() > 0 && this.dueCount() >= 2 * Math.max(this.defaultNew(), 10),
+  );
+
   ngOnInit(): void {
-    void this.queueService.load();
+    void this.refresh();
   }
 
   protected reload(): void {
-    void this.queueService.load();
+    void this.refresh();
+  }
+
+  private async refresh(): Promise<void> {
+    await this.queueService.load();
+    this.defaultNew.set(this.newCount());
+    this.sessionNew.set(this.newCount());
+  }
+
+  /** Ajusta cuántas tarjetas nuevas estudiar hoy (0..disponibles) y recomputa la cola. */
+  protected adjustNew(delta: number): void {
+    const next = Math.min(this.availableNew(), Math.max(0, this.sessionNew() + delta));
+    this.sessionNew.set(next);
+    this.queueService.applyNewLimit(next);
   }
 
   protected async study(): Promise<void> {
