@@ -15,6 +15,7 @@ import {
 import type { Card, Rating, RatingCounts, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
 import { studyDayId } from './study-day';
+import { suggestRatingByLatency } from './suggest-rating';
 
 export type ReviewStatus = 'idle' | 'active' | 'finished';
 
@@ -38,6 +39,8 @@ export class ReviewService {
   private readonly queueSignal = signal<Card[]>([]);
   private readonly indexSignal = signal(0);
   private readonly revealedSignal = signal(false);
+  // Grado sugerido por la velocidad de recuerdo (null = sin sugerencia: setting off o sin revelar).
+  private readonly suggestedRatingSignal = signal<Rating | null>(null);
   private readonly previewsSignal = signal<Record<Rating, RatingOutcome> | null>(null);
   private readonly reviewedSignal = signal(0);
   private readonly ratingCountsSignal = signal<RatingCounts>({ ...EMPTY_RATING_COUNTS });
@@ -45,6 +48,7 @@ export class ReviewService {
 
   readonly status = this.statusSignal.asReadonly();
   readonly revealed = this.revealedSignal.asReadonly();
+  readonly suggestedRating = this.suggestedRatingSignal.asReadonly();
   readonly previews = this.previewsSignal.asReadonly();
   readonly errorMessage = this.errorMessageSignal.asReadonly();
   readonly current = computed<Card | null>(() => this.queueSignal()[this.indexSignal()] ?? null);
@@ -79,8 +83,16 @@ export class ReviewService {
     return this.beginSession(cards);
   }
 
+  /** Revela la respuesta y, si el ajuste está activo, calcula el grado sugerido por la latencia de
+   *  recuerdo (anverso → revelar). Idempotente: una segunda llamada no recalcula. */
   reveal(): void {
+    if (this.revealedSignal()) {
+      return;
+    }
     this.revealedSignal.set(true);
+    const latencyMs = Date.now() - this.cardShownAt;
+    const autoGrade = this.authService.currentUser()?.settings.autoGradeByTime ?? false;
+    this.suggestedRatingSignal.set(autoGrade ? suggestRatingByLatency(latencyMs) : null);
   }
 
   /** Califica la tarjeta actual con un grado 1-4: persiste, registra y avanza. */
@@ -173,6 +185,7 @@ export class ReviewService {
     if (this.indexSignal() >= this.total()) {
       this.statusSignal.set('finished');
       this.previewsSignal.set(null);
+      this.suggestedRatingSignal.set(null);
     } else {
       this.showCurrent();
     }
@@ -184,6 +197,7 @@ export class ReviewService {
       return;
     }
     this.revealedSignal.set(false);
+    this.suggestedRatingSignal.set(null);
     this.previewsSignal.set(this.schedulingPort.schedule(card.scheduling));
     this.cardShownAt = Date.now();
   }
