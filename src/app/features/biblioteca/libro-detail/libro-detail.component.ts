@@ -1,12 +1,14 @@
 import { Component, type OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import type { Chapter, ChapterDraft } from '@domain/models';
+import type { Book, BookDraft, Chapter, ChapterDraft } from '@domain/models';
 import { BooksService } from '@services/books.service';
 import { ChaptersService } from '@services/chapters.service';
 import { ReviewService } from '@services/review';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
+import { IconComponent } from '@shared/icon/icon.component';
+import { BookSettingsDialogComponent } from '../book-settings-dialog/book-settings-dialog.component';
 import { ChapterFormDialogComponent } from '../chapter-form-dialog/chapter-form-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
@@ -18,6 +20,8 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
     RouterLink,
     EmptyStateComponent,
     ErrorStateComponent,
+    IconComponent,
+    BookSettingsDialogComponent,
     ChapterFormDialogComponent,
     ConfirmDialogComponent,
   ],
@@ -48,10 +52,12 @@ export class LibroDetailComponent implements OnInit {
 
   protected readonly showForm = signal(false);
   protected readonly editing = signal<Chapter | null>(null);
+  protected readonly configuring = signal<Book | null>(null);
   protected readonly pendingDelete = signal<Chapter | null>(null);
   protected readonly actionError = signal<string | null>(null);
   // En vuelo: bloquean los botones de los diálogos para evitar acciones duplicadas.
   protected readonly saving = signal(false);
+  protected readonly savingSettings = signal(false);
   protected readonly deleting = signal(false);
 
   ngOnInit(): void {
@@ -79,6 +85,35 @@ export class LibroDetailComponent implements OnInit {
       await this.router.navigate(['/repaso']);
     } finally {
       this.studying.set(false);
+    }
+  }
+
+  protected openSettings(book: Book): void {
+    this.configuring.set(book);
+  }
+
+  protected closeSettings(): void {
+    this.configuring.set(null);
+  }
+
+  protected async onSaveSettings(changes: Partial<BookDraft>): Promise<void> {
+    if (this.savingSettings()) {
+      return;
+    }
+    const book = this.configuring();
+    if (!book) {
+      return;
+    }
+    this.actionError.set(null);
+    this.savingSettings.set(true);
+    try {
+      await this.booksService.update(book.id, changes);
+      this.closeSettings();
+    } catch (error) {
+      console.error('No se pudieron guardar los ajustes del libro', error);
+      this.actionError.set('No se pudieron guardar los ajustes. Inténtalo de nuevo.');
+    } finally {
+      this.savingSettings.set(false);
     }
   }
 
