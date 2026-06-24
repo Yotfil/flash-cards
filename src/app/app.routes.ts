@@ -25,6 +25,11 @@ export const routes: Routes = [
           import('@features/biblioteca/biblioteca.component').then((m) => m.BibliotecaComponent),
       },
       {
+        path: 'biblioteca/:bookId',
+        loadComponent: () =>
+          import('@features/biblioteca/libro-detail.component').then((m) => m.LibroDetailComponent),
+      },
+      {
         path: 'progreso',
         loadComponent: () =>
           import('@features/progreso/progreso.component').then((m) => m.ProgresoComponent),

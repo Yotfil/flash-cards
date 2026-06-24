@@ -1,4 +1,5 @@
 import { Component, type OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import type { Book, BookDraft } from '@domain/models';
 import { BooksService } from '@services/books.service';
@@ -8,10 +9,11 @@ import { BookFormDialogComponent } from './book-form-dialog.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
 /** Pantalla "Biblioteca": CRUD de libros (Fase 1). Sólo pinta y captura eventos; toda la lógica y
- *  el estado viven en `BooksService`. Capítulos, tarjetas e importación llegan en ramas siguientes. */
+ *  el estado viven en `BooksService`. Tocar un libro abre su detalle (capítulos). */
 @Component({
   selector: 'app-biblioteca',
   imports: [
+    RouterLink,
     EmptyStateComponent,
     ErrorStateComponent,
     BookFormDialogComponent,
@@ -78,7 +80,10 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
                 <li
                   class="flex items-start justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-5"
                 >
-                  <div class="min-w-0">
+                  <a
+                    [routerLink]="['/biblioteca', book.id]"
+                    class="min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  >
                     <h2 class="truncate font-medium text-text-primary">{{ book.name }}</h2>
                     <div class="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-text-muted">
                       <span class="rounded-full bg-surface-sunken px-2 py-0.5 text-text-secondary">
@@ -88,7 +93,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
                       <span aria-hidden="true">·</span>
                       <span>{{ book.newCardsPerDay }} nuevas/día</span>
                     </div>
-                  </div>
+                  </a>
                   <div class="flex shrink-0 gap-2">
                     <button
                       type="button"

@@ -28,6 +28,14 @@ export class BooksService {
   readonly status = this.statusSignal.asReadonly();
   readonly errorMessage = this.errorMessageSignal.asReadonly();
 
+  /** Carga los libros sólo si aún no se han cargado. Útil para vistas (p. ej. el detalle de un
+   *  libro) a las que se puede llegar por navegación directa sin pasar por la lista. */
+  async ensureLoaded(): Promise<void> {
+    if (this.statusSignal() === 'idle') {
+      await this.load();
+    }
+  }
+
   /** Carga los libros del usuario actual. Maneja el error de forma visible (contrato). */
   async load(): Promise<void> {
     this.statusSignal.set('loading');
