@@ -68,5 +68,14 @@ export const routes: Routes = [
         (m) => m.ReviewSessionComponent,
       ),
   },
+  {
+    // Pantalla completa, fuera del shell: el modo Practicar (mini-quiz, Fase 2).
+    path: 'practicar',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('@features/quiz/practice-session/practice-session.component').then(
+        (m) => m.PracticeSessionComponent,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

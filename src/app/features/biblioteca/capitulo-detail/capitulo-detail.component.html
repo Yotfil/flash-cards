@@ -31,19 +31,36 @@
   </header>
 
   @if (cardsStatus() === 'ready' && cards().length > 0) {
-    <button
-      type="button"
-      [disabled]="studying()"
-      (click)="studyChapter()"
-      class="mt-4 w-full rounded-xl border border-accent bg-surface px-4 py-3 text-sm font-medium text-accent transition-colors hover:bg-surface-sunken disabled:opacity-50"
-    >
-      @if (studying()) {
-        Preparando…
-      } @else {
-        Estudiar este capítulo
-      }
-    </button>
+    <div class="mt-4 flex gap-2">
+      <button
+        type="button"
+        [disabled]="studying()"
+        (click)="studyChapter()"
+        class="flex-1 rounded-xl border border-accent bg-surface px-4 py-3 text-sm font-medium text-accent transition-colors hover:bg-surface-sunken disabled:opacity-50"
+      >
+        @if (studying()) {
+          Preparando…
+        } @else {
+          Estudiar este capítulo
+        }
+      </button>
+      <button
+        type="button"
+        [disabled]="practicing()"
+        (click)="practiceChapter()"
+        class="flex-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
+      >
+        @if (practicing()) {
+          Preparando…
+        } @else {
+          Practicar
+        }
+      </button>
+    </div>
     @if (studyMessage(); as message) {
+      <p class="mt-2 text-center text-sm text-text-muted">{{ message }}</p>
+    }
+    @if (practiceMessage(); as message) {
       <p class="mt-2 text-center text-sm text-text-muted">{{ message }}</p>
     }
   }
