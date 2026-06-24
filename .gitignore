@@ -46,6 +46,15 @@ Thumbs.db
 # Bitácora local de trabajo (registro de avance; no se versiona)
 /MEMORY.md
 
+# Documentación local (no se versiona)
+/docs
+
+# READMEs internos de carpetas (guías de arquitectura); solo se versiona el del root
+/src/**/README.md
+
+# Instrucciones locales para el asistente (no se versionan)
+/CLAUDE.md
+
 # Secrets — nunca versionar el .env real (sí .env.example)
 .env
 .env.local
