@@ -20,6 +20,9 @@ export class CardImportDialogComponent {
   readonly imported = output<CardContentDraft[]>();
   readonly cancelled = output<void>();
 
+  // Ejemplo cloze como texto plano (evita escapar `{{ }}` en la plantilla).
+  protected readonly clozeExample = 'El {{gato}} es {{negro}}';
+
   protected readonly text = signal('');
 
   private readonly parseResult = computed(() =>

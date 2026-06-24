@@ -5,6 +5,7 @@ import type { Card, CardContentDraft } from '@domain/models';
 import { CardsService } from '@services/cards.service';
 import { ChaptersService } from '@services/chapters.service';
 import { ReviewService } from '@services/review';
+import { clozeQuestion } from '@services/cloze';
 import { findDuplicateCardIds, sortCardsForDisplay } from '@services/card-duplicates';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
@@ -67,6 +68,16 @@ export class CapituloDetailComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
   protected readonly importing = signal(false);
+
+  /** ¿La tarjeta es cloze? Decide cómo se pinta en el listado (pregunta con huecos vs anverso→reverso). */
+  protected isCloze(card: Card): boolean {
+    return card.cardType === 'cloze';
+  }
+
+  /** Texto compacto de una tarjeta cloze para el listado: el texto con los huecos como `[…]`. */
+  protected clozePreview(card: Card): string {
+    return clozeQuestion(card.front);
+  }
 
   ngOnInit(): void {
     // Carga los capítulos del libro (para el nombre en la cabecera) y las tarjetas del capítulo.
