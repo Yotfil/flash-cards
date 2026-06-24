@@ -75,6 +75,19 @@ export class BooksService {
     this.booksSignal.update((books) => books.filter((book) => book.id !== bookId));
   }
 
+  /** Ajusta el conteo de tarjetas de un libro (+1/-1): lo persiste y refresca el signal local para
+   *  que la Biblioteca muestre el conteo correcto sin recargar. La llaman los servicios de tarjetas
+   *  al crear/borrar. */
+  async changeCardCount(bookId: string, delta: number): Promise<void> {
+    const uid = this.requireUid();
+    await this.bookRepository.incrementCardCount(uid, bookId, delta);
+    this.booksSignal.update((books) =>
+      books.map((book) =>
+        book.id === bookId ? { ...book, cardCount: (book.cardCount ?? 0) + delta } : book,
+      ),
+    );
+  }
+
   private nextOrder(): number {
     const orders = this.booksSignal().map((book) => book.order);
     return orders.length === 0 ? 0 : Math.max(...orders) + 1;

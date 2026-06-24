@@ -40,6 +40,10 @@ class FakeBookRepository extends BookRepository {
   override async delete(): Promise<void> {
     // No usado en estas pruebas.
   }
+
+  override async incrementCardCount(): Promise<void> {
+    // No usado en estas pruebas.
+  }
 }
 
 function buildBook(partial: Partial<Book>): Book {
