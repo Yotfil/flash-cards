@@ -106,9 +106,12 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
                   <li
                     class="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-4"
                   >
-                    <h2 class="min-w-0 truncate font-medium text-text-primary">
+                    <a
+                      [routerLink]="['/biblioteca', bookId, chapter.id]"
+                      class="min-w-0 truncate rounded-lg font-medium text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    >
                       {{ chapter.name }}
-                    </h2>
+                    </a>
                     <div class="flex shrink-0 gap-2">
                       <button
                         type="button"
@@ -158,7 +161,7 @@ export class LibroDetailComponent implements OnInit {
   private readonly booksService = inject(BooksService);
   private readonly chaptersService = inject(ChaptersService);
 
-  private readonly bookId = this.route.snapshot.paramMap.get('bookId') ?? '';
+  protected readonly bookId = this.route.snapshot.paramMap.get('bookId') ?? '';
 
   protected readonly book = computed(() =>
     this.booksService.books().find((candidate) => candidate.id === this.bookId),
