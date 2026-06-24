@@ -23,4 +23,7 @@ export abstract class BookRepository {
 
   /** Borra un libro. */
   abstract delete(uid: string, bookId: string): Promise<void>;
+
+  /** Ajusta el conteo denormalizado de tarjetas del libro (+1 al crear, -1 al borrar). */
+  abstract incrementCardCount(uid: string, bookId: string, delta: number): Promise<void>;
 }

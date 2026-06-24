@@ -65,3 +65,12 @@ export interface Card {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Contenido que el usuario edita en el formulario del MVP. Principio 2: el modelo tiene más campos
+ * (pronunciation, example, …) pero la UI del MVP sólo expone anverso/reverso.
+ */
+export interface CardContentDraft {
+  front: string;
+  back: string;
+}

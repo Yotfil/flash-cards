@@ -10,6 +10,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  increment,
   orderBy,
   query,
   setDoc,
@@ -83,6 +84,14 @@ export class FirestoreBookRepository extends BookRepository {
 
   override async delete(uid: string, bookId: string): Promise<void> {
     await deleteDoc(doc(this.booksCollection(uid), bookId));
+  }
+
+  override async incrementCardCount(uid: string, bookId: string, delta: number): Promise<void> {
+    // `increment` es atómico en el servidor: dos escrituras concurrentes no se pisan.
+    await updateDoc(doc(this.booksCollection(uid), bookId), {
+      cardCount: increment(delta),
+      updatedAt: Timestamp.fromDate(new Date()),
+    });
   }
 
   private booksCollection(uid: string) {
