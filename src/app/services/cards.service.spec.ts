@@ -67,6 +67,10 @@ class FakeCardRepository extends CardRepository {
     return [];
   }
 
+  override async listDue(): Promise<Card[]> {
+    return [];
+  }
+
   override async updateScheduling(): Promise<void> {
     // No usado en estas pruebas.
   }
