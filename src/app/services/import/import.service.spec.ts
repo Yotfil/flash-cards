@@ -14,6 +14,7 @@ const SCHEDULING: CardScheduling = {
   difficulty: 0,
   elapsedDays: 0,
   scheduledDays: 0,
+  learningSteps: 0,
   reps: 0,
   lapses: 0,
   state: CardState.New,
@@ -31,6 +32,10 @@ class FakeImportRepository extends ImportRepository {
 class FakeSchedulingPort extends SchedulingPort {
   override createInitialScheduling(): CardScheduling {
     return { ...SCHEDULING };
+  }
+
+  override schedule(): never {
+    throw new Error('no usado en estas pruebas');
   }
 }
 
