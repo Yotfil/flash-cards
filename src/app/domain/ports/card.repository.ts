@@ -18,6 +18,10 @@ export abstract class CardRepository {
   /** Lista todas las tarjetas de un libro (para estudiar el libro completo). */
   abstract listByBook(uid: string, bookId: string): Promise<Card[]>;
 
+  /** Lista las tarjetas con `scheduling.due ≤ endOfDay` (candidatas de la cola diaria: vencidas y
+   *  nuevas, ya que las nuevas tienen `due` en el pasado). */
+  abstract listDue(uid: string, endOfDay: Date): Promise<Card[]>;
+
   /** Crea una tarjeta y devuelve el modelo resultante (con `id` y timestamps ya asignados). */
   abstract create(uid: string, input: CardCreateInput): Promise<Card>;
 

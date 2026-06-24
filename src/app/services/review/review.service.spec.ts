@@ -57,6 +57,9 @@ class FakeCardRepository extends CardRepository {
   override async listByChapter(): Promise<Card[]> {
     return [...this.cards];
   }
+  override async listDue(): Promise<Card[]> {
+    return [...this.cards];
+  }
   override async updateScheduling(
     _uid: string,
     cardId: string,
@@ -116,6 +119,9 @@ class FakeDailyStatsRepository extends DailyStatsRepository {
   records: { dateId: string; input: ReviewStatInput }[] = [];
   override async recordReview(_uid: string, dateId: string, input: ReviewStatInput): Promise<void> {
     this.records.push({ dateId, input });
+  }
+  override async getToday(): Promise<null> {
+    return null;
   }
 }
 

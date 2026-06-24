@@ -70,6 +70,15 @@ export class ReviewService {
     return this.start(() => this.cardRepository.listByChapter(this.requireUser().id, chapterId));
   }
 
+  /** Arranca una sesión con una lista YA curada (p. ej. la cola diaria de Hoy). No re-filtra. */
+  startWith(cards: Card[]): number {
+    this.errorMessageSignal.set(null);
+    if (cards.length === 0) {
+      return 0;
+    }
+    return this.beginSession(cards);
+  }
+
   reveal(): void {
     this.revealedSignal.set(true);
   }
@@ -138,13 +147,17 @@ export class ReviewService {
     if (ready.length === 0) {
       return 0;
     }
-    this.queueSignal.set(ready);
+    return this.beginSession(ready);
+  }
+
+  private beginSession(cards: Card[]): number {
+    this.queueSignal.set(cards);
     this.indexSignal.set(0);
     this.reviewedSignal.set(0);
     this.ratingCountsSignal.set({ ...EMPTY_RATING_COUNTS });
     this.statusSignal.set('active');
     this.showCurrent();
-    return ready.length;
+    return cards.length;
   }
 
   /** Tarjetas listas para estudiar: nuevas o vencidas (due ≤ ahora). */
