@@ -18,15 +18,26 @@
           {{ currentBook.subject }}
         </span>
       </div>
-      @if (chaptersStatus() === 'ready') {
+      <div class="flex shrink-0 items-center gap-2">
         <button
           type="button"
-          (click)="openCreate()"
-          class="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+          [attr.aria-label]="'Ajustes de ' + currentBook.name"
+          title="Ajustes del libro"
+          (click)="openSettings(currentBook)"
+          class="rounded-lg border border-border bg-surface p-2 text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text-primary"
         >
-          Nuevo capítulo
+          <app-icon name="sliders" size="sm" />
         </button>
-      }
+        @if (chaptersStatus() === 'ready') {
+          <button
+            type="button"
+            (click)="openCreate()"
+            class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+          >
+            Nuevo capítulo
+          </button>
+        }
+      </div>
     </header>
 
     @if (chaptersStatus() === 'ready') {
@@ -148,5 +159,14 @@
     [pending]="deleting()"
     (confirmed)="confirmDelete(chapter)"
     (cancelled)="pendingDelete.set(null)"
+  />
+}
+
+@if (configuring(); as book) {
+  <app-book-settings-dialog
+    [book]="book"
+    [pending]="savingSettings()"
+    (saved)="onSaveSettings($event)"
+    (cancelled)="closeSettings()"
   />
 }

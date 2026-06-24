@@ -1,9 +1,11 @@
 // Armado de la cola diaria (spec §6.9). Puro y testeable. Recibe las tarjetas CANDIDATAS (las que ya
-// vienen con `due ≤ fin del día`, de una sola query), los libros (para `newCardsPerDay` y nombre) y
-// cuántas nuevas se introdujeron HOY por libro (de `dailyStats`). Devuelve la cola y los conteos.
+// vienen con `due ≤ fin del día`, de una sola query), los libros (para `newCardsPerDay`,
+// `maxReviewsPerDay` y nombre), cuántas nuevas se introdujeron HOY por libro y cuántos repasos se
+// completaron HOY por libro (ambos de `dailyStats`). Devuelve la cola y los conteos.
 //
-// Regla: vencidas (state≠0) TODAS, por `due` asc; nuevas (state==0) hasta `newCardsPerDay` menos las
-// ya introducidas hoy, por libro. La cola = vencidas seguidas de nuevas.
+// Regla: vencidas (state≠0) por `due` asc, topadas por libro a `maxReviewsPerDay` menos las ya
+// repasadas hoy (0 = sin tope); nuevas (state==0) hasta `newCardsPerDay` menos las ya introducidas
+// hoy, por libro. La cola = vencidas seguidas de nuevas.
 
 import { type Card, CardState } from '@domain/models';
 import type { Book } from '@domain/models';
@@ -25,22 +27,25 @@ export interface DailyQueue {
 }
 
 /**
- * Arma la cola. Si `newLimit` se omite, las nuevas se topan **por libro** con `newCardsPerDay` menos
- * las introducidas hoy (comportamiento por defecto). Si se indica, es un override de SESIÓN: toma
- * hasta `newLimit` nuevas en TOTAL (más antiguas primero), ignorando el tope por libro (para empujar
- * más, o 0 para no añadir).
+ * Arma la cola. Las vencidas se topan **por libro** a `maxReviewsPerDay` menos las ya repasadas hoy
+ * (`maxReviewsPerDay === 0` = sin tope). Para las nuevas: si `newLimit` se omite, se topan por libro
+ * con `newCardsPerDay` menos las introducidas hoy (comportamiento por defecto); si se indica, es un
+ * override de SESIÓN que toma hasta `newLimit` nuevas en TOTAL (más antiguas primero), ignorando el
+ * tope por libro (para empujar más, o 0 para no añadir).
  */
 export function buildDailyQueue(
   candidates: Card[],
   books: Book[],
   introducedByBook: Record<string, number>,
+  reviewedByBook: Record<string, number>,
   newLimit?: number,
 ): DailyQueue {
   const bookById = new Map(books.map((book) => [book.id, book]));
 
-  const due = candidates
+  const dueCandidates = candidates
     .filter((card) => card.scheduling.state !== CardState.New)
     .sort((a, b) => a.scheduling.due.getTime() - b.scheduling.due.getTime());
+  const due = selectDueWithCap(dueCandidates, bookById, reviewedByBook);
 
   const newCandidates = candidates
     .filter((card) => card.scheduling.state === CardState.New && bookById.has(card.bookId))
@@ -60,6 +65,32 @@ export function buildDailyQueue(
     availableNewCount: newCandidates.length,
     perBook,
   };
+}
+
+/** Vencidas topadas por libro a `maxReviewsPerDay` menos las ya repasadas hoy. `maxReviewsPerDay`
+ *  0 = sin tope. Libros desconocidos (sin metadatos) pasan sin topar. Entra ya ordenado por `due`
+ *  asc, así que se conservan las más atrasadas. */
+function selectDueWithCap(
+  dueCandidates: Card[],
+  bookById: Map<string, Book>,
+  reviewedByBook: Record<string, number>,
+): Card[] {
+  const takenByBook = new Map<string, number>();
+  const selected: Card[] = [];
+  for (const card of dueCandidates) {
+    const book = bookById.get(card.bookId);
+    if (book === undefined || book.maxReviewsPerDay === 0) {
+      selected.push(card);
+      continue;
+    }
+    const remaining = Math.max(0, book.maxReviewsPerDay - (reviewedByBook[card.bookId] ?? 0));
+    const taken = takenByBook.get(card.bookId) ?? 0;
+    if (taken < remaining) {
+      selected.push(card);
+      takenByBook.set(card.bookId, taken + 1);
+    }
+  }
+  return selected;
 }
 
 /** Selección por defecto: por libro, `newCardsPerDay` menos las ya introducidas hoy. */

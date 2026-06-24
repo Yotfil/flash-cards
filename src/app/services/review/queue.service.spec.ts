@@ -131,6 +131,7 @@ describe('QueueService', () => {
       date: '2026-06-23',
       newCardsIntroduced: { b1: 1 },
       reviewsCompleted: 1,
+      reviewsCompletedByBook: {},
       ratingCounts: { again: 0, hard: 0, good: 1, easy: 0 },
     };
     const service = configure([buildCard('n1', 'b1', CardState.New)], [buildBook('b1', 1)], today);

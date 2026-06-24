@@ -34,7 +34,11 @@ export class FirestoreDailyStatsRepository extends DailyStatsRepository {
       ratingCounts: { [RATING_NAME[input.rating]]: increment(1) },
     };
     if (input.wasNew) {
+      // Introducción de una nueva: cuenta para el tope de nuevas, no para el de repasos.
       data['newCardsIntroduced'] = { [input.bookId]: increment(1) };
+    } else {
+      // Repaso real (la tarjeta no estaba en New): cuenta para el tope de repasos/día.
+      data['reviewsCompletedByBook'] = { [input.bookId]: increment(1) };
     }
 
     await setDoc(reference, data, { merge: true });

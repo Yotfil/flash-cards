@@ -1,0 +1,79 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
+  <form
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-label]="heading()"
+    [formGroup]="form"
+    [attr.aria-busy]="pending()"
+    (ngSubmit)="submit()"
+    (keydown.escape)="pending() || cancelled.emit()"
+    class="w-full max-w-md rounded-2xl border border-border bg-surface-raised p-6 shadow-xl"
+  >
+    <h2 class="truncate text-lg font-semibold text-text-primary">{{ heading() }}</h2>
+
+    <!-- Sección "Tarjetas". Las secciones se apilan: añadir un ajuste futuro = otra <section>. -->
+    <section class="mt-5">
+      <h3 class="text-sm font-semibold text-text-primary">Tarjetas</h3>
+
+      <div class="mt-3 flex gap-4">
+        <div class="flex flex-1 flex-col gap-1.5">
+          <label for="book-settings-new" class="text-sm font-medium text-text-secondary">
+            Nuevas por día
+          </label>
+          <input
+            id="book-settings-new"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            formControlName="newCardsPerDay"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
+          />
+        </div>
+        <div class="flex flex-1 flex-col gap-1.5">
+          <label for="book-settings-max" class="text-sm font-medium text-text-secondary">
+            Máx. repasos/día
+          </label>
+          <input
+            id="book-settings-max"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            formControlName="maxReviewsPerDay"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
+          />
+          <p class="text-xs text-text-muted">0 = sin tope.</p>
+        </div>
+      </div>
+
+      <p class="mt-3 text-xs text-text-muted">
+        <strong class="font-medium">Nuevas por día:</strong> cada nueva genera varios repasos
+        futuros; si se te acumula trabajo en este libro, bájalas.
+        <strong class="font-medium">Máx. repasos/día:</strong> tope de tarjetas vencidas que verás
+        de este libro cada día; el resto rueda a días siguientes (0 = sin tope, las ves todas).
+      </p>
+    </section>
+
+    <div class="mt-6 flex justify-end gap-3">
+      <button
+        type="button"
+        [disabled]="pending()"
+        (click)="cancelled.emit()"
+        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        [disabled]="form.invalid || pending()"
+        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
+      >
+        @if (pending()) {
+          Guardando…
+        } @else {
+          Guardar
+        }
+      </button>
+    </div>
+  </form>
+</div>

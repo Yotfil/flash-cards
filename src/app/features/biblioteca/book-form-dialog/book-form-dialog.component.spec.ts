@@ -10,14 +10,21 @@ describe('BookFormDialogComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('precarga las nuevas/día con el default recibido al crear', () => {
+  it('siembra las nuevas/día con el default recibido al crear', () => {
     const fixture = TestBed.createComponent(BookFormDialogComponent);
     fixture.componentRef.setInput('defaultNewCardsPerDay', 7);
     fixture.detectChanges();
 
+    let emitted: { newCardsPerDay?: number } | undefined;
+    fixture.componentInstance.saved.subscribe((value) => (emitted = value));
+
     const component = fixture.componentInstance as unknown as {
-      form: { get(name: string): { value: number } | null };
+      form: { get(name: string): { setValue(v: string): void } | null };
+      submit(): void;
     };
-    expect(component.form.get('newCardsPerDay')?.value).toBe(7);
+    component.form.get('name')?.setValue('Inglés');
+    component.submit();
+
+    expect(emitted?.newCardsPerDay).toBe(7);
   });
 });

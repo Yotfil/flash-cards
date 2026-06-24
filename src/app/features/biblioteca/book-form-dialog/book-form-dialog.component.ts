@@ -10,10 +10,11 @@ import {
 import type { Book, BookDraft } from '@domain/models';
 import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@services/books.service';
 
-/** Formulario de libro en diálogo (crear/editar). Sólo expone front/back del modelo que toca el
- *  usuario (Principio 2: el resto del esquema existe pero la UI del MVP no lo muestra). Emite un
- *  `BookDraft` válido en `save`; el padre decide si crea o actualiza. Accesible: role="dialog",
- *  aria-modal, labels asociadas, cierre con Escape. */
+/** Formulario de libro en diálogo (crear/editar). Cubre la identidad del libro (nombre, materia,
+ *  dirección de estudio); los ajustes de tarjetas viven en BookSettingsDialogComponent. Emite un
+ *  `BookDraft` válido en `save`; el padre decide si crea o actualiza. En modo crear, los topes de
+ *  tarjetas se siembran con los defaults; en editar se conservan los del libro. Accesible:
+ *  role="dialog", aria-modal, labels asociadas, cierre con Escape. */
 @Component({
   selector: 'app-book-form-dialog',
   imports: [ReactiveFormsModule],
@@ -40,8 +41,6 @@ export class BookFormDialogComponent implements OnInit {
     name: ['', [Validators.required, Validators.maxLength(120)]],
     subject: ['general', [Validators.required]],
     studyDirection: ['forward' as BookDraft['studyDirection']],
-    newCardsPerDay: [DEFAULT_NEW_CARDS_PER_DAY, [Validators.required, Validators.min(0)]],
-    maxReviewsPerDay: [DEFAULT_MAX_REVIEWS_PER_DAY, [Validators.required, Validators.min(0)]],
   });
 
   ngOnInit(): void {
@@ -51,12 +50,7 @@ export class BookFormDialogComponent implements OnInit {
         name: existing.name,
         subject: existing.subject,
         studyDirection: existing.studyDirection,
-        newCardsPerDay: existing.newCardsPerDay,
-        maxReviewsPerDay: existing.maxReviewsPerDay,
       });
-    } else {
-      // Modo crear: precarga las nuevas/día con el default global del usuario (Ajustes).
-      this.form.get('newCardsPerDay')?.setValue(this.defaultNewCardsPerDay());
     }
   }
 
@@ -73,13 +67,16 @@ export class BookFormDialogComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
+    const existing = this.book();
     const value = this.form.getRawValue();
     this.saved.emit({
       name: value.name.trim(),
       subject: value.subject.trim() || 'general',
       studyDirection: value.studyDirection,
-      newCardsPerDay: Number(value.newCardsPerDay),
-      maxReviewsPerDay: Number(value.maxReviewsPerDay),
+      // Los topes de tarjetas se gestionan en el diálogo de ajustes del libro: al crear se siembran
+      // (nuevas = default global del usuario), al editar se conservan los del libro.
+      newCardsPerDay: existing ? existing.newCardsPerDay : this.defaultNewCardsPerDay(),
+      maxReviewsPerDay: existing ? existing.maxReviewsPerDay : DEFAULT_MAX_REVIEWS_PER_DAY,
     });
   }
 }
