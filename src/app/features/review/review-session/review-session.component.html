@@ -41,10 +41,27 @@
       [disabled]="revealed()"
       class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-6 px-6 text-center disabled:cursor-default"
     >
-      <p class="text-2xl font-semibold text-text-primary">{{ card.front }}</p>
-      @if (revealed()) {
-        <div class="h-px w-16 bg-border"></div>
-        <p class="text-xl text-text-secondary">{{ card.back }}</p>
+      @if (isCloze(card)) {
+        <!-- Cloze: un solo texto; los huecos se muestran como […] y se rellenan al revelar. -->
+        <p class="text-2xl font-semibold text-text-primary">
+          @for (segment of segments(card.front); track $index) {
+            @if (segment.cloze) {
+              @if (revealed()) {
+                <span class="text-accent">{{ segment.text }}</span>
+              } @else {
+                <span class="text-text-muted">[…]</span>
+              }
+            } @else {
+              <span>{{ segment.text }}</span>
+            }
+          }
+        </p>
+      } @else {
+        <p class="text-2xl font-semibold text-text-primary">{{ card.front }}</p>
+        @if (revealed()) {
+          <div class="h-px w-16 bg-border"></div>
+          <p class="text-xl text-text-secondary">{{ card.back }}</p>
+        }
       }
     </button>
 

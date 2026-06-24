@@ -1,8 +1,9 @@
 import { Component, type OnInit, HostListener, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
-import type { Rating } from '@domain/models';
+import type { Card, Rating } from '@domain/models';
 import { ReviewService } from '@services/review';
+import { type ClozeSegment, clozeSegments } from '@services/cloze';
 import { RatingComponent } from '../rating/rating.component';
 
 /** Sesión de repaso a pantalla completa (spec §8.6): Momento 1 (anverso + "Mostrar respuesta") →
@@ -38,6 +39,16 @@ export class ReviewSessionComponent implements OnInit {
   protected progressPercent(): number {
     const total = this.total();
     return total === 0 ? 0 : (this.summary().reviewed / total) * 100;
+  }
+
+  /** ¿La tarjeta es cloze? Decide cómo se pinta (segmentos con huecos vs anverso/reverso). */
+  protected isCloze(card: Card): boolean {
+    return card.cardType === 'cloze';
+  }
+
+  /** Segmentos de una tarjeta cloze para pintar huecos y respuestas. */
+  protected segments(text: string): ClozeSegment[] {
+    return clozeSegments(text);
   }
 
   protected reveal(): void {
