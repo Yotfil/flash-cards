@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { IconComponent, type IconName } from '@shared/icon/icon.component';
+import { VersionFooterComponent } from '@shared/version-footer/version-footer.component';
 
 interface NavItem {
   path: string;
@@ -13,7 +14,7 @@ interface NavItem {
  *  móvil) y el área de contenido donde se renderiza cada sección. */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, VersionFooterComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
