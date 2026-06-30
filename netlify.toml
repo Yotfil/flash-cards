@@ -1,0 +1,16 @@
+# Configuración de despliegue en Netlify (hosting del frontend).
+# La versión de Node la toma Netlify del archivo .nvmrc (24.17.0).
+
+[build]
+  # Build de producción de Angular (genera dist/flash-cards/browser).
+  command = "npm run build"
+  publish = "dist/flash-cards/browser"
+
+# SPA: cualquier ruta que no sea un archivo estático se sirve con index.html, para que el
+# enrutado del lado del cliente (Angular Router) funcione al recargar o entrar directo a una URL.
+# Netlify sirve primero los archivos existentes (assets, ngsw-worker.js, manifest…), así que este
+# rewrite solo aplica a las rutas de la app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
