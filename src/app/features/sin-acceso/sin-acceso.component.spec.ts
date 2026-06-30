@@ -3,21 +3,26 @@ import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { AuthService } from '@services/auth.service';
-import { AuthPageComponent } from './auth-page.component';
+import { SinAccesoComponent } from './sin-acceso.component';
 
-describe('AuthPageComponent', () => {
+describe('SinAccesoComponent', () => {
   it('se crea', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: { isAuthenticated: signal(false), accessDenied: signal(false) },
+          useValue: {
+            accessDeniedEmail: signal('pendiente@ejemplo.com'),
+            accessDenied: signal(true),
+            isAuthenticated: signal(false),
+            sessionResolved: signal(false),
+          },
         },
       ],
     });
 
-    const fixture = TestBed.createComponent(AuthPageComponent);
+    const fixture = TestBed.createComponent(SinAccesoComponent);
     fixture.detectChanges();
 
     expect(fixture.componentInstance).toBeTruthy();

@@ -60,6 +60,12 @@ export const routes: Routes = [
     ],
   },
   {
+    // Pantalla completa, fuera del shell: sesión autenticada pero sin acceso (early access).
+    path: 'sin-acceso',
+    loadComponent: () =>
+      import('@features/sin-acceso/sin-acceso.component').then((m) => m.SinAccesoComponent),
+  },
+  {
     // Pantalla completa, fuera del shell (sin la navegación): la sesión de repaso (§8.6).
     path: 'repaso',
     canActivate: [authGuard],
