@@ -21,6 +21,10 @@
         <span class="text-xs md:text-sm md:font-medium">{{ item.label }}</span>
       </a>
     }
+
+    <!-- Versión de la app: discreta, al fondo de la barra lateral (solo escritorio; en móvil la
+         nav inferior se mantiene limpia). `mt-auto` la empuja al final de la columna. -->
+    <app-version-footer class="mt-auto hidden px-3 py-3 md:block" />
   </nav>
 
   <main class="flex-1 overflow-y-auto">
