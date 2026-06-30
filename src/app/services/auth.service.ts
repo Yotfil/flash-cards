@@ -4,7 +4,7 @@
 
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import { AuthPort, UserRepository } from '@domain/ports';
+import { AllowlistRepository, AuthPort, UserRepository } from '@domain/ports';
 import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
 import type { AuthIdentity, User, UserSettings } from '@domain/models';
 
@@ -35,11 +35,26 @@ function buildDefaultUser(identity: AuthIdentity): User {
 export class AuthService {
   private readonly authPort = inject(AuthPort);
   private readonly userRepository = inject(UserRepository);
+  private readonly allowlistRepository = inject(AllowlistRepository);
 
   // undefined = aún resolviendo la sesión inicial; null = sin sesión; User = con sesión.
   private readonly currentUserSignal = signal<User | null | undefined>(undefined);
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.currentUserSignal() != null);
+
+  // True cuando hay sesión de Firebase pero el email NO está en la lista de acceso (early
+  // access): el usuario quedó autenticado pero sin permiso para usar la app ni tocar la DB.
+  private readonly accessDeniedSignal = signal(false);
+  readonly accessDenied = this.accessDeniedSignal.asReadonly();
+
+  // Email de la sesión sin acceso, para mostrarlo en la pantalla de "pendiente de acceso".
+  private readonly accessDeniedEmailSignal = signal<string | null>(null);
+  readonly accessDeniedEmail = this.accessDeniedEmailSignal.asReadonly();
+
+  // True una vez que la sesión inicial quedó determinada (para que las pantallas no naveguen
+  // antes de tiempo). Espeja la promesa `initialized` como signal consumible por effects.
+  private readonly resolvedSignal = signal(false);
+  readonly sessionResolved = this.resolvedSignal.asReadonly();
 
   // Promesa que resuelve cuando se conoce la sesión inicial (para el guard de rutas).
   private resolveInitialized!: () => void;
@@ -60,9 +75,16 @@ export class AuthService {
 
   async registerWithEmail(email: string, password: string, displayName: string): Promise<void> {
     const identity = await this.authPort.registerWithEmail({ email, password, displayName });
+    // Lista de acceso (early access): sin autorización no se crea perfil (las reglas lo
+    // rechazarían) y se marca el acceso denegado para mostrar la pantalla correspondiente.
+    if (!(await this.isAllowed(identity))) {
+      this.denyAccess(identity.email);
+      return;
+    }
     // Escritura autoritativa con el nombre ingresado (gana sobre lo que cree el observer).
     const profile: User = { ...buildDefaultUser(identity), displayName };
     await this.userRepository.save(profile);
+    this.accessDeniedSignal.set(false);
     this.currentUserSignal.set(profile);
   }
 
@@ -93,14 +115,43 @@ export class AuthService {
 
   private async onAuthStateChanged(identity: AuthIdentity | null): Promise<void> {
     try {
-      this.currentUserSignal.set(identity ? await this.ensureProfile(identity) : null);
+      if (!identity) {
+        this.accessDeniedSignal.set(false);
+        this.accessDeniedEmailSignal.set(null);
+        this.currentUserSignal.set(null);
+        return;
+      }
+      // Lista de acceso (early access): si el email no está autorizado, queda con sesión de
+      // Firebase pero sin acceso a la app (las reglas le niegan toda lectura/escritura).
+      if (!(await this.isAllowed(identity))) {
+        this.denyAccess(identity.email);
+        return;
+      }
+      this.accessDeniedSignal.set(false);
+      this.currentUserSignal.set(await this.ensureProfile(identity));
     } catch (error) {
       // Error explícito (contrato): no se silencia. Sin perfil, tratamos como sin sesión.
       console.error('No se pudo cargar el perfil del usuario', error);
       this.currentUserSignal.set(null);
     } finally {
+      this.resolvedSignal.set(true);
       this.resolveInitialized();
     }
+  }
+
+  /** Consulta la lista de acceso. Sin email no hay forma de autorizar (Google siempre lo da). */
+  private async isAllowed(identity: AuthIdentity): Promise<boolean> {
+    if (!identity.email) {
+      return false;
+    }
+    return this.allowlistRepository.isAllowed(identity.email);
+  }
+
+  /** Deja al usuario autenticado pero sin acceso a la app (no está en la lista). */
+  private denyAccess(email: string | null): void {
+    this.accessDeniedEmailSignal.set(email);
+    this.accessDeniedSignal.set(true);
+    this.currentUserSignal.set(null);
   }
 
   /** Carga el perfil; si todavía no existe (primer acceso), lo crea. Idempotente. */

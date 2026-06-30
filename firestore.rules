@@ -10,27 +10,45 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // ¿El email autenticado está en la lista de acceso? (early access privado.)
+    // La lista se administra a mano desde la consola; ver match /allowlist más abajo.
+    // Sin entrada en la lista = sin acceso a NINGÚN dato, ni lectura ni escritura.
+    function isAllowlisted() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
+    }
+
+    // Lista de acceso (early access). El doc id es el email autorizado.
+    // Se administra SOLO a mano desde la consola de Firebase (la consola salta las reglas);
+    // el cliente nunca escribe aquí. Cada usuario puede leer ÚNICAMENTE su propia entrada,
+    // para que la app sepa si tiene acceso y muestre la pantalla adecuada en vez de un error.
+    match /allowlist/{email} {
+      allow read: if request.auth != null && request.auth.token.email == email;
+      allow write: if false;
+    }
+
     match /users/{uid} {
-      // Perfil y ajustes del propio usuario.
-      allow read, write: if isOwner(uid);
+      // Perfil y ajustes del propio usuario. Requiere estar en la lista de acceso.
+      allow read, write: if isOwner(uid) && isAllowlisted();
 
       // Subcolecciones privadas: libros, capítulos, tarjetas y contadores del día.
       match /books/{bookId} {
-        allow read, write: if isOwner(uid);
+        allow read, write: if isOwner(uid) && isAllowlisted();
       }
       match /chapters/{chapterId} {
-        allow read, write: if isOwner(uid);
+        allow read, write: if isOwner(uid) && isAllowlisted();
       }
       match /cards/{cardId} {
-        allow read, write: if isOwner(uid);
+        allow read, write: if isOwner(uid) && isAllowlisted();
       }
       match /dailyStats/{date} {
-        allow read, write: if isOwner(uid);
+        allow read, write: if isOwner(uid) && isAllowlisted();
       }
 
       // Historial de repasos: APPEND-ONLY (§6.7). Se crea y se lee, nunca se modifica ni borra.
       match /reviewLogs/{logId} {
-        allow read, create: if isOwner(uid);
+        allow read, create: if isOwner(uid) && isAllowlisted();
         allow update, delete: if false;
       }
     }

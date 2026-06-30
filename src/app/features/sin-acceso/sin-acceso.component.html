@@ -1,0 +1,37 @@
+<main class="flex min-h-dvh items-center justify-center p-6">
+  <section
+    class="w-full max-w-sm rounded-2xl border border-border bg-surface-raised p-8 text-center shadow-sm"
+    aria-labelledby="sin-acceso-title"
+  >
+    <h1 id="sin-acceso-title" class="text-2xl font-semibold text-text-primary">
+      Tu cuenta está pendiente de acceso
+    </h1>
+    <p class="mt-2 text-sm text-text-secondary">
+      Por ahora Flash-cards está en acceso anticipado. Iniciaste sesión correctamente, pero tu
+      cuenta todavía no está habilitada para usar la app.
+    </p>
+
+    @if (email(); as currentEmail) {
+      <p class="mt-4 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary">
+        {{ currentEmail }}
+      </p>
+    }
+
+    <p class="mt-4 text-sm text-text-secondary">
+      Si crees que deberías tener acceso, comparte este correo con quien administra la app.
+    </p>
+
+    <button
+      type="button"
+      [disabled]="signingOut()"
+      (click)="signOut()"
+      class="mt-6 w-full rounded-lg border border-border bg-surface px-4 py-2.5 font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-60"
+    >
+      @if (signingOut()) {
+        Cerrando sesión…
+      } @else {
+        Cerrar sesión
+      }
+    </button>
+  </section>
+</main>

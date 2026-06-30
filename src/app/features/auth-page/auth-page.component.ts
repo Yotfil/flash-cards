@@ -31,9 +31,13 @@ export class AuthPageComponent {
     // La sesión puede llegar por el observer y no por la promesa de cada método (p. ej. el
     // popup de Google, que por COOP no siempre resuelve su promesa). Navegamos de forma
     // reactiva en cuanto haya sesión: así no dependemos de que cada flujo "devuelva" el éxito.
+    // Si la sesión es válida pero el email no está en la lista de acceso (early access), se va a
+    // la pantalla de "pendiente de acceso" en vez de a la app.
     effect(() => {
       if (this.authService.isAuthenticated()) {
         void this.router.navigate(['/']);
+      } else if (this.authService.accessDenied()) {
+        void this.router.navigate(['/sin-acceso']);
       }
     });
   }

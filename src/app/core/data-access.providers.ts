@@ -5,6 +5,7 @@
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 
 import {
+  AllowlistRepository,
   AuthPort,
   BookRepository,
   CardRepository,
@@ -17,6 +18,7 @@ import {
 } from '@domain/ports';
 import { FirebaseAuthAdapter } from '@infrastructure/auth';
 import {
+  FirestoreAllowlistRepository,
   FirestoreBookRepository,
   FirestoreCardRepository,
   FirestoreChapterRepository,
@@ -29,6 +31,7 @@ import { TsFsrsSchedulingAdapter } from '@infrastructure/scheduling';
 
 export function provideDataAccess(): EnvironmentProviders {
   return makeEnvironmentProviders([
+    { provide: AllowlistRepository, useClass: FirestoreAllowlistRepository },
     { provide: AuthPort, useClass: FirebaseAuthAdapter },
     { provide: BookRepository, useClass: FirestoreBookRepository },
     { provide: CardRepository, useClass: FirestoreCardRepository },
