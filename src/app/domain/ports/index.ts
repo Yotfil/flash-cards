@@ -1,5 +1,6 @@
 // Barrel de los puertos del dominio. Importar desde `@domain/ports`.
 
+export * from './allowlist.repository';
 export * from './auth.port';
 export * from './book.repository';
 export * from './card.repository';
