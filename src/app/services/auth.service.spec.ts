@@ -16,8 +16,12 @@ class FakeAuthPort extends AuthPort {
   override async signInWithEmail(): Promise<AuthIdentity> {
     return { uid: 'uid-1', email: 'nuevo@ejemplo.com', displayName: null, photoURL: null };
   }
-  override async signInWithGoogle(): Promise<void> {}
-  override async signOut(): Promise<void> {}
+  override signInWithGoogle(): Promise<void> {
+    return Promise.resolve();
+  }
+  override signOut(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 class FakeUserRepository extends UserRepository {
