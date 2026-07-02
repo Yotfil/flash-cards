@@ -14,3 +14,20 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Cabeceras de seguridad para toda la app.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # La app no se embebe en iframes de terceros (clickjacking).
+    X-Frame-Options = "DENY"
+    # El navegador respeta el Content-Type declarado (no adivina/ejecuta otra cosa).
+    X-Content-Type-Options = "nosniff"
+    # No filtrar la URL completa a otros orígenes.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Capacidades del navegador que la app no usa, apagadas explícitamente.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # OJO: "allow-popups" es NECESARIO para el login de Google con signInWithPopup
+    # (mismo valor que el dev-server en angular.json). Con "same-origin" a secas, el popup
+    # no puede comunicarse de vuelta y el login se rompe.
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
