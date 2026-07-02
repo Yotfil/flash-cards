@@ -39,6 +39,12 @@
 
   --color-focus-ring: #11806f;
 
+  // Errores y acciones destructivas (mensajes de formulario, botón de borrar).
+  // Distinto en intención de --color-rating-again aunque el valor coincida hoy:
+  // la escala de calificación queda reservada al repaso.
+  --color-danger: #dc2626;
+  --color-danger-contrast: #ffffff; // texto sobre el fondo danger
+
   // Escala semántica de la calificación — RESERVADA (mal → bien).
   --color-rating-again: #dc2626; // 1 · rojo · Again
   --color-rating-hard: #d97b34; // 2 · naranja · Hard
@@ -64,6 +70,9 @@
   --color-accent-contrast: #07211d;
 
   --color-focus-ring: #25b6a3;
+
+  --color-danger: #ef4444;
+  --color-danger-contrast: #ffffff;
 
   --color-rating-again: #ef4444;
   --color-rating-hard: #e08a44;

@@ -25,7 +25,7 @@
         type="button"
         [disabled]="pending()"
         (click)="confirmed.emit()"
-        class="rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
+        class="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-danger-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         @if (pending()) {
           {{ pendingLabel() }}
