@@ -241,6 +241,37 @@ describe('CardsService', () => {
     expect(books.cardCountCalls).toContainEqual({ bookId: 'book-1', delta: -1 });
   });
 
+  it('removeMany borra las seleccionadas y baja el conteo del libro por n', async () => {
+    const service = configure('u1');
+    await service.load('chapter-1');
+    await service.createMany('book-1', 'chapter-1', [
+      { cardType: 'basic', front: 'a', back: '1' },
+      { cardType: 'basic', front: 'b', back: '2' },
+      { cardType: 'basic', front: 'c', back: '3' },
+    ]);
+    books.cardCountCalls = [];
+    const [first, , third] = service.cards();
+    if (!first || !third) {
+      throw new Error('las tarjetas creadas deberían existir');
+    }
+
+    await service.removeMany('book-1', [first.id, third.id]);
+
+    expect(repository.deletedIds).toEqual([first.id, third.id]);
+    expect(service.cards().map((card) => card.front)).toEqual(['b']);
+    expect(books.cardCountCalls).toEqual([{ bookId: 'book-1', delta: -2 }]);
+  });
+
+  it('removeMany no hace nada con una lista vacía', async () => {
+    const service = configure('u1');
+    await service.load('chapter-1');
+
+    await service.removeMany('book-1', []);
+
+    expect(repository.deletedIds).toHaveLength(0);
+    expect(books.cardCountCalls).toEqual([]);
+  });
+
   it('deja el estado en "error" si la carga falla', async () => {
     const service = configure('u1');
     repository.shouldFail = true;
