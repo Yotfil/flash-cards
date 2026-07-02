@@ -8,7 +8,11 @@ import { ModalComponent } from './modal.component';
 @Component({
   imports: [ModalComponent],
   template: `
-    <app-modal label="Diálogo de prueba" [pending]="pending()" (dismissed)="dismissals = dismissals + 1">
+    <app-modal
+      label="Diálogo de prueba"
+      [pending]="pending()"
+      (dismissed)="dismissals = dismissals + 1"
+    >
       <p>contenido</p>
     </app-modal>
   `,
