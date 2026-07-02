@@ -5,10 +5,11 @@
 import { Injectable, inject } from '@angular/core';
 
 import { ImportRepository, SchedulingPort, type ImportBookInput } from '@domain/ports';
-import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
+import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
 import type { Book } from '@domain/models';
 import { AuthService } from '@services/auth.service';
-import { BooksService, DEFAULT_MAX_REVIEWS_PER_DAY } from '@services/books.service';
+import { BooksService } from '@services/books.service';
+import { requireSessionUid } from '@services/session';
 import type { ParseResult } from './flashcard-parser';
 
 export interface ImportSummary {
@@ -70,10 +71,6 @@ export class ImportService {
   }
 
   private requireUid(): string {
-    const uid = this.authService.currentUser()?.id;
-    if (!uid) {
-      throw new Error('No hay una sesión activa para importar.');
-    }
-    return uid;
+    return requireSessionUid(this.authService.currentUser());
   }
 }

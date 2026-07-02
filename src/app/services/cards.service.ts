@@ -9,6 +9,7 @@ import { CardRepository, SchedulingPort } from '@domain/ports';
 import type { Card, CardContentDraft } from '@domain/models';
 import { AuthService } from './auth.service';
 import { BooksService } from './books.service';
+import { requireSessionUid } from './session';
 
 /** Estado de carga de las tarjetas, para que la UI elija qué pintar (skeleton/error/lista). */
 export type CardsStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -102,13 +103,8 @@ export class CardsService {
     await this.booksService.changeCardCount(bookId, -1);
   }
 
-  /** El uid de la sesión actual; sin sesión es un error explícito (no debería pasar tras el guard). */
   private requireUid(): string {
-    const uid = this.authService.currentUser()?.id;
-    if (!uid) {
-      throw new Error('No hay una sesión activa para operar sobre las tarjetas.');
-    }
-    return uid;
+    return requireSessionUid(this.authService.currentUser());
   }
 
   private fail(message: string, error: unknown): void {

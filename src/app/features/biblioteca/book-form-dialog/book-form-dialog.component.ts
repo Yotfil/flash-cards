@@ -8,7 +8,7 @@ import {
 } from '@angular/forms';
 
 import type { Book, BookDraft } from '@domain/models';
-import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@services/books.service';
+import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
 
 /** Formulario de libro en diálogo (crear/editar). Cubre la identidad del libro (nombre, materia,
  *  dirección de estudio); los ajustes de tarjetas viven en BookSettingsDialogComponent. Emite un

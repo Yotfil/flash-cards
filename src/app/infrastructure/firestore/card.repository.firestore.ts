@@ -23,12 +23,11 @@ import { CardRepository, type CardCreateInput, type CardStateCounts } from '@dom
 import { type Card, type CardContentDraft, type CardScheduling, CardState } from '@domain/models';
 import { FIRESTORE } from '@infrastructure/firebase';
 import { cardToFirestoreDocument, schedulingToFirestore } from './card-document.mapper';
+import { MAX_BATCH_SIZE } from './firestore-limits';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
 const USERS_COLLECTION = 'users';
 const CARDS_COLLECTION = 'cards';
-// Firestore admite hasta 500 operaciones por batch; se deja margen.
-const MAX_BATCH_SIZE = 450;
 
 @Injectable()
 export class FirestoreCardRepository extends CardRepository {
@@ -50,6 +49,7 @@ export class FirestoreCardRepository extends CardRepository {
   }
 
   override async listByBook(uid: string, bookId: string): Promise<Card[]> {
+    // Mismo criterio que listByChapter: filtro por igualdad + orden en memoria (sin índice compuesto).
     const cardsQuery = query(this.cardsCollection(uid), where('bookId', '==', bookId));
     const snapshot = await getDocs(cardsQuery);
 
