@@ -7,12 +7,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { BookRepository } from '@domain/ports';
 import type { Book, BookDraft } from '@domain/models';
 import { AuthService } from './auth.service';
-
-/** Valores por defecto de un libro nuevo (espec. §6.4). Reutilizables por el formulario. El default
- *  de tarjetas nuevas vive en el dominio (fuente única, también seed del perfil) y se re-exporta aquí
- *  para no romper los imports existentes desde `@services/books.service`. */
-export { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
-export const DEFAULT_MAX_REVIEWS_PER_DAY = 200;
+import { requireSessionUid } from './session';
 
 /** Estado de carga de la biblioteca, para que la UI elija qué pintar (skeleton/error/lista). */
 export type BooksStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -108,13 +103,8 @@ export class BooksService {
     return orders.length === 0 ? 0 : Math.max(...orders) + 1;
   }
 
-  /** El uid de la sesión actual; sin sesión es un error explícito (no debería pasar tras el guard). */
   private requireUid(): string {
-    const uid = this.authService.currentUser()?.id;
-    if (!uid) {
-      throw new Error('No hay una sesión activa para operar sobre los libros.');
-    }
-    return uid;
+    return requireSessionUid(this.authService.currentUser());
   }
 
   private fail(message: string, error: unknown): void {

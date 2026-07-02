@@ -8,7 +8,8 @@ import {
 } from '@angular/forms';
 
 import type { Book, BookDraft } from '@domain/models';
-import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@services/books.service';
+import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models';
+import { ModalComponent } from '@shared/modal/modal.component';
 
 /** Formulario de libro en diálogo (crear/editar). Cubre la identidad del libro (nombre, materia,
  *  dirección de estudio); los ajustes de tarjetas viven en BookSettingsDialogComponent. Emite un
@@ -17,7 +18,7 @@ import { DEFAULT_MAX_REVIEWS_PER_DAY, DEFAULT_NEW_CARDS_PER_DAY } from '@service
  *  role="dialog", aria-modal, labels asociadas, cierre con Escape. */
 @Component({
   selector: 'app-book-form-dialog',
-  imports: [ReactiveFormsModule],
+  imports: [ModalComponent, ReactiveFormsModule],
   templateUrl: './book-form-dialog.component.html',
   styleUrl: './book-form-dialog.component.scss',
 })

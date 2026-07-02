@@ -3,13 +3,11 @@ import { signal } from '@angular/core';
 
 import {
   CardRepository,
-  DailyStatsRepository,
-  ReviewLogRepository,
+  GradePersistencePort,
   SchedulingPort,
   type CardCreateInput,
+  type GradePersistenceInput,
   type RatingOutcome,
-  type ReviewLogInput,
-  type ReviewStatInput,
 } from '@domain/ports';
 import { type Card, type CardScheduling, CardState, type Rating, type User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
@@ -49,7 +47,6 @@ function buildCard(id: string, scheduling: CardScheduling): Card {
 
 class FakeCardRepository extends CardRepository {
   cards: Card[] = [];
-  updatedScheduling: { cardId: string; scheduling: CardScheduling }[] = [];
 
   override async listByBook(): Promise<Card[]> {
     return [...this.cards];
@@ -63,12 +60,8 @@ class FakeCardRepository extends CardRepository {
   override async countByState(): Promise<{ newCards: number; learning: number; review: number }> {
     return { newCards: 0, learning: 0, review: 0 };
   }
-  override async updateScheduling(
-    _uid: string,
-    cardId: string,
-    scheduling: CardScheduling,
-  ): Promise<void> {
-    this.updatedScheduling.push({ cardId, scheduling });
+  override async updateScheduling(): Promise<void> {
+    // No usado: la calificación persiste vía GradePersistencePort.
   }
   override async create(_uid: string, input: CardCreateInput): Promise<Card> {
     return { ...input, id: 'x', createdAt: new Date(), updatedAt: new Date() };
@@ -111,32 +104,25 @@ class FakeSchedulingPort extends SchedulingPort {
   }
 }
 
-class FakeReviewLogRepository extends ReviewLogRepository {
-  logs: ReviewLogInput[] = [];
-  override async append(_uid: string, log: ReviewLogInput): Promise<void> {
-    this.logs.push(log);
-  }
-}
-
-class FakeDailyStatsRepository extends DailyStatsRepository {
-  records: { dateId: string; input: ReviewStatInput }[] = [];
-  override async recordReview(_uid: string, dateId: string, input: ReviewStatInput): Promise<void> {
-    this.records.push({ dateId, input });
-  }
-  override async getToday(): Promise<null> {
-    return null;
+class FakeGradePersistence extends GradePersistencePort {
+  grades: GradePersistenceInput[] = [];
+  /** Si se define, persistGrade rechaza con este error (simula el fallo del batch). */
+  failWith: Error | null = null;
+  override async persistGrade(_uid: string, input: GradePersistenceInput): Promise<void> {
+    if (this.failWith) {
+      throw this.failWith;
+    }
+    this.grades.push(input);
   }
 }
 
 describe('ReviewService', () => {
   let cards: FakeCardRepository;
-  let logs: FakeReviewLogRepository;
-  let stats: FakeDailyStatsRepository;
+  let persistence: FakeGradePersistence;
 
   function configure(): ReviewService {
     cards = new FakeCardRepository();
-    logs = new FakeReviewLogRepository();
-    stats = new FakeDailyStatsRepository();
+    persistence = new FakeGradePersistence();
     const user: User = {
       id: 'u1',
       displayName: 'Test',
@@ -156,8 +142,7 @@ describe('ReviewService', () => {
         ReviewService,
         { provide: CardRepository, useValue: cards },
         { provide: SchedulingPort, useClass: FakeSchedulingPort },
-        { provide: ReviewLogRepository, useValue: logs },
-        { provide: DailyStatsRepository, useValue: stats },
+        { provide: GradePersistencePort, useValue: persistence },
         { provide: AuthService, useValue: { currentUser: signal<User | null>(user) } },
       ],
     });
@@ -192,7 +177,7 @@ describe('ReviewService', () => {
     expect(service.status()).toBe('idle');
   });
 
-  it('grade persiste scheduling, registra log y stats (wasNew para tarjeta nueva) y avanza', async () => {
+  it('grade persiste TODO en una sola operación (scheduling + log + stats, wasNew) y avanza', async () => {
     const service = configure();
     cards.cards = [buildCard('a', buildScheduling({ state: CardState.New }))];
     await service.startBook('book-1');
@@ -200,12 +185,36 @@ describe('ReviewService', () => {
 
     await service.grade(3);
 
-    expect(cards.updatedScheduling).toHaveLength(1);
-    expect(cards.updatedScheduling[0]?.cardId).toBe('a');
-    expect(logs.logs[0]).toMatchObject({ cardId: 'a', rating: 3, state: CardState.New });
-    expect(stats.records[0]?.input).toMatchObject({ rating: 3, bookId: 'book-1', wasNew: true });
+    expect(persistence.grades).toHaveLength(1);
+    const grade = persistence.grades[0];
+    expect(grade?.cardId).toBe('a');
+    expect(grade?.scheduling.scheduledDays).toBe(3); // el outcome del grado 3 en el fake
+    expect(grade?.log).toMatchObject({ cardId: 'a', rating: 3, state: CardState.New });
+    expect(grade?.stat).toMatchObject({ rating: 3, bookId: 'book-1', wasNew: true });
     expect(service.status()).toBe('finished');
     expect(service.summary()).toMatchObject({ reviewed: 1, ratingCounts: { good: 1 } });
+  });
+
+  it('si la persistencia falla: muestra el error, NO avanza y permite reintentar', async () => {
+    const service = configure();
+    cards.cards = [buildCard('a', buildScheduling({ state: CardState.New }))];
+    await service.startBook('book-1');
+    service.reveal();
+
+    persistence.failWith = new Error('sin red');
+    await service.grade(3);
+
+    expect(service.errorMessage()).toContain('No se pudo guardar');
+    expect(service.status()).toBe('active');
+    expect(service.current()?.id).toBe('a'); // sigue en la misma tarjeta
+    expect(service.summary().reviewed).toBe(0);
+
+    // Reintento: al volver la red, la misma tarjeta se puede calificar.
+    persistence.failWith = null;
+    await service.grade(3);
+    expect(persistence.grades).toHaveLength(1);
+    expect(service.errorMessage()).toBeNull();
+    expect(service.status()).toBe('finished');
   });
 
   it('avanza por toda la cola antes de terminar', async () => {

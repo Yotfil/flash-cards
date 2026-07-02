@@ -2,13 +2,16 @@ import { Component, computed, input, output, signal } from '@angular/core';
 
 import type { CardContentDraft } from '@domain/models';
 import { parseFlashcards } from '@services/import';
+import { ModalComponent } from '@shared/modal/modal.component';
 
 /** Diálogo para importar varias tarjetas a un capítulo (spec §5): se pega texto (o se carga un
  *  `.txt`/`.md`) con líneas `anverso | reverso` y se previsualiza antes de confirmar. Presentacional:
  *  parsea en memoria, muestra cuántas tarjetas válidas hay y qué líneas fallan, y al confirmar emite
- *  las tarjetas válidas. El padre escribe en Firestore. Accesible: role="dialog", aria-modal, Escape. */
+ *  las tarjetas válidas; el padre persiste (vía CardsService). El cascarón accesible (role="dialog",
+ *  aria-modal, Escape) lo pone ModalComponent. */
 @Component({
   selector: 'app-card-import-dialog',
+  imports: [ModalComponent],
   templateUrl: './card-import-dialog.component.html',
   styleUrl: './card-import-dialog.component.scss',
 })

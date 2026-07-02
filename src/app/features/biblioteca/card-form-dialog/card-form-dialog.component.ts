@@ -11,6 +11,7 @@ import {
 
 import type { Card, CardContentDraft, CardType } from '@domain/models';
 import { hasCloze } from '@services/cloze';
+import { ModalComponent } from '@shared/modal/modal.component';
 
 /** Valida que un texto cloze tenga al menos un hueco `{{...}}`. */
 function clozeValidator(control: AbstractControl): ValidationErrors | null {
@@ -23,7 +24,7 @@ function clozeValidator(control: AbstractControl): ValidationErrors | null {
  *  aria-modal, labels asociadas, cierre con Escape. */
 @Component({
   selector: 'app-card-form-dialog',
-  imports: [ReactiveFormsModule],
+  imports: [ModalComponent, ReactiveFormsModule],
   templateUrl: './card-form-dialog.component.html',
   styleUrl: './card-form-dialog.component.scss',
 })

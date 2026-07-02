@@ -8,14 +8,15 @@ import {
 } from '@angular/forms';
 
 import type { Book, BookDraft } from '@domain/models';
+import { ModalComponent } from '@shared/modal/modal.component';
 
 /** Ajustes propios de un libro, en diálogo. Hoy expone la sección "Tarjetas" (nuevas/día y máx.
  *  repasos/día); está estructurado por secciones para sumar más ajustes en próximas iteraciones sin
  *  reescribirlo. Emite sólo los campos que cambian (`Partial<BookDraft>`) en `saved`; el padre
- *  persiste. Accesible: role="dialog", aria-modal, labels asociadas, cierre con Escape. */
+ *  persiste. El cascarón accesible (role="dialog", aria-modal, Escape) lo pone ModalComponent. */
 @Component({
   selector: 'app-book-settings-dialog',
-  imports: [ReactiveFormsModule],
+  imports: [ModalComponent, ReactiveFormsModule],
   templateUrl: './book-settings-dialog.component.html',
   styleUrl: './book-settings-dialog.component.scss',
 })

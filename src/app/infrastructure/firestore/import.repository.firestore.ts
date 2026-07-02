@@ -8,12 +8,12 @@ import { Timestamp, collection, doc, writeBatch } from 'firebase/firestore';
 import { ImportRepository, type ImportBookInput } from '@domain/ports';
 import { FIRESTORE } from '@infrastructure/firebase';
 import { cardToFirestoreDocument } from './card-document.mapper';
+import { MAX_BATCH_SIZE } from './firestore-limits';
 
 const USERS_COLLECTION = 'users';
 const BOOKS_COLLECTION = 'books';
 const CHAPTERS_COLLECTION = 'chapters';
 const CARDS_COLLECTION = 'cards';
-const MAX_BATCH_SIZE = 450;
 
 @Injectable()
 export class FirestoreImportRepository extends ImportRepository {

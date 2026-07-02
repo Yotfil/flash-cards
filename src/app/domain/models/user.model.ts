@@ -7,6 +7,12 @@
  */
 export const DEFAULT_NEW_CARDS_PER_DAY = 20;
 
+/**
+ * Tope por defecto de repasos por día de un libro nuevo (espec. §6.4). 0 = sin tope. Vive junto a
+ * {@link DEFAULT_NEW_CARDS_PER_DAY} en el dominio: fuente única para formularios e importación.
+ */
+export const DEFAULT_MAX_REVIEWS_PER_DAY = 200;
+
 /** Tema de la interfaz elegido por el usuario. */
 export type ThemePreference = 'light' | 'dark' | 'system';
 

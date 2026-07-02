@@ -21,27 +21,34 @@ const RATING_NAME: Record<Rating, 'again' | 'hard' | 'good' | 'easy'> = {
   4: 'easy',
 };
 
+/** Incrementos del contador del día para un repaso (siempre con setDoc + merge). Compartido con el
+ *  adaptador de calificación atómica. */
+export function reviewStatToFirestoreUpdate(
+  dateId: string,
+  input: ReviewStatInput,
+): Record<string, unknown> {
+  const data: Record<string, unknown> = {
+    date: dateId,
+    reviewsCompleted: increment(1),
+    ratingCounts: { [RATING_NAME[input.rating]]: increment(1) },
+  };
+  if (input.wasNew) {
+    // Introducción de una nueva: cuenta para el tope de nuevas, no para el de repasos.
+    data['newCardsIntroduced'] = { [input.bookId]: increment(1) };
+  } else {
+    // Repaso real (la tarjeta no estaba en New): cuenta para el tope de repasos/día.
+    data['reviewsCompletedByBook'] = { [input.bookId]: increment(1) };
+  }
+  return data;
+}
+
 @Injectable()
 export class FirestoreDailyStatsRepository extends DailyStatsRepository {
   private readonly firestore = inject(FIRESTORE);
 
   override async recordReview(uid: string, dateId: string, input: ReviewStatInput): Promise<void> {
     const reference = doc(this.firestore, USERS_COLLECTION, uid, DAILY_STATS_COLLECTION, dateId);
-
-    const data: Record<string, unknown> = {
-      date: dateId,
-      reviewsCompleted: increment(1),
-      ratingCounts: { [RATING_NAME[input.rating]]: increment(1) },
-    };
-    if (input.wasNew) {
-      // Introducción de una nueva: cuenta para el tope de nuevas, no para el de repasos.
-      data['newCardsIntroduced'] = { [input.bookId]: increment(1) };
-    } else {
-      // Repaso real (la tarjeta no estaba en New): cuenta para el tope de repasos/día.
-      data['reviewsCompletedByBook'] = { [input.bookId]: increment(1) };
-    }
-
-    await setDoc(reference, data, { merge: true });
+    await setDoc(reference, reviewStatToFirestoreUpdate(dateId, input), { merge: true });
   }
 
   override async getToday(uid: string, dateId: string): Promise<DailyStats | null> {

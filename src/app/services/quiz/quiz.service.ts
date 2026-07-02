@@ -7,6 +7,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { CardRepository } from '@domain/ports';
 import type { User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
+import { requireSessionUser } from '@services/session';
 import { type QuizQuestion, generateQuiz } from './generate-quiz';
 import { isWrittenAnswerCorrect } from './written-answer';
 
@@ -112,10 +113,6 @@ export class QuizService {
   }
 
   private requireUser(): User {
-    const user = this.authService.currentUser();
-    if (!user) {
-      throw new Error('No hay una sesión activa para practicar.');
-    }
-    return user;
+    return requireSessionUser(this.authService.currentUser());
   }
 }

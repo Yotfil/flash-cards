@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 
-import { CardRepository, DailyStatsRepository, type CardStateCounts } from '@domain/ports';
+import { CardRepository, type CardStateCounts } from '@domain/ports';
 import type { DailyStats, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
-import { QueueService } from '@services/review';
+import { QueueService, type QueueStatus } from '@services/review';
 import { ProgressService } from './progress.service';
 
 const USER: User = {
@@ -23,13 +23,18 @@ const USER: User = {
 };
 
 describe('ProgressService', () => {
-  function configure(collection: CardStateCounts, today: DailyStats | null): ProgressService {
+  function configure(
+    collection: CardStateCounts,
+    today: DailyStats | null,
+    queueStatus: QueueStatus = 'ready',
+  ): ProgressService {
     const cardRepo: Partial<CardRepository> = { countByState: async () => collection };
-    const statsRepo: Partial<DailyStatsRepository> = { getToday: async () => today };
     const queueService: Partial<QueueService> = {
       load: async () => {
-        // No-op en la prueba; los conteos se fijan abajo.
+        // No-op en la prueba; los conteos y stats se fijan abajo.
       },
+      status: signal<QueueStatus>(queueStatus).asReadonly(),
+      todayStats: signal<DailyStats | null>(today).asReadonly(),
       dueCount: signal(4).asReadonly(),
       newCount: signal(2).asReadonly(),
     };
@@ -37,7 +42,6 @@ describe('ProgressService', () => {
       providers: [
         ProgressService,
         { provide: CardRepository, useValue: cardRepo },
-        { provide: DailyStatsRepository, useValue: statsRepo },
         { provide: QueueService, useValue: queueService },
         { provide: AuthService, useValue: { currentUser: signal<User | null>(USER) } },
       ],
@@ -82,5 +86,14 @@ describe('ProgressService', () => {
     await service.load();
 
     expect(service.isEmpty()).toBe(true);
+  });
+
+  it('si la cola quedó en error, Progreso también muestra error (no finge datos)', async () => {
+    const service = configure({ newCards: 1, learning: 0, review: 0 }, null, 'error');
+
+    await service.load();
+
+    expect(service.status()).toBe('error');
+    expect(service.errorMessage()).toContain('No se pudieron cargar');
   });
 });
