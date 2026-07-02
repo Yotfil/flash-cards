@@ -1,14 +1,5 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
-  <div
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-    aria-label="Importar tarjetas"
-    [attr.aria-busy]="pending()"
-    (keydown.escape)="pending() || cancelled.emit()"
-    class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-surface-raised p-6 shadow-xl"
-  >
-    <h2 class="text-lg font-semibold text-text-primary">Importar tarjetas</h2>
+<app-modal label="Importar tarjetas" size="lg" [pending]="pending()" (dismissed)="cancelled.emit()">
+  <h2 class="text-lg font-semibold text-text-primary">Importar tarjetas</h2>
     <p class="mt-1 text-sm text-text-secondary">
       Una tarjeta por línea, con anverso y reverso separados por
       <code class="rounded bg-surface-sunken px-1">|</code>. Ej.:
@@ -75,5 +66,4 @@
         }
       </button>
     </div>
-  </div>
-</div>
+</app-modal>
