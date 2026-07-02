@@ -1,0 +1,13 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
+  <div
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-label]="label()"
+    [attr.aria-busy]="pending()"
+    (keydown.escape)="onEscape()"
+    [class]="dialogClasses()"
+  >
+    <ng-content />
+  </div>
+</div>
