@@ -84,6 +84,27 @@ export class CardsService {
     await this.booksService.changeCardCount(bookId, created.length);
   }
 
+  /** Reemplaza TODAS las tarjetas del capítulo por las importadas: borra las actuales (con su
+   *  progreso; la UI ya pidió confirmación explícita) y luego crea las nuevas. Los reviewLogs no se
+   *  tocan (append-only). */
+  async replaceAllInChapter(
+    bookId: string,
+    chapterId: string,
+    drafts: CardContentDraft[],
+  ): Promise<void> {
+    const uid = this.requireUid();
+    const existing = this.cardsSignal().filter((card) => card.chapterId === chapterId);
+    if (existing.length > 0) {
+      await this.cardRepository.deleteMany(
+        uid,
+        existing.map((card) => card.id),
+      );
+      this.cardsSignal.update((cards) => cards.filter((card) => card.chapterId !== chapterId));
+      await this.booksService.changeCardCount(bookId, -existing.length);
+    }
+    await this.createMany(bookId, chapterId, drafts);
+  }
+
   /** Edita el contenido (anverso/reverso) de una tarjeta y refleja el cambio en la lista local. */
   async update(cardId: string, draft: CardContentDraft): Promise<void> {
     const uid = this.requireUid();

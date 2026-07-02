@@ -76,6 +76,9 @@ class FakeCardRepository extends CardRepository {
   override async delete(): Promise<void> {
     throw new Error('La práctica no debe borrar tarjetas.');
   }
+  override async deleteMany(): Promise<void> {
+    throw new Error('La práctica no debe borrar tarjetas.');
+  }
 }
 
 describe('QuizService', () => {
