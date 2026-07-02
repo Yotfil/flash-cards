@@ -191,6 +191,7 @@
 @if (showImport()) {
   <app-card-import-dialog
     [defaultChapterName]="chapter()?.name ?? 'Importadas'"
+    [existingCardCount]="cards().length"
     [pending]="importing()"
     (imported)="onImport($event)"
     (cancelled)="showImport.set(false)"

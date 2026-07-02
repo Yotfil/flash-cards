@@ -12,7 +12,10 @@ import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { CardFormDialogComponent } from '../card-form-dialog/card-form-dialog.component';
-import { CardImportDialogComponent } from '../card-import-dialog/card-import-dialog.component';
+import {
+  CardImportDialogComponent,
+  type CardImportRequest,
+} from '../card-import-dialog/card-import-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 /** Pantalla "detalle de un capítulo": cabecera del capítulo + CRUD de sus tarjetas (vista compacta
@@ -150,14 +153,18 @@ export class CapituloDetailComponent implements OnInit {
     this.openTooltipId.update((current) => (current === cardId ? null : cardId));
   }
 
-  protected async onImport(drafts: CardContentDraft[]): Promise<void> {
+  protected async onImport(request: CardImportRequest): Promise<void> {
     if (this.importing()) {
       return;
     }
     this.actionError.set(null);
     this.importing.set(true);
     try {
-      await this.cardsService.createMany(this.bookId, this.chapterId, drafts);
+      if (request.mode === 'replace') {
+        await this.cardsService.replaceAllInChapter(this.bookId, this.chapterId, request.drafts);
+      } else {
+        await this.cardsService.createMany(this.bookId, this.chapterId, request.drafts);
+      }
       this.showImport.set(false);
     } catch (error) {
       console.error('No se pudieron importar las tarjetas', error);
