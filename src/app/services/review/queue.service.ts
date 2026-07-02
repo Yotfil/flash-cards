@@ -8,6 +8,7 @@ import { CardRepository, DailyStatsRepository } from '@domain/ports';
 import type { Card, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
 import { BooksService } from '@services/books.service';
+import { requireSessionUser } from '@services/session';
 import { type BookPending, buildDailyQueue } from './daily-queue';
 import { endOfStudyDay, studyDayId } from './study-day';
 
@@ -105,10 +106,6 @@ export class QueueService {
   }
 
   private requireUser(): User {
-    const user = this.authService.currentUser();
-    if (!user) {
-      throw new Error('No hay una sesión activa.');
-    }
-    return user;
+    return requireSessionUser(this.authService.currentUser());
   }
 }

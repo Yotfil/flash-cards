@@ -14,6 +14,7 @@ import {
 } from '@domain/ports';
 import type { Card, Rating, RatingCounts, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
+import { requireSessionUser } from '@services/session';
 import { studyDayId } from './study-day';
 import { suggestRatingByLatency } from './suggest-rating';
 
@@ -203,10 +204,6 @@ export class ReviewService {
   }
 
   private requireUser(): User {
-    const user = this.authService.currentUser();
-    if (!user) {
-      throw new Error('No hay una sesión activa para repasar.');
-    }
-    return user;
+    return requireSessionUser(this.authService.currentUser());
   }
 }

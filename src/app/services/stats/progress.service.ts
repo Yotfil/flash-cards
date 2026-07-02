@@ -7,6 +7,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { CardRepository, DailyStatsRepository, type CardStateCounts } from '@domain/ports';
 import type { RatingCounts, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
+import { requireSessionUser } from '@services/session';
 import { QueueService, studyDayId } from '@services/review';
 
 export type ProgressStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -73,10 +74,6 @@ export class ProgressService {
   }
 
   private requireUser(): User {
-    const user = this.authService.currentUser();
-    if (!user) {
-      throw new Error('No hay una sesión activa.');
-    }
-    return user;
+    return requireSessionUser(this.authService.currentUser());
   }
 }

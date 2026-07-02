@@ -7,6 +7,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ChapterRepository } from '@domain/ports';
 import type { Chapter } from '@domain/models';
 import { AuthService } from './auth.service';
+import { requireSessionUid } from './session';
 
 /** Estado de carga de los capítulos, para que la UI elija qué pintar (skeleton/error/lista). */
 export type ChaptersStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -70,13 +71,8 @@ export class ChaptersService {
     return orders.length === 0 ? 0 : Math.max(...orders) + 1;
   }
 
-  /** El uid de la sesión actual; sin sesión es un error explícito (no debería pasar tras el guard). */
   private requireUid(): string {
-    const uid = this.authService.currentUser()?.id;
-    if (!uid) {
-      throw new Error('No hay una sesión activa para operar sobre los capítulos.');
-    }
-    return uid;
+    return requireSessionUid(this.authService.currentUser());
   }
 
   private fail(message: string, error: unknown): void {
