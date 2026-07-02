@@ -75,6 +75,9 @@ class FakeCardRepository extends CardRepository {
   override async delete(): Promise<void> {
     // No usado en estas pruebas.
   }
+  override async deleteMany(): Promise<void> {
+    // No usado en estas pruebas.
+  }
 }
 
 class FakeSchedulingPort extends SchedulingPort {

@@ -49,4 +49,7 @@ export abstract class CardRepository {
 
   /** Borra una tarjeta. */
   abstract delete(uid: string, cardId: string): Promise<void>;
+
+  /** Borra muchas tarjetas de una vez (importación en modo "reemplazar"). */
+  abstract deleteMany(uid: string, cardIds: string[]): Promise<void>;
 }

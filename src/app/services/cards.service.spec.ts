@@ -23,6 +23,7 @@ const INITIAL_SCHEDULING: CardScheduling = {
 class FakeCardRepository extends CardRepository {
   cards: Card[] = [];
   lastCreateInput: CardCreateInput | null = null;
+  deletedIds: string[] = [];
   shouldFail = false;
 
   override async listByChapter(): Promise<Card[]> {
@@ -61,6 +62,11 @@ class FakeCardRepository extends CardRepository {
 
   override async delete(): Promise<void> {
     // No usado en estas pruebas.
+  }
+
+  override async deleteMany(_uid: string, cardIds: string[]): Promise<void> {
+    this.deletedIds.push(...cardIds);
+    this.cards = this.cards.filter((card) => !cardIds.includes(card.id));
   }
 
   override async listByBook(): Promise<Card[]> {
@@ -182,6 +188,42 @@ describe('CardsService', () => {
 
     expect(service.cards()).toHaveLength(0);
     expect(books.cardCountCalls).toEqual([]);
+  });
+
+  it('replaceAllInChapter borra las existentes, crea las nuevas y ajusta el conteo neto', async () => {
+    const service = configure('u1');
+    await service.load('chapter-1');
+    await service.createMany('book-1', 'chapter-1', [
+      { cardType: 'basic', front: 'vieja 1', back: 'x' },
+      { cardType: 'basic', front: 'vieja 2', back: 'y' },
+    ]);
+    books.cardCountCalls = [];
+
+    await service.replaceAllInChapter('book-1', 'chapter-1', [
+      { cardType: 'basic', front: 'nueva 1', back: 'a' },
+      { cardType: 'basic', front: 'nueva 2', back: 'b' },
+      { cardType: 'basic', front: 'nueva 3', back: 'c' },
+    ]);
+
+    expect(repository.deletedIds).toHaveLength(2);
+    expect(service.cards().map((card) => card.front)).toEqual(['nueva 1', 'nueva 2', 'nueva 3']);
+    expect(books.cardCountCalls).toEqual([
+      { bookId: 'book-1', delta: -2 },
+      { bookId: 'book-1', delta: 3 },
+    ]);
+  });
+
+  it('replaceAllInChapter con el capítulo vacío solo crea (no borra ni resta conteo)', async () => {
+    const service = configure('u1');
+    await service.load('chapter-1');
+
+    await service.replaceAllInChapter('book-1', 'chapter-1', [
+      { cardType: 'basic', front: 'nueva', back: 'a' },
+    ]);
+
+    expect(repository.deletedIds).toHaveLength(0);
+    expect(service.cards()).toHaveLength(1);
+    expect(books.cardCountCalls).toEqual([{ bookId: 'book-1', delta: 1 }]);
   });
 
   it('al borrar, baja el conteo del libro', async () => {

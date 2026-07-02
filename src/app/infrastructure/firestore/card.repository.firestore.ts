@@ -149,6 +149,17 @@ export class FirestoreCardRepository extends CardRepository {
     await deleteDoc(doc(this.cardsCollection(uid), cardId));
   }
 
+  override async deleteMany(uid: string, cardIds: string[]): Promise<void> {
+    // Mismo troceo que createMany: Firestore limita cada batch a 500 operaciones.
+    for (const chunk of this.chunk(cardIds, MAX_BATCH_SIZE)) {
+      const batch = writeBatch(this.firestore);
+      for (const cardId of chunk) {
+        batch.delete(doc(this.cardsCollection(uid), cardId));
+      }
+      await batch.commit();
+    }
+  }
+
   private cardsCollection(uid: string) {
     return collection(this.firestore, USERS_COLLECTION, uid, CARDS_COLLECTION);
   }
