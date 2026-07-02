@@ -5,7 +5,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 
 import { CardRepository, DailyStatsRepository } from '@domain/ports';
-import type { Card, User } from '@domain/models';
+import type { Card, DailyStats, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
 import { BooksService } from '@services/books.service';
 import { requireSessionUser } from '@services/session';
@@ -27,6 +27,9 @@ export class QueueService {
   private readonly newCountSignal = signal(0);
   private readonly availableNewSignal = signal(0);
   private readonly perBookSignal = signal<BookPending[]>([]);
+  // Stats del día leídas al armar la cola; se exponen para que otros lectores (Progreso)
+  // no repitan la misma lectura de Firestore.
+  private readonly todayStatsSignal = signal<DailyStats | null>(null);
   private readonly errorMessageSignal = signal<string | null>(null);
 
   readonly status = this.statusSignal.asReadonly();
@@ -35,6 +38,7 @@ export class QueueService {
   readonly newCount = this.newCountSignal.asReadonly();
   readonly availableNew = this.availableNewSignal.asReadonly();
   readonly perBook = this.perBookSignal.asReadonly();
+  readonly todayStats = this.todayStatsSignal.asReadonly();
   readonly errorMessage = this.errorMessageSignal.asReadonly();
 
   // Datos de la última carga, para recomputar la cola al cambiar el límite de nuevas sin re-consultar.
@@ -60,6 +64,7 @@ export class QueueService {
         this.dailyStatsRepository.getToday(user.id, dateId),
       ]);
 
+      this.todayStatsSignal.set(todayStats);
       this.cache = {
         candidates,
         introducedByBook: todayStats?.newCardsIntroduced ?? {},

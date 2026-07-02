@@ -1,14 +1,15 @@
-// Reúne las métricas de la pantalla Progreso (§8.7): pendientes hoy (de la cola), repasadas hoy y
-// distribución de calificaciones (de dailyStats), y estado de la colección (conteo por estado). No
-// conoce Firestore. Es lectura/agregación; el "cerebro" pesado vive en la cola y el scheduler.
+// Reúne las métricas de la pantalla Progreso (§8.7): pendientes hoy y stats del día (ambos ya
+// cargados por QueueService — no se repite ninguna lectura), y estado de la colección (conteo
+// agregado por estado). No conoce Firestore. Es lectura/agregación; el "cerebro" pesado vive en
+// la cola y el scheduler.
 
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import { CardRepository, DailyStatsRepository, type CardStateCounts } from '@domain/ports';
+import { CardRepository, type CardStateCounts } from '@domain/ports';
 import type { RatingCounts, User } from '@domain/models';
 import { AuthService } from '@services/auth.service';
 import { requireSessionUser } from '@services/session';
-import { QueueService, studyDayId } from '@services/review';
+import { QueueService } from '@services/review';
 
 export type ProgressStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -18,7 +19,6 @@ const EMPTY_COLLECTION: CardStateCounts = { newCards: 0, learning: 0, review: 0 
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
   private readonly cardRepository = inject(CardRepository);
-  private readonly dailyStatsRepository = inject(DailyStatsRepository);
   private readonly queueService = inject(QueueService);
   private readonly authService = inject(AuthService);
 
@@ -52,13 +52,16 @@ export class ProgressService {
     this.errorMessageSignal.set(null);
     try {
       const user = this.requireUser();
-      const dateId = studyDayId(new Date(), user.settings.timezone, user.settings.dayStartHour);
 
+      // La cola ya lee las stats del día: se reusan en vez de volver a pedirlas a Firestore.
       await this.queueService.load();
-      const [todayStats, collection] = await Promise.all([
-        this.dailyStatsRepository.getToday(user.id, dateId),
-        this.cardRepository.countByState(user.id),
-      ]);
+      if (this.queueService.status() === 'error') {
+        // La cola maneja su error internamente (no lanza); sin ella los pendientes serían
+        // basura, así que Progreso también se muestra en error en vez de fingir datos.
+        throw new Error('La cola del día no se pudo cargar.');
+      }
+      const todayStats = this.queueService.todayStats();
+      const collection = await this.cardRepository.countByState(user.id);
 
       this.pendingDueSignal.set(this.queueService.dueCount());
       this.pendingNewSignal.set(this.queueService.newCount());
