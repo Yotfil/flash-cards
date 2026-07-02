@@ -68,3 +68,6 @@ Thumbs.db
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Datos del build (generado por scripts/generate-build-info.mjs; cambia en cada build)
+/src/app/core/build-info.ts
