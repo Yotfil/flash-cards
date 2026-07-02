@@ -1,10 +1,13 @@
 import { Component, input, output } from '@angular/core';
 
+import { ModalComponent } from '@shared/modal/modal.component';
+
 /** Diálogo de confirmación para acciones destructivas (espec.: no se borra sin confirmar).
- *  Presentacional: el padre decide el texto y reacciona a `confirm`/`cancel`. Accesible:
- *  role="dialog", aria-modal, cierre con Escape y foco inicial en el botón de confirmar. */
+ *  Presentacional: el padre decide el texto y reacciona a `confirm`/`cancel`. El cascarón
+ *  accesible (role="dialog", aria-modal, cierre con Escape) lo pone ModalComponent. */
 @Component({
   selector: 'app-confirm-dialog',
+  imports: [ModalComponent],
   templateUrl: './confirm-dialog.component.html',
   styleUrl: './confirm-dialog.component.scss',
 })

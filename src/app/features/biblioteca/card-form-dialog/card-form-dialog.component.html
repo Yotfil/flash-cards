@@ -1,15 +1,5 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
-  <form
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-    [attr.aria-label]="heading()"
-    [formGroup]="form"
-    [attr.aria-busy]="pending()"
-    (ngSubmit)="submit()"
-    (keydown.escape)="pending() || cancelled.emit()"
-    class="w-full max-w-md rounded-2xl border border-border bg-surface-raised p-6 shadow-xl"
-  >
+<app-modal [label]="heading()" [pending]="pending()" (dismissed)="cancelled.emit()">
+  <form [formGroup]="form" (ngSubmit)="submit()">
     <h2 class="text-lg font-semibold text-text-primary">{{ heading() }}</h2>
 
     <div class="mt-5 flex flex-col gap-4">
@@ -116,4 +106,4 @@
       </button>
     </div>
   </form>
-</div>
+</app-modal>
