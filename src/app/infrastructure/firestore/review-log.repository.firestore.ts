@@ -10,30 +10,36 @@ import { FIRESTORE } from '@infrastructure/firebase';
 const USERS_COLLECTION = 'users';
 const REVIEW_LOGS_COLLECTION = 'reviewLogs';
 
+/** Traduce un registro de repaso al documento Firestore (Date → Timestamp, opcionales solo si
+ *  están). Compartido con el adaptador de calificación atómica. */
+export function reviewLogToFirestoreDocument(log: ReviewLogInput): Record<string, unknown> {
+  const document: Record<string, unknown> = {
+    cardId: log.cardId,
+    bookId: log.bookId,
+    rating: log.rating,
+    state: log.state,
+    due: Timestamp.fromDate(log.due),
+    stability: log.stability,
+    difficulty: log.difficulty,
+    elapsedDays: log.elapsedDays,
+    lastElapsedDays: log.lastElapsedDays,
+    scheduledDays: log.scheduledDays,
+    reviewedAt: Timestamp.fromDate(log.reviewedAt),
+  };
+  if (log.durationMs !== undefined) {
+    document['durationMs'] = log.durationMs;
+  }
+  return document;
+}
+
 @Injectable()
 export class FirestoreReviewLogRepository extends ReviewLogRepository {
   private readonly firestore = inject(FIRESTORE);
 
   override async append(uid: string, log: ReviewLogInput): Promise<void> {
-    const document: Record<string, unknown> = {
-      cardId: log.cardId,
-      bookId: log.bookId,
-      rating: log.rating,
-      state: log.state,
-      due: Timestamp.fromDate(log.due),
-      stability: log.stability,
-      difficulty: log.difficulty,
-      elapsedDays: log.elapsedDays,
-      lastElapsedDays: log.lastElapsedDays,
-      scheduledDays: log.scheduledDays,
-      reviewedAt: Timestamp.fromDate(log.reviewedAt),
-    };
-    if (log.durationMs !== undefined) {
-      document['durationMs'] = log.durationMs;
-    }
     await addDoc(
       collection(this.firestore, USERS_COLLECTION, uid, REVIEW_LOGS_COLLECTION),
-      document,
+      reviewLogToFirestoreDocument(log),
     );
   }
 }

@@ -1,14 +1,13 @@
 // Orquesta la sesión de repaso: arma la cola, lleva el progreso, y al calificar pasa la tarjeta por
-// el SchedulingPort (ts-fsrs) y persiste el resultado en tres sitios: la tarjeta (nuevo scheduling),
-// `reviewLogs` (append-only) y `dailyStats`. No conoce Firestore ni ts-fsrs. El `uid` y la zona
-// horaria salen de la sesión (AuthService).
+// el SchedulingPort (ts-fsrs) y persiste el resultado completo (scheduling + reviewLog + dailyStats)
+// en una sola operación atómica vía GradePersistencePort. No conoce Firestore ni ts-fsrs. El `uid`
+// y la zona horaria salen de la sesión (AuthService).
 
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import {
   CardRepository,
-  DailyStatsRepository,
-  ReviewLogRepository,
+  GradePersistencePort,
   SchedulingPort,
   type RatingOutcome,
 } from '@domain/ports';
@@ -32,8 +31,7 @@ const RATING_NAME: Record<Rating, keyof RatingCounts> = {
 export class ReviewService {
   private readonly cardRepository = inject(CardRepository);
   private readonly schedulingPort = inject(SchedulingPort);
-  private readonly reviewLogRepository = inject(ReviewLogRepository);
-  private readonly dailyStatsRepository = inject(DailyStatsRepository);
+  private readonly gradePersistence = inject(GradePersistencePort);
   private readonly authService = inject(AuthService);
 
   private readonly statusSignal = signal<ReviewStatus>('idle');
@@ -110,26 +108,30 @@ export class ReviewService {
     const durationMs = Date.now() - this.cardShownAt;
 
     try {
-      await this.cardRepository.updateScheduling(user.id, card.id, outcome.scheduling);
-      await this.reviewLogRepository.append(user.id, {
+      // Una sola operación atómica: scheduling + log + stats quedan juntos o no queda ninguno.
+      await this.gradePersistence.persistGrade(user.id, {
         cardId: card.id,
-        bookId: card.bookId,
-        rating,
-        state: card.scheduling.state, // estado ANTES del repaso
-        due: outcome.log.due,
-        stability: outcome.log.stability,
-        difficulty: outcome.log.difficulty,
-        elapsedDays: outcome.log.elapsedDays,
-        lastElapsedDays: outcome.log.lastElapsedDays,
-        scheduledDays: outcome.log.scheduledDays,
-        reviewedAt: now,
-        durationMs,
-      });
-      const dateId = studyDayId(now, user.settings.timezone, user.settings.dayStartHour);
-      await this.dailyStatsRepository.recordReview(user.id, dateId, {
-        rating,
-        bookId: card.bookId,
-        wasNew: card.scheduling.state === 0, // CardState.New
+        scheduling: outcome.scheduling,
+        log: {
+          cardId: card.id,
+          bookId: card.bookId,
+          rating,
+          state: card.scheduling.state, // estado ANTES del repaso
+          due: outcome.log.due,
+          stability: outcome.log.stability,
+          difficulty: outcome.log.difficulty,
+          elapsedDays: outcome.log.elapsedDays,
+          lastElapsedDays: outcome.log.lastElapsedDays,
+          scheduledDays: outcome.log.scheduledDays,
+          reviewedAt: now,
+          durationMs,
+        },
+        dateId: studyDayId(now, user.settings.timezone, user.settings.dayStartHour),
+        stat: {
+          rating,
+          bookId: card.bookId,
+          wasNew: card.scheduling.state === 0, // CardState.New
+        },
       });
     } catch (error) {
       console.error('No se pudo guardar la calificación', error);
@@ -138,6 +140,8 @@ export class ReviewService {
       return;
     }
 
+    // Un reintento exitoso limpia el error del intento anterior.
+    this.errorMessageSignal.set(null);
     this.reviewedSignal.update((value) => value + 1);
     this.ratingCountsSignal.update((counts) => ({
       ...counts,
