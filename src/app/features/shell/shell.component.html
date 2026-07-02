@@ -27,7 +27,10 @@
     <app-version-footer class="mt-auto hidden px-3 py-3 md:block" />
   </nav>
 
-  <main class="flex-1 overflow-y-auto">
+  <!-- En móvil la versión va al final del contenido que hace scroll (la nav inferior queda limpia);
+       `mt-auto` la baja al fondo cuando la pantalla tiene poco contenido. -->
+  <main class="flex flex-1 flex-col overflow-y-auto">
     <router-outlet />
+    <app-version-footer class="mt-auto px-4 pt-6 pb-4 text-center md:hidden" />
   </main>
 </div>
