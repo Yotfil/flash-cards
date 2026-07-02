@@ -8,13 +8,14 @@ import {
 } from '@angular/forms';
 
 import type { Chapter, ChapterDraft } from '@domain/models';
+import { ModalComponent } from '@shared/modal/modal.component';
 
 /** Formulario de capítulo en diálogo (crear/renombrar). Un capítulo sólo tiene `name` editable.
- *  Emite un `ChapterDraft` válido en `saved`; el padre decide si crea o renombra. Accesible:
- *  role="dialog", aria-modal, label asociada, cierre con Escape. */
+ *  Emite un `ChapterDraft` válido en `saved`; el padre decide si crea o renombra. El cascarón
+ *  accesible (role="dialog", aria-modal, Escape) lo pone ModalComponent. */
 @Component({
   selector: 'app-chapter-form-dialog',
-  imports: [ReactiveFormsModule],
+  imports: [ModalComponent, ReactiveFormsModule],
   templateUrl: './chapter-form-dialog.component.html',
   styleUrl: './chapter-form-dialog.component.scss',
 })
