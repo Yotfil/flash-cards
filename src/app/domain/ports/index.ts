@@ -6,6 +6,7 @@ export * from './book.repository';
 export * from './card.repository';
 export * from './chapter.repository';
 export * from './daily-stats.repository';
+export * from './grade-persistence.port';
 export * from './import.repository';
 export * from './review-log.repository';
 export * from './scheduling.port';
