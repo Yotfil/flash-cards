@@ -124,6 +124,19 @@ export class CardsService {
     await this.booksService.changeCardCount(bookId, -1);
   }
 
+  /** Borra varias tarjetas de golpe (selección múltiple), las quita de la lista local y baja el
+   *  conteo del libro por el número borrado. La UI ya pidió confirmación explícita. */
+  async removeMany(bookId: string, cardIds: string[]): Promise<void> {
+    if (cardIds.length === 0) {
+      return;
+    }
+    const uid = this.requireUid();
+    await this.cardRepository.deleteMany(uid, cardIds);
+    const removedIds = new Set(cardIds);
+    this.cardsSignal.update((cards) => cards.filter((card) => !removedIds.has(card.id)));
+    await this.booksService.changeCardCount(bookId, -cardIds.length);
+  }
+
   private requireUid(): string {
     return requireSessionUid(this.authService.currentUser());
   }

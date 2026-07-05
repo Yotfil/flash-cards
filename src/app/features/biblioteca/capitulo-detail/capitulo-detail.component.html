@@ -11,21 +11,40 @@
       {{ chapter()?.name ?? 'Capítulo' }}
     </h1>
     @if (cardsStatus() === 'ready') {
-      <div class="flex shrink-0 gap-2">
-        <button
-          type="button"
-          (click)="openImport()"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
-        >
-          Importar
-        </button>
-        <button
-          type="button"
-          (click)="openCreate()"
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-        >
-          Nueva tarjeta
-        </button>
+      <div class="flex shrink-0 flex-wrap justify-end gap-2">
+        @if (selectionMode()) {
+          <button
+            type="button"
+            (click)="toggleSelectionMode()"
+            class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+          >
+            Cancelar selección
+          </button>
+        } @else {
+          @if (cards().length > 0) {
+            <button
+              type="button"
+              (click)="toggleSelectionMode()"
+              class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+            >
+              Seleccionar
+            </button>
+          }
+          <button
+            type="button"
+            (click)="openImport()"
+            class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+          >
+            Importar
+          </button>
+          <button
+            type="button"
+            (click)="openCreate()"
+            class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+          >
+            Nueva tarjeta
+          </button>
+        }
       </div>
     }
   </header>
@@ -104,12 +123,50 @@
           </button>
         </app-empty-state>
       } @else {
+        @if (selectionMode()) {
+          <!-- Barra de acciones masivas: marcar todas + eliminar lo seleccionado. -->
+          <div
+            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-raised px-4 py-2.5"
+          >
+            <label class="flex cursor-pointer items-center gap-2 text-sm text-text-primary">
+              <input
+                type="checkbox"
+                [checked]="allSelected()"
+                (change)="toggleSelectAll()"
+                class="size-4 accent-accent"
+              />
+              Seleccionar todas
+            </label>
+            <div class="flex items-center gap-3">
+              <p class="text-sm text-text-secondary" aria-live="polite">
+                {{ selectedIds().size }} seleccionada(s)
+              </p>
+              <button
+                type="button"
+                [disabled]="selectedIds().size === 0"
+                (click)="askBulkDelete()"
+                class="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-danger-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        }
         <ul class="mt-6 flex flex-col gap-3">
           @for (card of sortedCards(); track card.id) {
             <li
               class="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-4"
             >
-              <div class="flex min-w-0 items-center gap-2 text-sm">
+              @if (selectionMode()) {
+                <input
+                  type="checkbox"
+                  [checked]="selectedIds().has(card.id)"
+                  (change)="toggleCardSelection(card.id)"
+                  [attr.aria-label]="'Seleccionar tarjeta ' + card.front"
+                  class="size-5 shrink-0 accent-accent"
+                />
+              }
+              <div class="flex min-w-0 flex-1 items-center gap-2 text-sm">
                 @if (isCloze(card)) {
                   <span
                     class="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-secondary"
@@ -145,21 +202,23 @@
                     </span>
                   </span>
                 }
-                <button
-                  type="button"
-                  (click)="openEdit(card)"
-                  class="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  [attr.aria-label]="'Borrar tarjeta ' + card.front"
-                  (click)="askDelete(card)"
-                  class="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-sunken"
-                >
-                  Borrar
-                </button>
+                @if (!selectionMode()) {
+                  <button
+                    type="button"
+                    (click)="openEdit(card)"
+                    class="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    [attr.aria-label]="'Borrar tarjeta ' + card.front"
+                    (click)="askDelete(card)"
+                    class="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-sunken"
+                  >
+                    Borrar
+                  </button>
+                }
               </div>
             </li>
           }
@@ -185,6 +244,17 @@
     [pending]="deleting()"
     (confirmed)="confirmDelete(card)"
     (cancelled)="pendingDelete.set(null)"
+  />
+}
+
+@if (pendingBulkDelete()) {
+  <app-confirm-dialog
+    title="¿Borrar las tarjetas seleccionadas?"
+    [message]="bulkDeleteMessage()"
+    [confirmLabel]="'Borrar ' + selectedIds().size"
+    [pending]="bulkDeleting()"
+    (confirmed)="confirmBulkDelete()"
+    (cancelled)="pendingBulkDelete.set(false)"
   />
 }
 

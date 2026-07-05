@@ -76,6 +76,23 @@ export class CapituloDetailComponent implements OnInit {
   protected readonly deleting = signal(false);
   protected readonly importing = signal(false);
 
+  // Selección múltiple para acciones masivas: modo activo, ids marcados y borrado en lote.
+  protected readonly selectionMode = signal(false);
+  protected readonly selectedIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly pendingBulkDelete = signal(false);
+  protected readonly bulkDeleting = signal(false);
+
+  protected readonly allSelected = computed(
+    () => this.cards().length > 0 && this.selectedIds().size === this.cards().length,
+  );
+
+  protected readonly bulkDeleteMessage = computed(() => {
+    const count = this.selectedIds().size;
+    return count === 1
+      ? 'Se eliminará 1 tarjeta de este capítulo, con su progreso de estudio. No se puede deshacer.'
+      : `Se eliminarán ${count} tarjetas de este capítulo, con su progreso de estudio. No se puede deshacer.`;
+  });
+
   /** ¿La tarjeta es cloze? Decide cómo se pinta en el listado (pregunta con huecos vs anverso→reverso). */
   protected isCloze(card: Card): boolean {
     return card.cardType === 'cloze';
@@ -203,6 +220,56 @@ export class CapituloDetailComponent implements OnInit {
       this.actionError.set('No se pudo guardar la tarjeta. Inténtalo de nuevo.');
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  /** Entra o sale del modo selección; al cambiar de modo se limpia lo marcado. */
+  protected toggleSelectionMode(): void {
+    this.selectionMode.update((active) => !active);
+    this.selectedIds.set(new Set());
+  }
+
+  protected toggleCardSelection(cardId: string): void {
+    this.selectedIds.update((ids) => {
+      const next = new Set(ids);
+      if (next.has(cardId)) {
+        next.delete(cardId);
+      } else {
+        next.add(cardId);
+      }
+      return next;
+    });
+  }
+
+  protected toggleSelectAll(): void {
+    this.selectedIds.set(
+      this.allSelected() ? new Set() : new Set(this.cards().map((card) => card.id)),
+    );
+  }
+
+  protected askBulkDelete(): void {
+    if (this.selectedIds().size === 0) {
+      return;
+    }
+    this.pendingBulkDelete.set(true);
+  }
+
+  protected async confirmBulkDelete(): Promise<void> {
+    if (this.bulkDeleting()) {
+      return;
+    }
+    this.actionError.set(null);
+    this.bulkDeleting.set(true);
+    try {
+      await this.cardsService.removeMany(this.bookId, [...this.selectedIds()]);
+      this.selectionMode.set(false);
+      this.selectedIds.set(new Set());
+    } catch (error) {
+      console.error('No se pudieron borrar las tarjetas seleccionadas', error);
+      this.actionError.set('No se pudieron borrar las tarjetas seleccionadas. Inténtalo de nuevo.');
+    } finally {
+      this.bulkDeleting.set(false);
+      this.pendingBulkDelete.set(false);
     }
   }
 
