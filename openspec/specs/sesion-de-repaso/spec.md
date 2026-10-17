@@ -248,6 +248,21 @@ Al calificar la última tarjeta, el sistema SHALL mostrar una pantalla de cierre
 - **WHEN** el usuario califica la última tarjeta y el guardado tiene éxito
 - **THEN** se ve "¡Sesión completada!", "Repasaste N tarjeta(s)." y el desglose por grado
 
+### Requirement: La sesión recuerda sus tarjetas difíciles y las entrega a la práctica con IA
+El sistema SHALL conservar, durante la sesión, la lista de tarjetas cuya calificación guardada con éxito fue "Otra vez" (1) o "Difícil" (2), en orden de calificación y sin repetir una tarjeta. Al mostrar la pantalla de cierre y al pulsar "Salir", el sistema SHALL entregar esa lista a la práctica con IA (ver spec de práctica con IA), y la pantalla de cierre SHALL mostrar debajo del resumen el bloque "Práctica con IA". Al iniciar una sesión nueva la lista SHALL empezar vacía.
+
+#### Scenario: Difíciles de la sesión
+- **WHEN** en una sesión se califican con éxito tarjetas con grados 1, 3, 2 y 4
+- **THEN** la lista de difíciles contiene la primera y la tercera, en ese orden
+
+#### Scenario: Calificación fallida no entra
+- **WHEN** una tarjeta se califica "Otra vez", el guardado falla, y el reintento con "Bien" tiene éxito
+- **THEN** la tarjeta no está en la lista de difíciles
+
+#### Scenario: Sesión nueva arranca limpia
+- **WHEN** termina una sesión con difíciles y el usuario inicia otra
+- **THEN** la lista de difíciles de la nueva sesión está vacía
+
 ### Requirement: Salir en cualquier momento conserva lo ya calificado
 El sistema SHALL ofrecer "Salir" en la barra superior durante toda la sesión. Salir SHALL llevar a Biblioteca sin perder lo ya guardado: las tarjetas calificadas conservan su nueva programación y las no calificadas siguen pendientes.
 

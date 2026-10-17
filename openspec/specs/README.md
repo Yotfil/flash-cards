@@ -7,6 +7,10 @@
 > escribirlas están en `docs/hallazgos-codigo-actual.md`: decidir ahí qué se corrige en la reescritura.
 > Validar con `openspec validate --specs`.
 
+> **Excepción documentada:** `practica-con-ia` no describe código existente: es la primera capacidad
+> diseñada directamente como spec base (2026-10-17, vía `opsx:explore`) para implementarse en su turno
+> dentro de la reescritura. Añadió un requisito a `sesion-de-repaso` (la sesión recuerda las difíciles).
+
 ## Mapa de capacidades
 
 | Spec | Qué cubre | Orden sugerido de reescritura |
@@ -24,6 +28,7 @@
 | `importacion` | Formato de texto, parser con errores por línea, previsualización, agregar vs reemplazar, importar libro | 11 (cerebro) |
 | `progreso` | Métricas del día, distribución de calificaciones, colección por estado, eficiencia de lecturas | 12 |
 | `practica-quiz` | Mini-quiz por capítulo (opción múltiple + escribir), sin tocar la programación | 13 |
+| `practica-con-ia` | Lotes cerrados de tarjetas difíciles (grado 1-2), prompt copiable para un chat de IA externo, dominio marcado a mano, historial. **Capacidad nueva** (no existe en v0.1.1; diseñada 2026-10-17) | 14 |
 
 ## Cómo se usan
 
