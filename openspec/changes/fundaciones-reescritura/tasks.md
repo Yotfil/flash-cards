@@ -24,8 +24,8 @@
 
 ## 5. Capas exigidas por ESLint
 
-- [ ] 5.1 Añadir a `eslint.config.js` un bloque por capa con `@typescript-eslint/no-restricted-imports` según la matriz del design (incluidos patrones relativos y la prohibición de `@testing/*` fuera de `*.spec.ts`); verificar que `npm run lint` pasa sobre el esqueleto.
-- [ ] 5.2 Crear un fixture temporal `src/app/features/violacion.ts` que importe `@infrastructure/x` y otro en `src/app/services/` que importe `firebase/firestore`; verificar que `npm run lint` falla en ambos, luego borrarlos y verificar que vuelve a pasar. Anotar la comprobación en el mensaje del commit.
+- [x] 5.1 Añadir a `eslint.config.js` un bloque por capa con `@typescript-eslint/no-restricted-imports` según la matriz del design (incluidos patrones relativos y la prohibición de `@testing/*` fuera de `*.spec.ts`); verificar que `npm run lint` pasa sobre el esqueleto.
+- [x] 5.2 Crear un fixture temporal `src/app/features/violacion.ts` que importe `@infrastructure/x` y otro en `src/app/services/` que importe `firebase/firestore`; verificar que `npm run lint` falla en ambos, luego borrarlos y verificar que vuelve a pasar. Anotar la comprobación en el mensaje del commit.
 
 ## 6. Logger y ErrorHandler global (TDD)
 
