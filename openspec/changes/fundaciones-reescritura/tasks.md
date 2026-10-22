@@ -47,7 +47,7 @@
 ## 9. Documentación
 
 - [x] 9.1 Reescribir `README.md` del repo para Cadence: qué es, requisitos (Node 24.17 vía nvm, Java 21 para el emulador, caché local de npm), scripts y su significado, flujo de ramas y enlace a `openspec/specs/README.md` y `docs/design/`; verificar que cada comando documentado corre tal como está escrito.
-- [ ] 9.2 Anotar en `MEMORY.md` (bitácora, local) el cierre del change 0 y las líneas base de tiempo de `test` y `test:integration`.
+- [x] 9.2 Anotar en `MEMORY.md` (bitácora, local) el cierre del change 0 y las líneas base de tiempo de `test` y `test:integration`.
 
 ## 10. Verificación final
 
