@@ -19,8 +19,8 @@
 
 ## 4. Tokens Cadence e identidad
 
-- [ ] 4.1 Reescribir `src/styles.scss` con el `@theme` oscuro base (fondos, vidrio, acento, texto, escala de calificación reservada, sombras, desenfoques, movimiento), la variante clara bajo `prefers-color-scheme: light` y `[data-theme]`, `prefers-reduced-transparency`, `prefers-reduced-motion`, las utilidades `glass`, `glass-soft` y `press`, y la fuente Plus Jakarta Sans; verificar que el build de producción contiene `--color-accent` y la fuente (grep tolerante sobre `dist/`), sin literales de color en `src/app/`.
-- [ ] 4.2 Cambiar `src/index.html` (título "Cadence", `lang="es"`, `theme-color` por modo) y `public/manifest.webmanifest` (`name`, `short_name`, `theme_color`, `background_color`); verificar que `dist/flash-cards/browser/manifest.webmanifest` dice "Cadence" tras `npm run build`.
+- [x] 4.1 Reescribir `src/styles.scss` con el `@theme` oscuro base (fondos, vidrio, acento, texto, escala de calificación reservada, sombras, desenfoques, movimiento), la variante clara bajo `prefers-color-scheme: light` y `[data-theme]`, `prefers-reduced-transparency`, `prefers-reduced-motion`, las utilidades `glass`, `glass-soft` y `press`, y la fuente Plus Jakarta Sans; verificar que el build de producción contiene `--color-accent` y la fuente (grep tolerante sobre `dist/`), sin literales de color en `src/app/`.
+- [x] 4.2 Cambiar `src/index.html` (título "Cadence", `lang="es"`, `theme-color` por modo) y `public/manifest.webmanifest` (`name`, `short_name`, `theme_color`, `background_color`); verificar que `dist/flash-cards/browser/manifest.webmanifest` dice "Cadence" tras `npm run build`.
 
 ## 5. Capas exigidas por ESLint
 
