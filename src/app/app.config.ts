@@ -1,17 +1,16 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-
-import { routes } from './app.routes';
-import { provideFirebase } from '@core/firebase';
-import { provideDataAccess } from '@core/data-access.providers';
 import { provideServiceWorker } from '@angular/service-worker';
 
+import { provideCore } from '@core/provide-core';
+
+// Raíz de composición de la app. Las rutas llegan con `navegacion-y-shell`;
+// los proveedores de datos, con `plataforma-datos-y-offline`.
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
-    provideFirebase(),
-    provideDataAccess(),
+    provideRouter([]),
+    provideCore(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',

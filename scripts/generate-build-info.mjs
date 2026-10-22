@@ -4,7 +4,7 @@
 // cambia en cada build y versionarlo ensuciaría cada commit.
 
 import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,5 +33,7 @@ export const BUILD_INFO = {
 } as const;
 `;
 
+// La carpeta puede no existir en un checkout recién limpiado: se crea antes de escribir.
+mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, content);
 console.log(`[build-info] Generado ${outputPath} (commit ${commit}, ${builtAt})`);

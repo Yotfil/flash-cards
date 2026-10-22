@@ -1,14 +1,14 @@
 {
-  "name": "Flash-cards",
-  "short_name": "Flash-cards",
-  "description": "Repaso espaciado con UX limpia y baja fricción, para móvil y escritorio.",
+  "name": "Cadence",
+  "short_name": "Cadence",
+  "description": "Cadence: repaso espaciado sereno, para móvil y escritorio.",
   "lang": "es",
   "dir": "ltr",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",
-  "theme_color": "#faf9f7",
-  "background_color": "#faf9f7",
+  "theme_color": "#0b0c22",
+  "background_color": "#0b0c22",
   "icons": [
     {
       "src": "icons/icon-72x72.png",

@@ -17,3 +17,5 @@ package-lock.json
 # Documentos de prosa (no reformatear la redacción del autor)
 CLAUDE.md
 /docs
+/openspec
+/.claude

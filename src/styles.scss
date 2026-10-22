@@ -1,125 +1,249 @@
-// Hoja de estilos global y ARCHIVO DE TEMA ÚNICO (especificación §11.1, Principio 5).
+// Hoja de estilos global y ARCHIVO DE TEMA ÚNICO (Principio 5, ADR 0003).
 //
-// Punto único de verdad de los design tokens. Regla del contrato (CLAUDE.md):
-// PROHIBIDO el valor literal de color/fuente en los componentes. Siempre un token
-// semántico (bg-surface, text-text-primary, font-sans…). Cambiar la identidad = tocar
-// solo este archivo.
+// Punto único de verdad de los design tokens del sistema visual "Cadence". Regla del contrato
+// (CLAUDE.md): PROHIBIDO el valor literal de color, fuente, sombra, desenfoque o duración en
+// los componentes; siempre un token semántico (bg-glass, text-text-dim, blur-glass, …).
+// Cambiar la identidad = tocar solo este archivo.
 //
-// Tailwind 4 se carga con `@use` (no `@import`, que está deprecado en Sass). El
-// compilador Sass procesa este archivo y luego el plugin @tailwindcss/postcss genera
-// las utilidades a partir de los tokens de @theme y de las clases usadas en las plantillas.
+// Fuente de la dirección visual: docs/design/Cadence - Guia de Rediseno UI-UX.md y el
+// prototipo aprobado docs/design/cadence-prototipo-extendido.html, de donde se calcan los valores.
+//
+// Tailwind 4 se carga con `@use` (no `@import`, deprecado en Sass). Sass procesa este archivo y
+// el plugin @tailwindcss/postcss genera las utilidades a partir de los tokens de @theme.
 
 @use 'tailwindcss';
 
 // ───────────────────────────────────────────────────────────────────────────
-// Design tokens. Valores PROVISIONALES (§10.6): se afinan sobre la app real.
-// Acento: teal profundo (§10.3, "índigo / teal profundo / terracota"), disciplinado
-// y distinto del azul corporativo y del verde-Duolingo. La escala rojo→verde queda
-// RESERVADA para la calificación.
+// Tokens. OSCURO PRIMERO: la estética nocturna con acrílico es la identidad (ADR 0003).
+// Los valores base son los del modo oscuro; el modo claro es una variante plana que los
+// redefine más abajo. Los tonos exactos se afinan sobre la app real.
 // ───────────────────────────────────────────────────────────────────────────
 @theme {
-  // Tipografía: una sola familia sans con buen soporte de acentos (§10.2).
-  --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+  // Tipografía: una sola familia sans, autohospedada (angular.json carga @fontsource).
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  // Base neutra cálida — modo claro por defecto (§10.3).
-  --color-surface: #faf9f7; // lienzo de la app
-  --color-surface-raised: #ffffff; // tarjetas y paneles elevados
-  --color-surface-sunken: #f1efea; // zonas hundidas / fondos sutiles
+  // Fondo: azul noche → púrpura oscuro. Tres paradas para el degradado de página.
+  --color-night-1: #0b0c22;
+  --color-night-2: #121030;
+  --color-night-3: #1b1442;
 
-  --color-text-primary: #2b2a27; // negro cálido, no puro
-  --color-text-secondary: #57544e;
-  --color-text-muted: #8a857c;
+  // Superficie SÓLIDA: la tarjeta de estudio y todo bloque largo de lectura. Nunca acrílico.
+  --color-surface: #16163a;
 
-  --color-border: #e6e2d9;
+  // Acrílico: solo en el cromo (navegación, diálogos, paneles, listados). Siempre con color
+  // base semitransparente debajo del desenfoque, nunca transparencia pura.
+  --color-glass: rgb(30 34 78 / 0.62);
+  --color-glass-soft: rgb(30 34 78 / 0.42);
+  --color-glass-border: rgb(150 190 255 / 0.14);
+  --color-glass-border-soft: rgb(150 190 255 / 0.1);
 
-  // Único acento, usado con disciplina (acción principal, estado activo).
-  --color-accent: #11806f;
-  --color-accent-hover: #0c6355;
-  --color-accent-contrast: #ffffff; // texto/íconos sobre el acento
+  // Único acento interactivo: azul eléctrico. Texto oscuro encima, no blanco.
+  --color-accent: #38bdf8;
+  --color-accent-deep: #2563eb;
+  --color-accent-ink: #06142e;
+  --color-accent-text: #38bdf8; // el acento como texto o icono sobre el fondo
+  --color-accent-tint: rgb(56 189 248 / 0.13); // fondos suaves de estado activo
+  --color-accent-line: rgb(56 189 248 / 0.35); // bordes y divisores con acento
 
-  --color-focus-ring: #11806f;
+  // Texto: blanco azulado sobre superficies oscuras (contraste AA como mínimo).
+  --color-text: #eaf0ff;
+  --color-text-dim: #a3abd0;
+  --color-text-faint: #6f76a0;
 
-  // Errores y acciones destructivas (mensajes de formulario, botón de borrar).
-  // Distinto en intención de --color-rating-again aunque el valor coincida hoy:
-  // la escala de calificación queda reservada al repaso.
-  --color-danger: #dc2626;
-  --color-danger-contrast: #ffffff; // texto sobre el fondo danger
+  // Apagado (cerebros inactivos, interruptores) y pistas de progreso.
+  --color-off: #2f3158;
+  --color-track: rgb(150 190 255 / 0.14);
 
-  // Escala semántica de la calificación — RESERVADA (mal → bien).
-  --color-rating-again: #dc2626; // 1 · rojo · Again
-  --color-rating-hard: #d97b34; // 2 · naranja · Hard
-  --color-rating-good: #c79a1f; // 3 · amarillo · Good
-  --color-rating-easy: #1f9d52; // 4 · verde · Easy
-}
+  // Vinotinto: un ÚNICO brillo tenue en el fondo de las pantallas de gestión. Nunca en
+  // botones ni en Repaso (colisionaría con el rojo de "Otra vez").
+  --color-wine: rgb(128 22 66 / 0.22);
 
-// Paleta del modo oscuro (§10.3): mismos tokens semánticos, valores cálidos oscuros.
-// Mixin reutilizado para la preferencia del sistema y para el override manual, sin duplicar.
-@mixin dark-palette {
-  --color-surface: #161512;
-  --color-surface-raised: #201e1b;
-  --color-surface-sunken: #110f0d;
-
-  --color-text-primary: #ece8e0;
-  --color-text-secondary: #b3ada2;
-  --color-text-muted: #837d73;
-
-  --color-border: #322f29;
-
-  --color-accent: #1ba291;
-  --color-accent-hover: #25b6a3;
-  --color-accent-contrast: #07211d;
-
-  --color-focus-ring: #25b6a3;
-
+  // Errores de formulario y acciones destructivas. Distinto en intención de rating-again.
   --color-danger: #ef4444;
   --color-danger-contrast: #ffffff;
 
-  --color-rating-again: #ef4444;
-  --color-rating-hard: #e08a44;
-  --color-rating-good: #d6ab33;
-  --color-rating-easy: #34b364;
+  // Escala semántica de la calificación — RESERVADA a los cuatro cerebros (mal → bien).
+  --color-rating-again: #f87171; // 1 · rojo · Otra vez
+  --color-rating-hard: #fb923c; // 2 · naranja · Difícil
+  --color-rating-good: #fbbf24; // 3 · amarillo · Bien
+  --color-rating-easy: #4ade80; // 4 · verde · Fácil
+
+  // Desenfoque del acrílico (utilidades blur-glass, blur-glass-soft, blur-glass-nav).
+  --blur-glass: 16px;
+  --blur-glass-soft: 12px;
+  --blur-glass-nav: 20px;
+
+  // Sombras: solo la tarjeta de estudio, los diálogos y el botón principal las llevan.
+  --shadow-card: 0 26px 60px -26px rgb(0 0 0 / 0.75);
+  --shadow-btn: 0 10px 26px -8px rgb(56 189 248 / 0.6);
+
+  // Curvas de movimiento: salida suave para casi todo; entrada solo para lo que se va.
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-soft: cubic-bezier(0.5, 0, 0.75, 0);
 }
 
-// Override manual explícito (interruptor de tema, a futuro en Ajustes).
-:root[data-theme='dark'] {
-  @include dark-palette;
+// Tokens sin espacio de nombres en Tailwind: duraciones y fondos compuestos.
+:root {
+  --duration-press: 120ms; // hundimiento al presionar
+  --duration-fast: 220ms; // cambios de color/borde
+  --duration-base: 320ms; // píldora de navegación, entrada de la siguiente tarjeta
+  --duration-view: 360ms; // cambio de pantalla
+  --duration-flip: 500ms; // volteo de la tarjeta
+
+  // Degradado de página con los brillos de acento y púrpura.
+  --bg-page:
+    radial-gradient(560px 380px at 15% -8%, rgb(56 189 248 / 0.16), transparent 60%),
+    radial-gradient(520px 420px at 110% 108%, rgb(124 92 255 / 0.2), transparent 55%),
+    linear-gradient(165deg, var(--color-night-1), var(--color-night-2) 60%, var(--color-night-3));
 }
 
-// Por defecto sigue la preferencia del sistema, salvo que el usuario fije "claro".
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    @include dark-palette;
+// ───────────────────────────────────────────────────────────────────────────
+// Modo claro: variante PLANA y sobria, SIN acrílico (el vidrio pierde su gracia sobre claro).
+// Mismos tokens, valores calcados del prototipo aprobado. Mixin para no duplicar.
+// ───────────────────────────────────────────────────────────────────────────
+@mixin light-palette {
+  --color-night-1: #eef1f8;
+  --color-night-2: #f4f6fb;
+  --color-night-3: #e9ecf7;
+
+  --color-surface: #ffffff;
+
+  --color-glass: #ffffff;
+  --color-glass-soft: #ffffff;
+  --color-glass-border: rgb(20 30 80 / 0.1);
+  --color-glass-border-soft: rgb(20 30 80 / 0.08);
+
+  --color-accent-text: #1d4ed8;
+  --color-accent-tint: rgb(37 99 235 / 0.1);
+  --color-accent-line: rgb(37 99 235 / 0.35);
+
+  --color-text: #141a33;
+  --color-text-dim: #4c5577;
+  --color-text-faint: #7a82a6;
+
+  --color-off: #d7dbea;
+  --color-track: rgb(20 30 80 / 0.1);
+  --color-wine: rgb(128 22 66 / 0.07);
+
+  --color-danger: #dc2626;
+
+  --color-rating-again: #dc2626;
+  --color-rating-hard: #ea580c;
+  --color-rating-good: #ca8a04;
+  --color-rating-easy: #16a34a;
+
+  --blur-glass: 0px;
+  --blur-glass-soft: 0px;
+  --blur-glass-nav: 0px;
+
+  --shadow-card: 0 18px 40px -22px rgb(20 30 80 / 0.35);
+  --shadow-btn: 0 10px 24px -10px rgb(37 99 235 / 0.5);
+
+  --bg-page:
+    radial-gradient(520px 360px at 12% -10%, rgb(56 189 248 / 0.18), transparent 60%),
+    linear-gradient(165deg, #f6f7fc, #eef1f8 60%, #e9ecf7);
+
+  color-scheme: light;
+}
+
+// Override manual explícito (ajuste "tema" en Ajustes).
+:root[data-theme='light'] {
+  @include light-palette;
+}
+
+// Por defecto sigue la preferencia del sistema, salvo que el usuario fije "oscuro".
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    @include light-palette;
+  }
+}
+
+// "Reducir transparencia": todas las superficies de vidrio se vuelven sólidas, sin desenfoque.
+// La clase .solid permite lo mismo a mano (ajuste futuro o depuración).
+@mixin solid-surfaces {
+  --color-glass: var(--color-surface);
+  --color-glass-soft: var(--color-surface);
+  --blur-glass: 0px;
+  --blur-glass-soft: 0px;
+  --blur-glass-nav: 0px;
+}
+
+:root.solid {
+  @include solid-surfaces;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    @include solid-surfaces;
   }
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// Capa base: aplica los tokens al documento. Descansa sobre el preflight de Tailwind
-// y queda por debajo de las utilidades, de modo que cualquier clase utilitaria en una
-// plantilla pueda sobreescribir. Cero literales de color/fuente aquí tampoco.
+// Utilidades propias: la fórmula del acrílico y la respuesta al presionar viven aquí para que
+// ninguna pantalla la repita. Máximo dos capas de vidrio visibles a la vez; nunca vidrio sobre
+// vidrio ni sobre elementos que animan (ADR 0003).
+// ───────────────────────────────────────────────────────────────────────────
+@utility glass {
+  background-color: var(--color-glass);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--color-glass-border);
+}
+
+@utility glass-soft {
+  background-color: var(--color-glass-soft);
+  -webkit-backdrop-filter: blur(var(--blur-glass-soft));
+  backdrop-filter: blur(var(--blur-glass-soft));
+  border: 1px solid var(--color-glass-border-soft);
+}
+
+// Hundimiento al presionar (120 ms): funciona igual con mouse y con el dedo.
+@utility press {
+  transition:
+    transform var(--duration-press) var(--ease-out-soft),
+    box-shadow var(--duration-fast),
+    border-color var(--duration-fast),
+    background-color var(--duration-fast),
+    color var(--duration-fast);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Capa base: aplica los tokens al documento. Por debajo de las utilidades, para que cualquier
+// clase utilitaria en una plantilla pueda sobreescribir. Cero literales aquí tampoco.
 // ───────────────────────────────────────────────────────────────────────────
 @layer base {
   html {
-    color-scheme: light dark; // controles nativos y scrollbars coherentes con el tema
+    color-scheme: dark; // controles nativos y scrollbars coherentes con el tema base
   }
 
   body {
     margin: 0;
     min-height: 100dvh;
-    background-color: var(--color-surface);
-    color: var(--color-text-primary);
+    background: var(--bg-page);
+    background-attachment: fixed;
+    color: var(--color-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   // Anillo de foco visible y consistente para accesibilidad por teclado (CLAUDE.md).
   :focus-visible {
-    outline: 2px solid var(--color-focus-ring);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
   }
 }
 
-// Respeto de "reducir movimiento" como base, no como retoque (§10.4 / CLAUDE.md).
+// Respeto de "reducir movimiento" como base, no como retoque. Los cambios de estado ocurren
+// igual, sin animación; la luz orbital de Hoy se queda quieta (lo aplica su componente).
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -127,6 +251,7 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }
