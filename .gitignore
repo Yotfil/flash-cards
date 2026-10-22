@@ -46,8 +46,9 @@ Thumbs.db
 # Bitácora local de trabajo (registro de avance; no se versiona)
 /MEMORY.md
 
-# Documentación local (no se versiona)
-/docs
+# Documentación local (no se versiona), salvo la guía de diseño Cadence y su prototipo
+/docs/*
+!/docs/design/
 
 # READMEs internos de carpetas (guías de arquitectura); solo se versiona el del root
 /src/**/README.md
