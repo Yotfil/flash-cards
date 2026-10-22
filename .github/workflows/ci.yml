@@ -9,27 +9,29 @@ on:
     branches: [dev]
   workflow_dispatch:
 
+# Un push nuevo cancela la corrida anterior SOLO en PRs (validar un commit ya superado no aporta).
+# En dev y main cada commit integrado se valida de principio a fin.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
     name: Lint, tipos, pruebas y build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # fijo, no 'latest': reproducible aunque GitHub cambie la imagen
     timeout-minutes: 20
     steps:
       - name: Código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Node (versión de .nvmrc)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
 
       - name: Java 21 (emulador de Firestore)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
