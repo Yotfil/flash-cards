@@ -1,6 +1,6 @@
 # Tasks
 
-> Fase B (ejecución, Claude Opus 5.5). Rama `feature/plataforma-datos-y-offline` desde `dev`. Cada tarea de código va precedida por su prueba en rojo (skill `tdd`). Antes de marcar una tarea: `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:integration` (exige Java 21 en el PATH) y `npm run build` en verde. Un commit por tarea o por pareja rojo-verde. Si el design no cuadra con el código: `/opsx:update`, anotar el porqué, no improvisar.
+> Fase B (ejecución, Claude Opus 5.5), en la rama única `feature/reescritura-cadence` y en el orden del README. Cada tarea de código va precedida por su prueba en rojo (skill `tdd`). Antes de marcar una tarea: `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:integration` (exige Java 21 en el PATH) y `npm run build` en verde. Si el design no cuadra con el código: `/opsx:update`, anotar el porqué, no improvisar.
 
 ## 1. Runner de pruebas estáticas y de integración
 
@@ -50,4 +50,4 @@
 ## 9. Verificación final
 
 - [ ] 9.1 Ejecutar en orden `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:integration`, `npm run build` y verificar que todos terminan en verde en la misma sesión con `git status` limpio.
-- [ ] 9.2 Push de la rama y entrega del link `https://github.com/Yotfil/flash-cards/compare/dev...feature/plataforma-datos-y-offline?expand=1` con el resumen del PR; verificar que el workflow de CI termina en verde.
+- [ ] 9.2 `/opsx:archive plataforma-datos-y-offline` (spec base sincronizada con el delta) y un único commit de cierre `feat(plataforma-datos-y-offline): …` con el código, las pruebas y el archive; push de respaldo de la rama sin abrir PR. Verificar con `git log --oneline -1` y `git status` limpio.

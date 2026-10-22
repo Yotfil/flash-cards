@@ -128,4 +128,4 @@ Pruebas que leen archivos de configuración con `fs` y afirman lo que la spec ex
 
 ## Migration Plan
 
-Rama `feature/plataforma-datos-y-offline` desde `dev` en la fase B. Sin datos que migrar ni reglas nuevas que desplegar. Rollback: revertir el merge en `dev`; producción (`main`, 0.1.1) no se toca.
+Primer commit de la rama única `feature/reescritura-cadence` en la fase B. Sin datos que migrar ni reglas nuevas que desplegar. Rollback: revertir el merge en `dev`; producción (`main`, 0.1.1) no se toca.
