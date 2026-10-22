@@ -41,12 +41,12 @@
 
 ## 8. CI
 
-- [ ] 8.1 Crear `.github/workflows/ci.yml` (pull_request a `dev` y `main`, push a `dev`; setup-node con `.nvmrc` y caché npm, setup-java Temurin 21, `npm ci`, `lint`, `format:check`, `typecheck`, `test`, `test:integration`, `build`); verificar la sintaxis con `npx prettier --check .github` y lectura cruzada contra los scripts de `package.json`.
+- [x] 8.1 Crear `.github/workflows/ci.yml` (pull_request a `dev` y `main`, push a `dev`; setup-node con `.nvmrc` y caché npm, setup-java Temurin 21, `npm ci`, `lint`, `format:check`, `typecheck`, `test`, `test:integration`, `build`); verificar la sintaxis con `npx prettier --check .github` y lectura cruzada contra los scripts de `package.json`.
 - [ ] 8.2 Abrir el PR hacia `dev` y verificar que el workflow termina en verde, incluida la prueba de reglas contra el emulador.
 
 ## 9. Documentación
 
-- [ ] 9.1 Reescribir `README.md` del repo para Cadence: qué es, requisitos (Node 24.17 vía nvm, Java 21 para el emulador, caché local de npm), scripts y su significado, flujo de ramas y enlace a `openspec/specs/README.md` y `docs/design/`; verificar que cada comando documentado corre tal como está escrito.
+- [x] 9.1 Reescribir `README.md` del repo para Cadence: qué es, requisitos (Node 24.17 vía nvm, Java 21 para el emulador, caché local de npm), scripts y su significado, flujo de ramas y enlace a `openspec/specs/README.md` y `docs/design/`; verificar que cada comando documentado corre tal como está escrito.
 - [ ] 9.2 Anotar en `MEMORY.md` (bitácora, local) el cierre del change 0 y las líneas base de tiempo de `test` y `test:integration`.
 
 ## 10. Verificación final
