@@ -3,14 +3,14 @@
 ## 1. Prerrequisitos del entorno
 
 - [ ] 1.1 (Usuario) Instalar Java 21 para el emulador de Firestore (`brew install openjdk@21` y enlazarlo) y verificar con `java -version`. Hasta entonces, las tareas de integración se verifican en CI.
-- [ ] 1.2 Confirmar que `npm_config_cache=.npm-cache npm ci` instala sin errores EACCES y que `npm run build` del código viejo sigue en verde antes de borrar nada (línea base).
+- [x] 1.2 Confirmar que `npm_config_cache=.npm-cache npm ci` instala sin errores EACCES y que `npm run build` del código viejo sigue en verde antes de borrar nada (línea base).
 
 ## 2. Limpieza y esqueleto
 
-- [ ] 2.1 Borrar `src/app/**` completo y verificar con `git status` que solo desaparecen archivos bajo `src/app/` (nada de `environments/`, `public/`, `scripts/`, reglas ni configuración).
-- [ ] 2.2 Escribir en rojo `src/app/app.spec.ts` (el componente raíz renderiza "Cadence") y verificar que `npm test` falla por ausencia del componente.
-- [ ] 2.3 Crear el componente raíz en sus cuatro archivos (`app.ts`, `app.html`, `app.scss`, `app.spec.ts`), `app.config.ts` con `provideRouter([])` y el service worker solo en producción, y `main.ts`; verificar que `npm test` pasa y `npm run build` termina sin avisos de presupuesto.
-- [ ] 2.4 Crear las carpetas `domain/models`, `domain/ports`, `services`, `infrastructure`, `features`, `shared`, `core`, `testing` con `.gitkeep`, y el alias `@testing/*` en `tsconfig.json`; verificar con `npm run typecheck` (script nuevo: `tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit`).
+- [x] 2.1 Borrar `src/app/**` completo y verificar con `git status` que solo desaparecen archivos bajo `src/app/` (nada de `environments/`, `public/`, `scripts/`, reglas ni configuración).
+- [x] 2.2 Escribir en rojo `src/app/app.spec.ts` (el componente raíz renderiza "Cadence") y verificar que `npm test` falla por ausencia del componente.
+- [x] 2.3 Crear el componente raíz en sus cuatro archivos (`app.ts`, `app.html`, `app.scss`, `app.spec.ts`), `app.config.ts` con `provideRouter([])` y el service worker solo en producción, y `main.ts`; verificar que `npm test` pasa y `npm run build` termina sin avisos de presupuesto.
+- [x] 2.4 Crear las carpetas `domain/models`, `domain/ports`, `services`, `infrastructure`, `features`, `shared`, `core`, `testing` con `.gitkeep`, y el alias `@testing/*` en `tsconfig.json`; verificar con `npm run typecheck` (script nuevo: `tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit`).
 
 ## 3. Dependencias
 

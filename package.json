@@ -10,7 +10,9 @@
     "prebuild": "npm run build-info",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
+    "test": "ng test --watch=false",
+    "test:watch": "ng test",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "format": "prettier --write .",
@@ -52,5 +54,6 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "8.60.1",
     "vitest": "^4.0.8"
-  }
+  },
+  "description": "Cadence, repetición espaciada"
 }
