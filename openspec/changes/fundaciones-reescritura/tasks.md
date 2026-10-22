@@ -36,7 +36,7 @@
 
 ## 7. Integración con el emulador de Firestore (TDD)
 
-- [ ] 7.1 Añadir `emulators.firestore.port = 8080` y `emulators.ui.enabled = false` a `firebase.json`, crear `vitest.integration.config.ts` (entorno `node`, patrón `tests/rules/**/*.spec.ts` y `src/**/*.integration.spec.ts`) y el script `test:integration` = `firebase emulators:exec --only firestore --project demo-cadence "vitest run -c vitest.integration.config.ts"`; verificar que el script arranca el emulador y termina con "no tests" sin error (o, sin Java local, que falla con el mensaje de Java ausente y no por configuración).
+- [x] 7.1 Añadir `emulators.firestore.port = 8080` y `emulators.ui.enabled = false` a `firebase.json`, crear `vitest.integration.config.ts` (entorno `node`, patrón `tests/rules/**/*.spec.ts` y `src/**/*.integration.spec.ts`) y el script `test:integration` = `firebase emulators:exec --only firestore --project demo-cadence "vitest run -c vitest.integration.config.ts"`; verificar que el script arranca el emulador y termina con "no tests" sin error (o, sin Java local, que falla con el mensaje de Java ausente y no por configuración).
 - [ ] 7.2 Escribir `tests/rules/users.rules.spec.ts` con `@firebase/rules-unit-testing` contra `firestore.rules`: sin sesión no se lee `/users/u1/books/b1`; `u1` con su email en `/allowlist` sí lee y escribe su árbol; `u2` no lee el árbol de `u1`; verificar que `npm run test:integration` pasa (localmente con Java, o en CI en 8.2).
 
 ## 8. CI

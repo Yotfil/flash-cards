@@ -1,0 +1,10 @@
+/* Pruebas de integración (emulador de Firestore). Fuera de src/ para que el builder de pruebas
+   unitarias de Angular no las recoja; las corre `vitest.integration.config.ts`. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/integration",
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["tests/**/*.ts", "vitest.integration.config.ts"]
+}
