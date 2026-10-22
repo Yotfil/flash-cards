@@ -42,7 +42,7 @@
 ## 8. CI
 
 - [x] 8.1 Crear `.github/workflows/ci.yml` (pull_request a `dev` y `main`, push a `dev`; setup-node con `.nvmrc` y caché npm, setup-java Temurin 21, `npm ci`, `lint`, `format:check`, `typecheck`, `test`, `test:integration`, `build`); verificar la sintaxis con `npx prettier --check .github` y lectura cruzada contra los scripts de `package.json`.
-- [ ] 8.2 Abrir el PR hacia `dev` y verificar que el workflow termina en verde, incluida la prueba de reglas contra el emulador.
+- [x] 8.2 Abrir el PR hacia `dev` y verificar que el workflow termina en verde, incluida la prueba de reglas contra el emulador.
 
 ## 9. Documentación
 
