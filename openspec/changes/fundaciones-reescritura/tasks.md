@@ -14,8 +14,8 @@
 
 ## 3. Dependencias
 
-- [ ] 3.1 Añadir `@angular/cdk` (22.x) y `@fontsource/plus-jakarta-sans`, quitar `@fontsource/source-sans-3`; verificar que `npm ci` y `npm run build` siguen en verde.
-- [ ] 3.2 Añadir como devDependencias `firebase-tools` y `@firebase/rules-unit-testing`; verificar que `npx firebase --version` responde con la caché local de npm.
+- [x] 3.1 Añadir `@angular/cdk` (22.x) y `@fontsource/plus-jakarta-sans`, quitar `@fontsource/source-sans-3`; verificar que `npm ci` y `npm run build` siguen en verde.
+- [x] 3.2 Añadir como devDependencias `firebase-tools` y `@firebase/rules-unit-testing`; verificar que `npx firebase --version` responde con la caché local de npm.
 
 ## 4. Tokens Cadence e identidad
 
