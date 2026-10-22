@@ -29,10 +29,10 @@
 
 ## 6. Logger y ErrorHandler global (TDD)
 
-- [ ] 6.1 Escribir en rojo `src/app/infrastructure/logging/console-logger.adapter.spec.ts` (`error` escribe en `console.error` con prefijo `[Cadence]` y la causa; `info` y `warn` en sus métodos) y verificar que falla.
-- [ ] 6.2 Crear el puerto `src/app/domain/ports/logger.port.ts` (clase abstracta `Logger` con `info`, `warn`, `error`) y `console-logger.adapter.ts`; verificar que 6.1 pasa.
-- [ ] 6.3 Escribir en rojo `src/app/core/global-error-handler.spec.ts` usando `src/app/testing/fake-logger.ts` (fake en memoria que acumula entradas): delega en `error`, no relanza, acepta valores que no son `Error`; verificar que falla.
-- [ ] 6.4 Implementar `global-error-handler.ts` y `provide-core.ts` (enlaza `Logger` con el adaptador y registra el `ErrorHandler`), registrarlo en `app.config.ts`; verificar que 6.3 pasa y que `npm run lint` y `npm run typecheck` siguen en verde.
+- [x] 6.1 Escribir en rojo `src/app/infrastructure/logging/console-logger.adapter.spec.ts` (`error` escribe en `console.error` con prefijo `[Cadence]` y la causa; `info` y `warn` en sus métodos) y verificar que falla.
+- [x] 6.2 Crear el puerto `src/app/domain/ports/logger.port.ts` (clase abstracta `Logger` con `info`, `warn`, `error`) y `console-logger.adapter.ts`; verificar que 6.1 pasa.
+- [x] 6.3 Escribir en rojo `src/app/core/global-error-handler.spec.ts` usando `src/app/testing/fake-logger.ts` (fake en memoria que acumula entradas): delega en `error`, no relanza, acepta valores que no son `Error`; verificar que falla.
+- [x] 6.4 Implementar `global-error-handler.ts` y `provide-core.ts` (enlaza `Logger` con el adaptador y registra el `ErrorHandler`), registrarlo en `app.config.ts`; verificar que 6.3 pasa y que `npm run lint` y `npm run typecheck` siguen en verde.
 
 ## 7. Integración con el emulador de Firestore (TDD)
 
