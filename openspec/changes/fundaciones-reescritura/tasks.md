@@ -2,7 +2,7 @@
 
 ## 1. Prerrequisitos del entorno
 
-- [ ] 1.1 (Usuario) Instalar Java 21 para el emulador de Firestore (`brew install openjdk@21` y enlazarlo) y verificar con `java -version`. Hasta entonces, las tareas de integración se verifican en CI.
+- [x] 1.1 (Usuario) Instalar Java 21 para el emulador de Firestore (`brew install openjdk@21` y enlazarlo) y verificar con `java -version`. Hasta entonces, las tareas de integración se verifican en CI.
 - [x] 1.2 Confirmar que `npm_config_cache=.npm-cache npm ci` instala sin errores EACCES y que `npm run build` del código viejo sigue en verde antes de borrar nada (línea base).
 
 ## 2. Limpieza y esqueleto
@@ -37,7 +37,7 @@
 ## 7. Integración con el emulador de Firestore (TDD)
 
 - [x] 7.1 Añadir `emulators.firestore.port = 8080` y `emulators.ui.enabled = false` a `firebase.json`, crear `vitest.integration.config.ts` (entorno `node`, patrón `tests/rules/**/*.spec.ts` y `src/**/*.integration.spec.ts`) y el script `test:integration` = `firebase emulators:exec --only firestore --project demo-cadence "vitest run -c vitest.integration.config.ts"`; verificar que el script arranca el emulador y termina con "no tests" sin error (o, sin Java local, que falla con el mensaje de Java ausente y no por configuración).
-- [ ] 7.2 Escribir `tests/rules/users.rules.spec.ts` con `@firebase/rules-unit-testing` contra `firestore.rules`: sin sesión no se lee `/users/u1/books/b1`; `u1` con su email en `/allowlist` sí lee y escribe su árbol; `u2` no lee el árbol de `u1`; verificar que `npm run test:integration` pasa (localmente con Java, o en CI en 8.2).
+- [x] 7.2 Escribir `tests/rules/users.rules.spec.ts` con `@firebase/rules-unit-testing` contra `firestore.rules`: sin sesión no se lee `/users/u1/books/b1`; `u1` con su email en `/allowlist` sí lee y escribe su árbol; `u2` no lee el árbol de `u1`; verificar que `npm run test:integration` pasa (localmente con Java, o en CI en 8.2).
 
 ## 8. CI
 
@@ -51,4 +51,4 @@
 
 ## 10. Verificación final
 
-- [ ] 10.1 Ejecutar en orden `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:integration`, `npm run build` y verificar que todos terminan en verde en la misma sesión, con `git status` limpio salvo lo commiteado.
+- [x] 10.1 Ejecutar en orden `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:integration`, `npm run build` y verificar que todos terminan en verde en la misma sesión, con `git status` limpio salvo lo commiteado.

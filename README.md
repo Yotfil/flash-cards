@@ -12,8 +12,10 @@ siempre un anverso y un reverso genéricos. El repositorio se llama `flash-cards
 ## Requisitos
 
 - **Node 24.17** (`nvm use` lee `.nvmrc`).
-- **Java 21** para el emulador de Firestore (`brew install openjdk@21`), solo para
-  `npm run test:integration`. Sin Java, esas pruebas corren igual en CI.
+- **Java 21 o superior** para el emulador de Firestore (`brew install openjdk`), solo para
+  `npm run test:integration`. El JDK de Homebrew no entra al PATH solo: añade
+  `export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"` a `~/.zprofile`. Sin Java, esas pruebas
+  corren igual en CI.
 - Caché local de npm: el proyecto usa `.npm-cache/` para esquivar permisos rotos en la caché
   global. Si `npm` falla con `EACCES`, prefija el comando con
   `npm_config_cache="$(pwd)/.npm-cache"`.
