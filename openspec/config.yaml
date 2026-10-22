@@ -41,16 +41,16 @@ rules:
   design:
     - Respetar las capas (UI / servicios / repositorios) y nombrar en qué capa cae cada pieza
     - Justificar cualquier abstracción nueva con el segundo caso de uso real que la pide
-    - Incluir una sección "Plan de pruebas": cada escenario de la spec mapeado a una prueba concreta y su capa (unitaria pura, integración con emulador, componente); se aprueba antes de codificar
+    - Incluir una sección "Plan de pruebas" con cada escenario de la spec mapeado a una prueba concreta y su capa (unitaria pura, integración con emulador, componente); se aprueba antes de codificar
     - Si la capacidad pinta UI, indicar qué superficies llevan acrílico (máximo dos capas visibles) y cuáles son sólidas, según el ADR 0003
   specs:
     - Formato del piloto openspec/specs/cola-diaria/spec.md (SHALL + escenarios WHEN/THEN)
     - Comportamiento observable, sin nombres de clases, archivos ni librerías
   tasks:
-    - Orden TDD: cada tarea de código va precedida por la tarea de escribir su test en rojo
+    - "Orden TDD: cada tarea de código va precedida por la tarea de escribir su test en rojo"
     - Empezar por el "cerebro" (servicios puros) y terminar por la UI
     - Tareas pequeñas (menos de 2 horas), una por commit atómico
-    - Derivar las tareas del "Plan de pruebas" del design: cada prueba planeada es una tarea en rojo antes de su código
+    - Derivar las tareas del "Plan de pruebas" del design; cada prueba planeada es una tarea en rojo antes de su código
 
 operations:
   apply:
