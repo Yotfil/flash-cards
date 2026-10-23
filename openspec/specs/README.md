@@ -29,6 +29,7 @@
 | `progreso` | Métricas del día, distribución de calificaciones, colección por estado, eficiencia de lecturas | 12 |
 | `practica-quiz` | Mini-quiz por capítulo (opción múltiple + escribir), sin tocar la programación | 13 |
 | `practica-con-ia` | Lotes cerrados de tarjetas difíciles (grado 1-2), prompt copiable para un chat de IA externo, dominio marcado a mano, historial. **Capacidad nueva** (no existe en v0.1.1; diseñada 2026-10-17) | 14 |
+| `exportacion-de-libros` | Exportar un libro como texto importable (inverso exacto de la importación), por hoja de compartir o descarga; el "paquete de libro" como costura para compartir a futuro. **Capacidad nueva** (propuesta 2026-10-22 en el explore de `libros`; spec pendiente de escribir en su explore) | 15, justo después de `importacion`; release por decidir |
 
 ## Cómo se usan
 
