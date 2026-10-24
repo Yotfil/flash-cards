@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Borrar un libro exige confirmación y borra también sus capítulos y tarjetas
-El sistema SHALL pedir confirmación antes de borrar un libro en un diálogo "¿Borrar este libro?" que nombra el libro, indica cuántos capítulos y tarjetas se borrarán con él ("Se borrarán N capítulos y M tarjetas. Tu historial de repasos se conserva."), advierte que no se puede deshacer y ofrece "Cancelar" y "Borrar". Al confirmar, el sistema SHALL eliminar las tarjetas y los capítulos del libro y, al final, el propio libro, en lotes de hasta 450 operaciones; el historial de repasos y las estadísticas diarias NO SHALL tocarse. Mientras borra, el botón SHALL mostrar "Borrando…" y el diálogo quedar ocupado. Si el borrado falla, el diálogo SHALL permanecer abierto mostrando "No se pudo borrar el libro. Inténtalo de nuevo." y el libro SHALL seguir en la lista; reintentar borra lo que quede.
+El sistema SHALL pedir confirmación antes de borrar un libro en un diálogo "¿Borrar este libro?" que nombra el libro, indica cuántos capítulos y tarjetas se borrarán con él ("Se borrarán N capítulos y M tarjetas. Tu historial de repasos se conserva."), advierte que no se puede deshacer y ofrece "Cancelar" y "Borrar". Al confirmar, el sistema SHALL eliminar las tarjetas y los capítulos del libro y, al final, el propio libro, en lotes de hasta 450 operaciones; el historial de repasos y las estadísticas diarias NO SHALL tocarse. Mientras borra, el botón SHALL mostrar "Borrando…" y el diálogo quedar ocupado. Si el borrado falla, el diálogo SHALL permanecer abierto mostrando "No se pudo borrar el libro. Inténtalo de nuevo." y el libro SHALL seguir en la lista; reintentar borra lo que quede. Si el número de capítulos y tarjetas no se puede obtener, la confirmación SHALL decir "También se borrarán sus capítulos y tarjetas. Tu historial de repasos se conserva." sin números y sin bloquear el borrado; sin conexión, el sistema NO SHALL pedir esos números.
 
 #### Scenario: Confirmar borrado
 - **WHEN** el usuario pulsa "Borrar" en un libro con 3 capítulos y 40 tarjetas y confirma
@@ -20,6 +20,29 @@ El sistema SHALL pedir confirmación antes de borrar un libro en un diálogo "¿
 #### Scenario: Falla el borrado
 - **WHEN** el almacén rechaza el borrado
 - **THEN** el diálogo sigue abierto con "No se pudo borrar el libro. Inténtalo de nuevo.", el libro sigue en la lista y el usuario puede reintentar o cancelar
+
+#### Scenario: Conteo no disponible
+- **WHEN** el conteo de capítulos y tarjetas falla al abrir la confirmación
+- **THEN** la confirmación se abre igual y dice "También se borrarán sus capítulos y tarjetas. Tu historial de repasos se conserva."
+
+### Requirement: Sin conexión, las acciones que guardan libros no se ofrecen
+Mientras no haya conexión, el sistema SHALL deshabilitar el botón principal de los diálogos de crear y editar un libro, de sus ajustes y de la confirmación de borrado, y mostrar dentro del diálogo "Necesitas conexión para guardar cambios."; "Cancelar" y Escape SHALL seguir cerrando el diálogo. Al volver la conexión, el botón SHALL habilitarse sin cerrar el diálogo ni perder lo escrito. Ver la Biblioteca ya leída y estudiar NO SHALL depender de la conexión.
+
+#### Scenario: Crear sin conexión
+- **WHEN** no hay conexión y el usuario abre "Nuevo libro" y escribe un nombre válido
+- **THEN** "Crear libro" está deshabilitado, el diálogo muestra "Necesitas conexión para guardar cambios." y "Cancelar" lo cierra sin crear nada
+
+#### Scenario: Ajustes sin conexión
+- **WHEN** no hay conexión y el usuario abre los ajustes de un libro
+- **THEN** el botón de guardar está deshabilitado y el diálogo muestra "Necesitas conexión para guardar cambios."
+
+#### Scenario: Borrar sin conexión
+- **WHEN** no hay conexión y el usuario pulsa "Borrar" en un libro
+- **THEN** la confirmación se abre sin pedir los conteos, dice "También se borrarán sus capítulos y tarjetas…", el botón "Borrar" está deshabilitado y muestra "Necesitas conexión para guardar cambios."
+
+#### Scenario: Vuelve la conexión
+- **WHEN** un diálogo de libro está abierto sin conexión con cambios escritos y vuelve la conexión
+- **THEN** su botón principal se habilita, lo escrito sigue y el diálogo no se cierra
 
 ## MODIFIED Requirements
 
@@ -112,7 +135,7 @@ El sistema SHALL ofrecer, tanto desde la Biblioteca como desde el detalle del li
 - **THEN** el sistema lo acepta y el diálogo indica "0 = sin tope"
 
 ### Requirement: El detalle de un libro muestra su cabecera y maneja el libro inexistente
-El sistema SHALL mostrar en el detalle del libro un enlace "← Biblioteca", el nombre del libro, su materia como etiqueta, los totales de tarjetas por estado ("dominadas" = en repaso, "en aprendizaje" = aprendiendo y reaprendiendo, "nuevas"), contados en el servidor sin leer las tarjetas, y un botón de ajustes del libro. Si se llega al detalle por navegación directa sin haber cargado la Biblioteca, el sistema SHALL cargarla. Si la carga de la Biblioteca falla, el detalle SHALL mostrar el estado de error con "Reintentar". Si la Biblioteca ya está cargada y el libro no existe, el sistema SHALL mostrar "Libro no encontrado" con la sugerencia de volver a la Biblioteca.
+El sistema SHALL mostrar en el detalle del libro un enlace "← Biblioteca", el nombre del libro, su materia como etiqueta, los totales de tarjetas por estado ("dominadas" = en repaso, "en aprendizaje" = aprendiendo y reaprendiendo, "nuevas"), contados en el servidor sin leer las tarjetas, y un botón de ajustes del libro. Si se llega al detalle por navegación directa sin haber cargado la Biblioteca, el sistema SHALL cargarla. Si la carga de la Biblioteca falla, el detalle SHALL mostrar el estado de error con "Reintentar". Si la Biblioteca ya está cargada y el libro no existe, el sistema SHALL mostrar "Libro no encontrado" con la sugerencia de volver a la Biblioteca. Sin conexión, o si el conteo falla, la cabecera SHALL omitir los totales, nunca mostrarlos con 0 ni como error.
 
 #### Scenario: Navegación directa
 - **WHEN** el usuario abre la dirección del detalle de un libro sin pasar por la Biblioteca
@@ -121,6 +144,10 @@ El sistema SHALL mostrar en el detalle del libro un enlace "← Biblioteca", el 
 #### Scenario: Totales por estado
 - **WHEN** un libro tiene 12 tarjetas en repaso, 3 aprendiendo, 1 reaprendiendo y 20 nuevas
 - **THEN** la cabecera muestra 12 dominadas, 4 en aprendizaje y 20 nuevas, sin descargar las tarjetas
+
+#### Scenario: Totales no disponibles
+- **WHEN** no hay conexión o el conteo por estado falla
+- **THEN** la cabecera muestra nombre, materia y botón de ajustes, sin los totales y sin mensaje de error
 
 #### Scenario: Falla la carga de la biblioteca
 - **WHEN** el usuario abre el detalle y la lectura de libros falla

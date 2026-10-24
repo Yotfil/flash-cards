@@ -13,6 +13,7 @@ Implementa la spec base `openspec/specs/libros/spec.md` con las decisiones de su
 - **Borrar un libro borra sus capítulos y tarjetas** por lotes, con el libro en el último lote; historial y estadísticas se conservan; la confirmación dice cuántos capítulos y tarjetas se van (hallazgo 1). Si falla, el diálogo se queda abierto con el error (hallazgo 6).
 - Diálogos con el servicio del caparazón y Signal Forms con Zod: nombre recortado y obligatorio (hallazgo 2), materia opcional que vacía queda "general" (hallazgo 7), ajustes por libro con enteros acotados (hallazgo 3). Nace el `ConfirmDialog` reutilizable.
 - Modelo y repositorio de libros con incremento atómico del contador, que usarán `tarjetas` e `importacion`.
+- Sin conexión, crear, editar, ajustar y borrar se deshabilitan con "Necesitas conexión para guardar cambios." y los totales se omiten (transversal 6). Nace el aviso compartido que respeta `ConfirmDialog`.
 
 ## Capabilities
 
@@ -22,7 +23,7 @@ Ninguna.
 
 ### Modified Capabilities
 
-- `libros`: lista en acrílico y estados del recurso (MODIFIED); creación con nombre recortado y materia opcional (MODIFIED); ajustes con enteros acotados (MODIFIED); borrado en cascada con confirmación informada y diálogo que no se cierra al fallar (REMOVED + ADDED); cabecera con totales por estado y error si la biblioteca falló (MODIFIED); estudiar con fallo distinguido de "al día" (MODIFIED); errores dentro del diálogo (MODIFIED).
+- `libros`: lista, estados, creación, ajustes, cabecera con totales, estudiar y errores dentro del diálogo (MODIFIED); borrado en cascada (REMOVED + ADDED); sin conexión (ADDED).
 
 ## Impact
 
