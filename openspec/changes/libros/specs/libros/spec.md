@@ -85,7 +85,7 @@ El sistema SHALL mostrar el esqueleto de carga mientras lee los libros, el estad
 - **THEN** la cabecera muestra "Importar libro" y "Nuevo libro" y debajo la lista
 
 ### Requirement: Crear un libro pide solo su identidad y siembra el resto con valores por defecto
-El sistema SHALL ofrecer un diálogo "Nuevo libro" con los campos nombre (obligatorio tras recortar espacios, máximo 120 caracteres), materia (texto libre opcional, con la pista "Si la dejas vacía, será «general»") y dirección de estudio (`forward` "Sólo anverso → reverso" por defecto, o `both` "Ambos sentidos"). Al guardar, el sistema SHALL recortar espacios de nombre y materia, usar "general" si la materia queda vacía, sembrar `newCardsPerDay` con el ajuste global del usuario (`defaultNewCardsPerDay`), sembrar `maxReviewsPerDay` con 200, asignar `order` igual al máximo actual más uno (0 si es el primer libro), iniciar `cardCount` en 0 y añadir el libro al final de la lista sin recargarla.
+El sistema SHALL ofrecer un diálogo "Nuevo libro" con los campos nombre (obligatorio tras recortar espacios, máximo 120 caracteres), materia (texto libre opcional, con la pista "Si la dejas vacía, será «general»"). El diálogo NO SHALL ofrecer la dirección de estudio: al crear, el sistema SHALL guardar `studyDirection = forward`; al editar, SHALL conservar la que el libro ya tenga, incluso `both` en libros creados por versiones anteriores (el estudio bidireccional no está implementado y no se promete en la interfaz). Al guardar, el sistema SHALL recortar espacios de nombre y materia, usar "general" si la materia queda vacía, sembrar `newCardsPerDay` con el ajuste global del usuario (`defaultNewCardsPerDay`), sembrar `maxReviewsPerDay` con 200, asignar `order` igual al máximo actual más uno (0 si es el primer libro), iniciar `cardCount` en 0 y añadir el libro al final de la lista sin recargarla.
 
 #### Scenario: Siembra de nuevas por día desde los ajustes del usuario
 - **WHEN** el usuario tiene `defaultNewCardsPerDay = 7` y crea un libro
@@ -93,7 +93,11 @@ El sistema SHALL ofrecer un diálogo "Nuevo libro" con los campos nombre (obliga
 
 #### Scenario: Primer libro
 - **WHEN** la biblioteca está vacía y el usuario crea un libro
-- **THEN** el libro se guarda con `order = 0` y `cardCount = 0`
+- **THEN** el libro se guarda con `order = 0`, `cardCount = 0` y `studyDirection = forward`, sin que el diálogo haya mostrado ninguna opción de dirección
+
+#### Scenario: Libro heredado con ambos sentidos
+- **WHEN** el usuario edita el nombre de un libro guardado con `studyDirection = both`
+- **THEN** el diálogo se abre sin opción de dirección, el guardado conserva `both` y la Biblioteca lo muestra igual que a los demás
 
 #### Scenario: Libro al final
 - **WHEN** existen libros con `order` 0 y 5 y el usuario crea otro

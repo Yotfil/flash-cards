@@ -38,3 +38,4 @@ Ninguna.
 - Incrementos del contador al crear o borrar tarjetas: `tarjetas` e `importacion`, sobre el método que nace aquí.
 - Importar un libro: `importacion`; aquí los botones solo navegan a `/importar`.
 - Reordenar libros y compactar `order`: no existe en la 0.1.1.
+- Estudio bidireccional: la opción "Ambos sentidos" deja de ofrecerse (nada la leía); el campo se conserva para una capacidad futura (transversal 7).
