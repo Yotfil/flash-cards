@@ -1,0 +1,67 @@
+# Tasks
+
+> Fase B (ejecución, Claude Opus 5.5), en la rama única `feature/reescritura-cadence` y en el orden del README, tras `sesion-de-repaso`. Cada tarea de código va precedida por su prueba en rojo (skill `tdd`). Antes de marcar una tarea: `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:integration` y `npm run build` en verde. Componentes en su carpeta con cuatro archivos; cero literales; textos en `features/importacion/importacion.copy.ts`; motivos del parser en `services/import/import-reasons.ts`. Si el design no cuadra con el código: `/opsx:update`, anotar el porqué, no improvisar.
+
+## 0. Refactors previos (sin cambio de comportamiento)
+
+- [ ] 0.1 Mover `book-form.schema.ts`, `chapter-form.schema.ts` y `card-form.schema.ts` (con sus `.spec.ts`) de `src/app/features/biblioteca/` a `src/app/services/books/`, `src/app/services/chapters/` y `src/app/services/cards/`; actualizar los imports de los diálogos; verificar que los tres specs pasan desde la ruta nueva y que `npm run lint` no reporta violaciones de capas.
+- [ ] 0.2 Añadir en rojo a `tests/firestore/counted-batch.integration.spec.ts` el caso "delta por operación": 2 `delete` con `−1` y 3 `set` con `+1` → `batches 1` y `cardCount` +1; verificar que falla por la firma; cambiar `writeInCountedBatches` a `{ firestore, bookRef, operations: CountedOperation[], trailing? }` (cada grupo suma sus deltas en un único `increment`), adaptar `createMany`, `deleteManyWithCount` y `deleteWithCards`; verificar que el caso nuevo y todos los de integración existentes pasan.
+- [ ] 0.3 Añadir en rojo a `src/app/services/books/books.service.spec.ts` que `nextOrder()` devuelve 0 sin libros y máximo + 1 con `order` 0 y 5; verificar que falla; extraer `nextOrder()` público de `create` y verificar que pasa.
+
+## 1. Dominio y parser puro
+
+- [ ] 1.1 Crear `src/app/domain/models/book-package.ts` (`BookPackage`, `PackageChapter`), `src/app/domain/ports/import.repository.ts` (`ImportRepository.importBook`, `ImportBookInput`, `ImportBookError { committedCount; rolledBack; cause }`), añadir `replaceInChapter` a `CardRepository`, y los fakes `src/app/testing/fake-import-repository.ts` (resuelve con id o lanza, guarda el último `input`) y `replaceInChapter` en `FakeCardRepository`; verificar `npm run typecheck` y `npm run lint`.
+- [ ] 1.2 Escribir en rojo `src/app/services/import/split-card-line.spec.ts`: `splitExample` con `to give up | rendirse :: I gave up…`, `She {{has lived}}… :: present perfect`, `std::vector | vector dinámico` (sin ejemplo), `a | b :: primero :: segundo` (`example = primero :: segundo`), `a | b :: ` (`undefined`); `splitBasicCard` con pipe, tab, pipe con prioridad sobre tab, solo primer separador, recorte, `null` sin separador; verificar que falla; implementar `import-grammar.ts` y `split-card-line.ts` y verificar que pasa.
+- [ ] 1.3 Escribir en rojo `src/app/services/import/import-reasons.spec.ts` (`tooLongReason('anverso', 2000)` → "El anverso supera los 2000 caracteres.", `('nombre del capítulo', 120)` → "El nombre del capítulo supera los 120 caracteres."; constantes con los textos exactos de la spec) y verificar que falla; implementar y verificar que pasa.
+- [ ] 1.4 Escribir en rojo `src/app/services/import/parse-import-text.spec.ts`, bloque "líneas y encabezados": blancos y CRLF, texto vacío, `// nota` → sin separador, ejemplo completo de la convención (2/4/0), `#` y `#   ` → dos errores y capítulo por defecto, `# A`/`x | y`/`# B` → "B" vacío y `chapterCount 2`, 121 caracteres → motivo exacto, nombre por defecto "Mi libro"/"Defecto", sin capítulo por defecto si arranca con `#`; verificar que falla; implementar `parseImportText` (sin cloze ni Zod aún) y verificar que pasa.
+- [ ] 1.5 Añadir en rojo el bloque "tarjetas, cloze y ejemplo": lado vacío (líneas 1 y 2), línea sin separador (línea 2), `El {{gato}} es {{negro}}` → cloze con `back ''`, `El {{}} es negro` → sin separador, `I {{gave up}} | rendirse` → "Una línea con huecos {{…}} no lleva separador." en la línea 1, ejemplo en básica y en cloze, mezcla 3 válidas/2 errores con líneas exactas, error en la línea 3 con la 2 en blanco; verificar que falla; completar con `hasCloze` y `splitExample` y verificar que pasa.
+- [ ] 1.6 Añadir en rojo el bloque "validez de los formularios": anverso de 2001 → "El anverso supera los 2000 caracteres.", reverso de 2001, ejemplo de 2001, cloze de 2001; verificar que falla; pasar cada tarjeta por `cardFormSchema` del tipo y traducir el primer `issue` por `path` y verificar que pasa.
+- [ ] 1.7 Escribir en rojo `src/app/services/import/count-repeated-lines.spec.ts`: 1 contra una existente, 2 dentro del texto (`x | y` dos veces), `To Give Up | rendirse` contra `to give up | rendirse` cuenta, sin existentes solo cuenta el texto, 0 sin coincidencias; verificar que falla; implementar con `normalizeCardText` y verificar que pasa.
+- [ ] 1.8 Escribir en rojo `src/app/services/import/import-book-form.schema.spec.ts` (nombre `''` pasa, 121 falla, materia de solo espacios pasa, materia por encima del máximo falla con el mensaje de `bookFormSchema`) y verificar que falla; implementar `importBookFormSchema` y verificar que pasa.
+
+## 2. Servicio de importación (unitarias con fakes)
+
+- [ ] 2.1 Escribir en rojo `src/app/services/import/import.service.spec.ts`, bloque "libro": `importBook("  Phrasal Verbs  ", "", parse)` → nombre recortado, `subject general`, `order` siguiente, `newCardsPerDay 7` del perfil, `maxReviewsPerDay 200`, `cardCount 3`, capítulos con `order` 0 y 1, `noteId` no vacíos y distintos, `scheduling` igual a `initialCardScheduling`, `example` solo si existe, `addLocal` con el libro devuelto; nombre en blanco → "Libro importado"; materia "  Francés  " → `Francés`; `signedOut` → "No hay una sesión activa." sin llamar; repositorio que lanza `ImportBookError` → se registra en `Logger` y se relanza sin `addLocal`; verificar que falla; implementar `ImportService.importBook` y verificar que pasa.
+- [ ] 2.2 Añadir en rojo el bloque "capítulo y previsualización": `importIntoChapter(..., 'append')` llama a `cards.createMany` con los drafts; `'replace'` llama a `cards.replaceAll`; drafts vacío no llama; `previewForBook` no pasa tarjetas existentes a `countRepeatedLines`; `previewForChapter` sí; verificar que falla; implementar y verificar que pasa.
+- [ ] 2.3 Añadir en rojo a `src/app/services/cards/cards.service.spec.ts` el bloque "reemplazar": `replaceAll(bookId, chapterId, 3 drafts)` con 2 cargadas → llama a `replaceInChapter` con los 2 ids, el recurso queda con las 3 nuevas y `changeCardCount(bookId, +1)`; repositorio que lanza → recurso intacto y sin `changeCardCount`; verificar que falla; implementar y verificar que pasa.
+
+## 3. Infraestructura (integración con emulador)
+
+- [ ] 3.1 Añadir en rojo a `tests/firestore/card.repository.integration.spec.ts` el bloque "reemplazar": capítulo con 2 tarjetas y libro con `cardCount 10` → `replaceInChapter` de 2 por 3 deja solo las 3 nuevas, `cardCount 11` y un único lote; altas que apuntan a un árbol ajeno → lanza, las 2 siguen y `cardCount 10`; verificar que falla; implementar `replaceInChapter` con `writeInCountedBatches` (deletes −1, sets +1) y verificar que pasa.
+- [ ] 3.2 Escribir en rojo `tests/firestore/import.repository.integration.spec.ts`: caso feliz con 3 capítulos y 1000 tarjetas → libro con `cardCount 1000`, capítulos con `order` 0-2, 1000 tarjetas con `bookId`/`chapterId` correctos y `example` recortado donde lo hay; el libro no existe hasta el último lote (comprobar con un `onSnapshot`/lectura intermedia o con el orden de `written`); segundo lote hacia un árbol ajeno → `ImportBookError` con `rolledBack true`, `committedCount 450`, ningún libro y 0 tarjetas bajo ese `bookId`; verificar que falla; implementar `FirestoreImportRepository` con `BatchWriter` y compensación, enlazar en `provide-core.ts`, y verificar que pasa.
+
+## 4. Copy y previsualización compartida
+
+- [ ] 4.1 Escribir en rojo `src/app/features/importacion/importacion.copy.spec.ts`: `countsLine({ chapters: 2, cards: 4, repeated: 1 }, true)` → "2 capítulos · 4 tarjetas · 1 repetida", con 1/1/0 → "1 capítulo · 1 tarjeta", sin capítulos (diálogo) → "4 tarjetas · 3 repetidas"; `omittedHeading(1)` → "1 línea se omitirá:", `(2)` → "2 líneas se omitirán:"; `importLabel(4)` → "Importar 4"; `replaceWarning(1)` empieza por "Se borrará la tarjeta actual del capítulo", `(5)` menciona "las 5 tarjetas actuales", el progreso y "Editar"; verificar que falla; implementar con `pluralize` y verificar que pasa.
+- [ ] 4.2 Escribir en rojo `src/app/features/importacion/import-preview/import-preview.component.spec.ts`: con 2/4/1 y `showChapters` pinta la línea de conteos y la frase "Se importarán igual. Las verás marcadas como repetidas."; con 0 repetidas no hay frase ni conteo; con 2 errores, "2 líneas se omitirán:" y dos `<li>` "Línea N: motivo" con icono; sin errores no hay lista; región `aria-live="polite"`; la raíz lleva la clase sólida; verificar que falla; crear `ImportPreviewComponent` y verificar que pasa.
+
+## 5. Página "Importar un libro"
+
+- [ ] 5.1 Escribir en rojo `src/app/features/importacion/importar-libro-page/importar-libro-page.component.spec.ts` con `FakeImportRepository`, `FakeBookRepository`, `FakeConnectivity` y `RouterTestingHarness`:
+  - Campos nombre y materia (pista "Si la dejas vacía, será «general»"), área de texto y "Cargar archivo"; la previsualización cambia al escribir; `Importar N` deshabilitado con 0 válidas.
+  - Cargar `File` "Phrasal Verbs.txt" rellena el texto y propone "Phrasal Verbs"; con el nombre ya editado, se respeta; el mismo archivo se puede cargar dos veces.
+  - Materia por encima del máximo deshabilita y muestra el mensaje del diálogo de libro.
+  - Confirmar → `importBook` con nombre, materia y parse, navega a `/biblioteca/{id}`; dos clics → una llamada y "Importando…"; fake que lanza → `role="alert"` con "No se pudo importar el libro. Inténtalo de nuevo." encima de los botones y nombre/materia/texto intactos.
+  - Sin red: previsualización completa y botón deshabilitado con `NEEDS_CONNECTION_MESSAGE`; `setOnline(true)` lo habilita con el texto intacto.
+  - Cerrar sin confirmar → ninguna llamada.
+
+  Verificar que falla; crear `ImportarLibroPageComponent` (Signal Forms + `importBookFormSchema`) y verificar que pasa.
+- [ ] 5.2 Sustituir la página provisional de `/importar` por `ImportarLibroPageComponent` en `app.routes.ts`; verificar que `app.routes.spec` y `biblioteca-page.component.spec` ("Importar libro" navega a `/importar`) siguen en verde y que la página se ve en `ng serve` con emuladores.
+
+## 6. Diálogo "Importar tarjetas"
+
+- [ ] 6.1 Escribir en rojo `src/app/features/importacion/card-import-dialog/card-import-dialog.component.spec.ts` con `FakeCardRepository`, `FakeConnectivity` y el `DialogService` real:
+  - Pregunta "¿Qué hacemos con las tarjetas que ya tiene el capítulo?" con "Agregar a las que ya existen" marcado y "Reemplazar todas"; placeholder con ` :: `; previsualización sin capítulos y con repetidas contra `chapterCards`.
+  - `append` → `importIntoChapter(..., 'append')` sin confirmación, `close(true)`; drafts con `example` llegan intactos.
+  - `replace` con 5 tarjetas → se abre la confirmación con `replaceWarning(5)` y "Reemplazar todo" sin escribir; `false` → nada y texto intacto; `true` → `importIntoChapter(..., 'replace')` y `close(true)`; `replace` con 0 tarjetas → directo.
+  - Mientras importa: "Importando…", botones deshabilitados, Escape bloqueado, un solo envío con dos clics.
+  - Fallo en `append` → `role="alert"` dentro con "No se pudieron importar las tarjetas. Inténtalo de nuevo.", texto intacto y Cancelar disponible; fallo en `replace` → la confirmación sigue abierta con el error (lo cubre `ConfirmDialog`).
+  - Sin red: previsualización completa y botón deshabilitado con `NEEDS_CONNECTION_MESSAGE`; cancelar sin confirmar → ninguna llamada.
+
+  Verificar que falla; crear `CardImportDialogComponent` y verificar que pasa.
+- [ ] 6.2 Añadir en rojo a `src/app/features/biblioteca/capitulo-detail-page/capitulo-detail-page.component.spec.ts` que `importRequested` abre el diálogo con `{ bookId, chapterId, chapterName, chapterCards }` y que `true` refresca `cardCountFor` y la lista muestra las nuevas sin recargar; verificar que falla; conectar en `CapituloDetailPageComponent` y verificar que pasa.
+
+## 7. Documentación y cierre
+
+- [ ] 7.1 Añadir la nota al inicio del §5 de `docs/especificacion-anki-mejorada.md` y una línea en `README.md` sobre la convención (`#`, `|`, ` :: `, cloze); verificar leyendo ambos archivos.
+- [ ] 7.2 Verificación manual con emuladores: importar el archivo de ejemplo de §5.6 ampliado con una línea ` :: `, una cloze y una cloze con `|` → previsualización con "2 capítulos · 5 tarjetas", "1 línea se omitirá:", libro creado y abierto; pegar las mismas líneas en un capítulo → "N repetidas"; reemplazar con confirmación; desconectar la red → botón deshabilitado y previsualización viva; verificar que `npm run lint`, `format:check`, `typecheck`, `test`, `test:integration` y `build` están en verde.
