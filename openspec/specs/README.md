@@ -10,6 +10,7 @@
 > **Excepción documentada:** `practica-con-ia` no describe código existente: es la primera capacidad
 > diseñada directamente como spec base (2026-10-17, vía `opsx:explore`) para implementarse en su turno
 > dentro de la reescritura. Añadió un requisito a `sesion-de-repaso` (la sesión recuerda las difíciles).
+> `exportacion-de-libros` es la segunda (2026-10-24, vía `opsx:explore`): inverso de `importacion`, entra en 1.0.0.
 
 ## Mapa de capacidades
 
@@ -29,7 +30,7 @@
 | `progreso` | Métricas del día, distribución de calificaciones, colección por estado, eficiencia de lecturas | 12 |
 | `practica-quiz` | Mini-quiz por capítulo (opción múltiple + escribir), sin tocar la programación | 13 |
 | `practica-con-ia` | Lotes cerrados de tarjetas difíciles (grado 1-2), prompt copiable para un chat de IA externo, dominio marcado a mano, historial. **Capacidad nueva** (no existe en v0.1.1; diseñada 2026-10-17) | 14 |
-| `exportacion-de-libros` | Exportar un libro como texto importable (inverso exacto de la importación), por hoja de compartir o descarga; el "paquete de libro" como costura para compartir a futuro. **Capacidad nueva** (propuesta 2026-10-22 en el explore de `libros`; spec pendiente de escribir en su explore) | 15, justo después de `importacion`; release por decidir |
+| `exportacion-de-libros` | Exportar un libro como texto importable (inverso exacto de la importación: `# Capítulo`, `anverso \| reverso :: ejemplo`, cloze), contenido sin progreso; diálogo con resumen, Compartir (hoja del sistema) o Descargar `.txt` según el dispositivo, Copiar texto; necesita conexión. **Capacidad nueva** (propuesta 2026-10-22 en el explore de `libros`; spec base escrita en su explore el 2026-10-24) | 12, justo después de `importacion`; **entra en 1.0.0** (decidido 2026-10-24) |
 
 ## Cómo se usan
 
