@@ -13,6 +13,7 @@ Implementa la spec base `openspec/specs/ajustes-de-usuario/spec.md` con las deci
 - **Regla única de guardado:** los controles de elección (casilla, selectores, tema) guardan al tocar, se deshabilitan mientras guardan y, si falla, vuelven al valor anterior con el error junto al control (hallazgo 4). Los campos de texto numérico guardan con "Guardar", deshabilitado si el valor no cambió (hallazgo 5).
 - Validación de entero acotado con un esquema Zod compartido que luego reutilizan los formularios de libro (transversal 3).
 - Guardado parcial de ajustes en el servicio de sesión, único dueño del usuario; una sola fuente del valor por defecto de la sugerencia por tiempo (hallazgo 8).
+- Sin conexión, los controles y "Guardar" se deshabilitan con una nota única "Necesitas conexión para guardar cambios." (transversal 6); aquí nace ese aviso compartido.
 
 ## Capabilities
 
@@ -22,7 +23,7 @@ Ninguna.
 
 ### Modified Capabilities
 
-- `ajustes-de-usuario`: tema, zona horaria y hora de inicio editables (ADDED); pie de versión al final (ADDED); regla de guardado por tipo de control y error visible en la casilla (MODIFIED); entero acotado y botón deshabilitado sin cambios (MODIFIED); pantalla por secciones (MODIFIED); requisito de ajustes sin interfaz (REMOVED).
+- `ajustes-de-usuario`: tema, zona horaria y hora de inicio editables (ADDED); pie de versión al final (ADDED); regla de guardado por tipo de control y error visible en la casilla (MODIFIED); entero acotado y botón deshabilitado sin cambios (MODIFIED); pantalla por secciones (MODIFIED); sin conexión (ADDED); requisito de ajustes sin interfaz (REMOVED).
 
 ## Impact
 

@@ -28,7 +28,7 @@ Ninguna.
 ## Impact
 
 - **Código:** `domain` (modelo y puerto de capítulos), `infrastructure/firestore` (esquema y repositorio con conteo y cascada), `services/chapters`, `features/biblioteca` (lista, fila, diálogo, detalle de capítulo, copy), `libro-detail-page` y `app.routes.ts`.
-- **Depende de:** los contratos de `libros` (`BooksService`, `ConfirmDialog` con `action`, `pluralize`) y del `opsx:update` de `libros` por T2 (`ConfirmDialog` sin red), pendiente.
+- **Depende de:** los contratos de `libros` (`BooksService`, `ConfirmDialog` con `action`, `pluralize`) y del `opsx:update` de `libros` por T2 (`ConfirmDialog` sin red), ya aplicado.
 - **Dependencias nuevas:** ninguna.
 - **Datos:** sin campo nuevo. Las consultas por `chapterId` usan el índice automático de un solo campo.
 

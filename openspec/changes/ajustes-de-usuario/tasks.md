@@ -9,6 +9,7 @@
 - [ ] 1.3 Escribir en rojo `src/app/shared/forms/bounded-integer.schema.spec.ts` (`boundedInteger(0, 999, msg)`: 1000, 2.5, -1 y `NaN` fallan con `msg`; 0 y 999 pasan) y verificar que falla; implementar y verificar que pasa.
 - [ ] 1.4 Escribir en rojo `src/app/services/settings/time-zones.spec.ts` (`supportedTimeZones('Zona/Inventada')` incluye la zona del dispositivo y la zona pasada aunque no esté en la lista; `deviceTimeZone()` devuelve una cadena no vacía) y verificar que falla; implementar y verificar que pasa.
 - [ ] 1.5 Escribir en rojo `src/app/services/settings/profile-theme-sync.spec.ts` con fake de sesión y `FakeThemePort` (sesión `active` con `theme: 'light'` y preferencia previa `dark` → `preference()` = `light`; `signedOut` → no cambia) y verificar que falla; implementar `ProfileThemeSync` y arrancarlo desde `provideCore` con `provideAppInitializer`; verificar que pasa y que `app.spec.ts` sigue en verde.
+- [ ] 1.6 Crear `src/app/shared/text/connection.copy.ts` con `NEEDS_CONNECTION_MESSAGE` ("Necesitas conexión para guardar cambios."); verificar `npm run typecheck` y `npm run lint`.
 
 ## 2. Helper de guardado inmediato
 
@@ -22,11 +23,12 @@
 - [ ] 3.4 Añadir en rojo el bloque "día de estudio": selector de zona con la del perfil seleccionada; elegir `Europe/Madrid` guarda `timezone`; con dispositivo en otra zona aparece "Tu dispositivo está en {zona}." y "Usar esta zona" guarda la del dispositivo; con la misma zona no hay aviso; selector de hora con 24 opciones `HH:00`; elegir "02:00" guarda `dayStartHour: 2`; verificar que falla; implementar y verificar que pasa.
 - [ ] 3.5 Añadir en rojo el bloque "apariencia" con `FakeThemePort`: grupo con "Oscuro", "Claro", "Sistema" y `aria-checked` en el actual; tocar "Claro" cambia `ThemeService.preference()` a `light` en el acto y guarda `theme: 'light'`; fallo → `preference()` y el grupo vuelven a `system` con el error junto al grupo; verificar que falla; implementar y verificar que pasa.
 - [ ] 3.6 Añadir en rojo el bloque "cerrar sesión" con `RouterTestingHarness`: "Cerrando sesión…", `signOut` llamado una vez aunque se pulse dos veces, URL final `/login`; verificar que falla; implementar y verificar que pasa.
-- [ ] 3.7 Sustituir la página provisional de `/ajustes` por `AjustesPageComponent` en `app.routes.ts`; ampliar `app.routes.spec.ts` (con sesión activa, `/ajustes` pinta la pantalla dentro del caparazón) y verificar que pasa.
+- [ ] 3.7 Añadir en rojo el bloque "sin conexión" con `FakeConnectivity`: sin red, casilla, selectores, grupo de tema, "Usar esta zona" y "Guardar" deshabilitados, una sola nota `role="status"` con `NEEDS_CONNECTION_MESSAGE` y los valores visibles; escribir 5 no habilita "Guardar"; `setOnline(true)` habilita todo con el 5 intacto; "Cerrar sesión" sigue habilitado; verificar que falla; implementar y verificar que pasa.
+- [ ] 3.8 Sustituir la página provisional de `/ajustes` por `AjustesPageComponent` en `app.routes.ts`; ampliar `app.routes.spec.ts` (con sesión activa, `/ajustes` pinta la pantalla dentro del caparazón) y verificar que pasa.
 
 ## 4. Verificación manual y documentación
 
-- [ ] 4.1 (Manual) Con emuladores y la allowlist sembrada: cambiar el tema y ver el cambio al instante y tras recargar; cambiar la zona y la hora y comprobar en la UI del emulador que el documento del perfil cambió solo en ese campo; forzar un fallo (detener el emulador de Firestore) y comprobar que la casilla vuelve y muestra el error; recargar y confirmar que el pie de versión solo aparece en Ajustes. Anotar el resultado en el mensaje del commit.
+- [ ] 4.1 (Manual) Con emuladores y la allowlist sembrada: cambiar el tema y ver el cambio al instante y tras recargar; cambiar la zona y la hora y comprobar en la UI del emulador que el documento del perfil cambió solo en ese campo; con DevTools en "Offline", comprobar que los controles y "Guardar" se deshabilitan con la nota única y que "Cerrar sesión" sigue activo (detener el emulador no sirve para ver el fallo de la casilla: sin servidor la escritura queda pendiente en vez de fallar, transversal 6; la reversión la cubren `immediate-setting.spec` y la página); recargar y confirmar que el pie de versión solo aparece en Ajustes. Anotar el resultado en el mensaje del commit.
 - [ ] 4.2 Actualizar `README.md` (regla de guardado de Ajustes y el patrón `createImmediateSetting`) y anotar en `MEMORY.md` el cierre del change con el tamaño del bundle.
 
 ## 5. Cierre

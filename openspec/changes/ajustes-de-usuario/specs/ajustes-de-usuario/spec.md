@@ -61,6 +61,25 @@ El sistema SHALL mostrar al final de Ajustes, debajo de "Cerrar sesión", el pie
 - **WHEN** el usuario baja hasta el final de Ajustes
 - **THEN** ve `v{versión} · {commit}` y la fecha del build en una línea tenue
 
+### Requirement: Sin conexión, los ajustes no se guardan
+Mientras no haya conexión, el sistema SHALL deshabilitar los controles de elección de Ajustes (casilla, selectores de zona y de hora, tema y la acción "Usar esta zona") y el botón "Guardar" del campo numérico, y mostrar una sola vez, al principio de la pantalla, "Necesitas conexión para guardar cambios."; los valores guardados SHALL seguir visibles y el campo numérico SHALL seguir editable. "Cerrar sesión" SHALL seguir disponible. Al volver la conexión, los controles SHALL habilitarse sin perder lo escrito.
+
+#### Scenario: Ajustes sin conexión
+- **WHEN** no hay conexión y el usuario abre Ajustes
+- **THEN** la casilla, los selectores, el tema y "Guardar" están deshabilitados, arriba se lee "Necesitas conexión para guardar cambios." y los valores guardados siguen a la vista
+
+#### Scenario: Escribir sin conexión
+- **WHEN** no hay conexión y el usuario escribe 5 en el campo numérico
+- **THEN** el campo acepta el valor y "Guardar" sigue deshabilitado
+
+#### Scenario: Vuelve la conexión
+- **WHEN** Ajustes está abierto sin conexión con 5 escrito en el campo y vuelve la conexión
+- **THEN** los controles se habilitan, el campo conserva el 5 y "Guardar" queda habilitado
+
+#### Scenario: Cerrar sesión sin conexión
+- **WHEN** no hay conexión y el usuario pulsa "Cerrar sesión"
+- **THEN** la sesión se cierra igual que con conexión
+
 ## MODIFIED Requirements
 
 ### Requirement: La pantalla Ajustes muestra con quién está iniciada la sesión

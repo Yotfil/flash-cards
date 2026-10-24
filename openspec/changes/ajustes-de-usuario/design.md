@@ -5,7 +5,7 @@
 Ver `proposal.md` (Why). Estado esperado de `dev` cuando este change se ejecute (tras `autenticacion-y-acceso`):
 
 - `SessionService` con `state`, `user()` (perfil cargado, `UserSettings` completo gracias a los defaults del esquema), `signOut()`; `UserRepository.save(user)`; `requireSessionUser`. `DEFAULT_NEW_CARDS_PER_DAY` en `domain/models/study-defaults.ts`; `ThemePreference` en `domain/models/theme-preference.ts`.
-- `ThemeService.preference` (signal escribible, aplica al documento y recuerda en el navegador), `VersionFooterComponent`, `IconComponent`, `ErrorState`, utilidades `glass-soft` y `press`, patrón de copy por feature, `requireSessionGuard` sobre `/ajustes`, `PendingPageComponent` en `/ajustes`.
+- `ThemeService.preference` (signal escribible, aplica al documento y recuerda en el navegador), `VersionFooterComponent`, `IconComponent`, `ErrorState`, utilidades `glass-soft` y `press`, patrón de copy por feature, `requireSessionGuard` sobre `/ajustes`, `PendingPageComponent` en `/ajustes`; `ConnectivityPort.online` y `FakeConnectivity`.
 - Signal Forms + `validateStandardSchema` ya estrenados en la pantalla de acceso con `authFormSchema`.
 - Verificado en Node 24: `Intl.supportedValuesOf('timeZone')` devuelve 418 zonas; `Intl.DateTimeFormat().resolvedOptions().timeZone` la del dispositivo. jsdom expone las mismas API de `Intl`.
 - Código viejo de referencia en `backup/old-version/src/app/features/ajustes`: dos controles (número con Guardar, casilla inmediata), fallo de la casilla solo en consola, `updateSettings` en `AuthService`.
@@ -53,6 +53,12 @@ Una sola página con secciones `<section aria-labelledby>`; cada sección una ta
 
 `app.routes.ts`: `/ajustes` carga `AjustesPageComponent` en lugar de la página provisional. El guard ya existe.
 
+### 8. Sin conexión (transversal 6, T2; añadido el 2026-10-23 por `opsx:update`)
+
+Sin red, la promesa de una escritura de Firestore no se resuelve hasta que vuelve la conexión: un control "guardando" se quedaría deshabilitado sin fin. Por eso la página inyecta `ConnectivityPort`: los controles de elección llevan `[disabled]="saving() || !online()"`, `canSave` exige `online()`, y arriba de las secciones va una única nota `role="status"` con `NEEDS_CONNECTION_MESSAGE` (una por control sería ruido; el caparazón ya muestra su indicador). "Cerrar sesión" no se toca: es local. El bloqueo vive en la página y no en `createImmediateSetting`, que sigue puro y sin saber de la red.
+
+**Aquí nace `shared/text/connection.copy.ts`** con `NEEDS_CONNECTION_MESSAGE` = "Necesitas conexión para guardar cambios.": es el primer change de la fase B que lo usa. Lo reutilizan `libros` (sus tres diálogos y `ConfirmDialog`), `capitulos`, `tarjetas` e `importacion`.
+
 ## Superficies con acrílico (ADR 0003)
 
 | Superficie | Tratamiento | Capa visible |
@@ -73,6 +79,7 @@ Sin diálogos ni listas adicionales: el presupuesto de dos capas se cumple. Nada
 | `ProfileThemeSync` arrancado en `provideCore` | Nadie más lo toca |
 | `supportedTimeZones()`, `deviceTimeZone()` | `cola-diaria` (día de estudio), pruebas |
 | `user().settings.defaultNewCardsPerDay` como siembra | `libros`, `importacion` |
+| `NEEDS_CONNECTION_MESSAGE` en `shared/text/connection.copy.ts` | `libros`, `capitulos`, `tarjetas`, `importacion` |
 
 ## Plan de pruebas
 
@@ -91,6 +98,7 @@ Sin diálogos ni listas adicionales: el presupuesto de dos capas se cumple. Nada
 | Cambiar un ajuste no toca los otros; La sesión refleja el cambio al instante; Actualizar ajustes sin sesión | `session.service.spec`: `updateSettings({ defaultNewCardsPerDay: 5 })` conserva los demás y `user()` cambia al terminar; en `signedOut` lanza "No hay una sesión activa." sin llamar a `save` | unitaria pura |
 | Versión visible en Ajustes | `ajustes-page.component.spec`: el pie de versión existe al final; `shell.component.spec` ya garantiza que el caparazón no lo pinta | componente |
 | Cerrar sesión | `ajustes-page.component.spec` con `RouterTestingHarness`: "Cerrando sesión…", `signOut` llamado, URL `/login` | componente |
+| Ajustes sin conexión; Escribir sin conexión; Vuelve la conexión; Cerrar sesión sin conexión | `ajustes-page.component.spec` con `FakeConnectivity`: sin red, casilla, selectores, grupo de tema, "Usar esta zona" y "Guardar" deshabilitados, una sola nota `role="status"` con `NEEDS_CONNECTION_MESSAGE` y los valores visibles; escribir 5 no habilita "Guardar"; `setOnline(true)` habilita todo con el 5 intacto; "Cerrar sesión" sigue habilitado y funciona | componente |
 | Crear libro; Editar libro; Cambiar el default no altera libros existentes | `libros` | diferido |
 | Sugerencia activa; Sugerencia desactivada | `sesion-de-repaso`; la única fuente del default se fija con una prueba estática: `DEFAULT_AUTO_GRADE_BY_TIME` referenciado por el esquema y por la creación del perfil, sin `?? false` en `src/app` | diferido + estática |
 | Estadísticas del día correcto | `cola-diaria` | diferido |
@@ -100,6 +108,7 @@ Sin diálogos ni listas adicionales: el presupuesto de dos capas se cumple. Nada
 - [`Intl.supportedValuesOf` ausente en navegadores viejos] → `supportedTimeZones()` devuelve al menos la zona guardada y la del dispositivo; el selector sigue funcionando.
 - [Doble escritura rápida de dos controles de elección] → cada `change` lee `user()` en el momento de guardar; el último en terminar gana con el perfil completo. Aceptado: son ajustes personales de baja frecuencia.
 - [El efecto de sincronía pisa un cambio de tema en vuelo] → el efecto solo reacciona a cambios de `state`; `updateSettings` actualiza `state` con el tema ya elegido, así que converge.
+- [`navigator.onLine` dice que hay red y no la hay, o la red cae a mitad de un guardado] → el control espera deshabilitado y termina al volver la red; riesgo aceptado en el transversal 6.
 - [Signal Forms con `<input type="number">` entrega `NaN` con el campo vacío] → `required` y `boundedInteger` lo rechazan con el mismo mensaje; se prueba.
 
 ## Migration Plan

@@ -58,7 +58,7 @@ Lee solo referencias: `getDocs(query(cards, where('bookId', '==', bookId)))` y l
 
 ### 7. Sin conexión (transversal 6, T2; añadido el 2026-10-23 por `opsx:update`)
 
-Sin red, la promesa de una escritura de Firestore no se resuelve hasta que vuelve la conexión, y los conteos siempre van al servidor. Por eso, sin red la gestión no se ofrece y estudiar sí. `shared/text/connection.copy.ts` exporta `NEEDS_CONNECTION_MESSAGE` = "Necesitas conexión para guardar cambios.". Lo usan los tres diálogos de este change, y luego `capitulos`, `ajustes-de-usuario`, `tarjetas` e `importacion`: ese es el segundo caso real que justifica compartirlo. El bloqueo vive en cada diálogo que guarda y no en `DialogService`, porque el servicio no sabe qué diálogos guardan. La señal es `ConnectivityPort.online`.
+Sin red, la promesa de una escritura de Firestore no se resuelve hasta que vuelve la conexión, y los conteos siempre van al servidor. Por eso, sin red la gestión no se ofrece y estudiar sí. `NEEDS_CONNECTION_MESSAGE` = "Necesitas conexión para guardar cambios." nace en `ajustes-de-usuario` (`shared/text/connection.copy.ts`, que se ejecuta antes); este change lo reutiliza en sus tres diálogos y en `ConfirmDialog`, y luego `capitulos`, `tarjetas` e `importacion`. El bloqueo vive en cada diálogo que guarda y no en `DialogService`, porque el servicio no sabe qué diálogos guardan. La señal es `ConnectivityPort.online`.
 
 ## Superficies con acrílico (ADR 0003)
 
