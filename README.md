@@ -62,6 +62,11 @@ En el emulador, autoriza un correo una vez (con los emuladores corriendo):
 npm run seed:allowlist -- prueba@ejemplo.com
 ```
 
+O a mano, en la interfaz de los emuladores (`http://127.0.0.1:4000/firestore`, solo con
+`npm run emulators`; las pruebas de integración no la arrancan): en la colección `allowlist`,
+un documento cuyo ID es el correo exacto, con cualquier campo. Ahí mismo se ven los datos y las
+cuentas (pestaña Authentication).
+
 Después crea la cuenta con ese correo en `http://localhost:4200/login`, o entra con
 "Continuar con Google": el emulador abre una ventana falsa donde se elige o inventa la cuenta.
 Un correo fuera de la lista no crea cuenta; uno de Google fuera de la lista se borra al instante
