@@ -1,0 +1,20 @@
+<div class="glass-soft flex items-center gap-4 rounded-2xl px-4 py-3">
+  <div
+    role="progressbar"
+    class="h-1.5 flex-1 overflow-hidden rounded-full bg-track"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="progress()"
+    [attr.aria-label]="copy.progress"
+  >
+    <div class="progress-fill h-full rounded-full bg-accent" [style.width.%]="progress()"></div>
+  </div>
+  <span class="text-xs font-semibold whitespace-nowrap text-text-dim">{{ remainingText() }}</span>
+  <button
+    type="button"
+    class="press rounded-lg px-2 py-1 text-sm font-semibold text-text-dim hover:text-text"
+    (click)="exitRequested.emit()"
+  >
+    {{ copy.exit }}
+  </button>
+</div>

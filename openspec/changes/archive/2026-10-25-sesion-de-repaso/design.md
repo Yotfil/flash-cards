@@ -14,6 +14,8 @@ Ver `proposal.md` (Why) y el delta `specs/sesion-de-repaso/spec.md`. Estado espe
 - Código viejo de referencia en `backup/old-version` (`services/review/{review.service,suggest-rating}.ts`, `domain/ports/grade-persistence.port.ts`, `infrastructure/firestore/{grade-persistence.firestore,review-log.repository.firestore}.ts`, `features/review/{rating,review-session}`): el lote atómico y la sugerencia son correctos y se reescriben con TDD; el servicio esperaba el `commit`, no reencolaba, usaba `schedule(scheduling)` sin instante y mezclaba el filtro de "listas" con la sesión.
 - Prototipo aprobado `docs/design/cadence-prototipo-extendido.html`: barra superior (`track` + "1 / 5" + Salir), tarjeta con `card-inner.flipped` (volteo 500 ms), cara trasera con reverso, divisor y ejemplo, `rating` con cascada de 40 ms, cierre con anillo (`ring`, 900 ms + check 380 ms), "Sesión terminada", "Repasaste N tarjetas.", pastillas por grado, nota, bloque IA y "Volver a Hoy".
 
+*Correcciones de la tarea 0.1 (2026-10-25, fase B, vía `/opsx:update`):* (1) la guardia de sesión del caparazón se llama `requireSessionGuard` (no `authGuard`); la ruta queda `canActivate: [requireSessionGuard, studyHandoffGuard]`. (2) `StudyHandoffService` guardaba la bandeja en una señal privada; se expone como `readonly prepared` (señal de solo lectura) para que `studyHandoffGuard` la consulte sin consumirla, y `take()` sigue siendo la única forma de vaciarla.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -109,6 +111,20 @@ Sugerencia en `services/review/suggest-rating.ts` (`suggestRatingByLatency(ms)`,
 ### 7. Rutas
 
 `/repaso` pasa de la página provisional a `RepasoPageComponent` con `canActivate: [authGuard, studyHandoffGuard]`, fuera del caparazón (ya lo estaba). Se amplía `app.routes.spec.ts`: sin bandeja redirige a `/hoy`; con bandeja renderiza la sesión sin navegación.
+
+### 8. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+Ajustes al implementar, sin cambiar la arquitectura ni la spec:
+
+1. **`startSession` recibe `timezone` y `dayStartHour`** y fija ahí el día de estudio (`studyDayAt`): el núcleo puro prueba también que la madrugada cuenta para el día anterior; el servicio solo le pasa el perfil.
+2. **Avisos de rechazo como datos** (`alerts: { cardId; front }[]`): `services/` no puede importar la copy de `features/`; la pantalla pone el texto con `rejectedGradeMessage`. El aviso se quita cuando un guardado posterior de esa tarjeta se confirma.
+3. **Las difíciles guardan su tarjeta** (`{ cardId; appearanceId; card }`), así `difficultCards` no tiene que buscarlas.
+4. **`ratingCountKey(rating)` vive en el dominio** (`daily-stats.model.ts`): la usan el núcleo (conteo de la sesión) y el adaptador (incrementos del día), con una sola definición. `dailyStatsIncrements` recibe `Pick<GradeRecord, 'dayId' | 'bookId' | 'stat'>`.
+5. **Identidad de sesión en el servicio** (`sessionNumber`): una confirmación o un rechazo tardío solo se aplica si su sesión sigue en pantalla; tras `exit()`/`reset()` solo se registra. El servicio expone además `shownAt` (el instante de las previsualizaciones, para `formatInterval`).
+6. **La guardia contra toques accidentales vive en `FlipCardComponent`**: durante 320 ms tras aparecer (el valor de `--duration-base`) tocar la tarjeta no la revela; "Mostrar respuesta" y el teclado sí. La tarjeta tocable lleva `tabindex="-1"` y Enter (exigencia del lint de accesibilidad) sin ser otra parada de tabulación.
+7. **Tamaño `lg` del icono:** 18 px en móvil (cuatro cerebros caben en un cuarto de pantalla, como en el prototipo) y 24 px desde `sm`; el cerebro va relleno con `currentColor` ("relleno vivo" de la spec).
+8. **Teclado:** con el foco en un botón, Espacio y Enter son de ese botón (su clic nativo); 1-4 califican siempre que la respuesta esté revelada.
+9. **`exit()` solo anuncia `ended` si la sesión estaba activa** (salir desde el cierre no es "salida anticipada").
 
 ## Superficies con acrílico (ADR 0003)
 

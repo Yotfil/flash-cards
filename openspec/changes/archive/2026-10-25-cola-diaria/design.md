@@ -43,7 +43,7 @@ Ver `proposal.md` (Why) y el delta `specs/cola-diaria/spec.md`. Estado esperado 
 ### 2. Indicadores diarios, lado de lectura (`domain/models/daily-stats.model.ts`, `domain/ports/daily-stats.repository.ts`, `infrastructure/firestore/schemas/daily-stats.schema.ts`, `infrastructure/firestore/daily-stats.repository.firestore.ts`, `testing/fake-daily-stats-repository.ts`)
 
 - Modelo `DailyStats { id; date; newCardsIntroduced: Record<bookId, number>; reviewsCompleted; reviewsCompletedByBook: Record<bookId, number>; ratingCounts: { again; hard; good; easy } }` y `RatingCounts`, como en la 0.1.1 (compatibilidad de datos, ADR 0002).
-- Puerto `DailyStatsRepository` con dos lecturas: `getByDay(uid, dayId): Promise<DailyStats | null>` y `listRecent(uid, limit): Promise<DailyStats[]>` (por `date` descendente). `sesion-de-repaso` añade `recordReview` al mismo puerto.
+- Puerto `DailyStatsRepository` con dos lecturas: `getByDay(uid, dayId): Promise<DailyStats | null>` y `listRecent(uid, limit): Promise<DailyStats[]>` (por `date` descendente). La escritura la añade `sesion-de-repaso`, pero no como un método `recordReview` de este puerto: los incrementos del día viven en el lote atómico de la calificación (`dailyStatsIncrements`, exportado desde `daily-stats.repository.firestore.ts`), así nadie escribe indicadores fuera del todo o nada. *(Redacción ajustada el 2026-10-25 vía `/opsx:update`, tarea 6.2 de `sesion-de-repaso`; sin cambio de comportamiento.)*
 - Esquema Zod con contadores dispersos: `newCardsIntroduced` y `reviewsCompletedByBook` `.default({})`, `reviewsCompleted` `.default(0)`, `ratingCounts` con cada clave `.default(0)`; documentos viejos sin `reviewsCompletedByBook` se leen bien. Lectura por `parseDocument` (hoy) y `parseDocuments` (recientes; todo-o-nada, hallazgo 4 de plataforma).
 - `listRecent` = `query(collection, orderBy('date', 'desc'), limit(n))`: un solo campo, auto-indexado; `date` ya existe en cada documento y es igual a su id.
 - `FakeDailyStatsRepository` en memoria con `seed(stats[])` y fallo programable por método.
@@ -158,7 +158,7 @@ El prototipo pintaba el bloque principal con acrílico. Se hace sólido por dos 
 | Contrato | Para quién |
 | --- | --- |
 | `studyDayId`, `endOfStudyDay`, `previousStudyDayId`, `formatLocalDate` | `sesion-de-repaso` (acreditar el día), `progreso` |
-| `DailyStats`, `RatingCounts`; `DailyStatsRepository.getByDay`/`listRecent`; esquema Zod; `FakeDailyStatsRepository` | `sesion-de-repaso` añade `recordReview`; `progreso` lee `todayStats` |
+| `DailyStats`, `RatingCounts`; `DailyStatsRepository.getByDay`/`listRecent`; esquema Zod; `FakeDailyStatsRepository` | `sesion-de-repaso` escribe los incrementos del día dentro de su lote atómico (sin método `recordReview`); `progreso` lee `todayStats` |
 | `CardRepository.listReady`, `listReadyByBook` | `progreso` (candidatas vía la cola), `practica-quiz` si practica "lo listo" |
 | `isReadyCard`, `orderReadyCards`, `countReadyByChapter`, `buildDailyQueue`, `computeStreak` | `progreso` (pendientes = `baseQueue`), `sesion-de-repaso` (orden) |
 | `DailyQueueService.refresh`, `baseQueue`, `sessionQueue`, `todayStats`, `status`, `streak` | `progreso` (una sola carga por visita, su spec), `sesion-de-repaso` (al terminar vuelve a Hoy, que refresca) |

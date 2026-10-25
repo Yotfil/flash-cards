@@ -8,15 +8,21 @@ import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
+import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
+import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
+import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
+import { aCard } from '@testing/fake-card-repository';
 import { FakeCardRepository } from '@testing/fake-card-repository';
 import { FakeChapterRepository } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeDailyStatsRepository } from '@testing/fake-daily-stats-repository';
+import { FakeGradePersistence } from '@testing/fake-grade-persistence';
 import { FakeLogger } from '@testing/fake-logger';
+import { FakeSchedulingPort } from '@testing/fake-scheduling-port';
 import { FakeSessionService } from '@testing/fake-session';
 import { FakeThemePort } from '@testing/fake-theme-port';
 import { aUser } from '@testing/fake-user-repository';
@@ -30,6 +36,7 @@ const NO_ACCESS: SessionState = { kind: 'noAccess', email: 'nuevo@ejemplo.com' }
 async function navigate(
   url: string,
   session: SessionState = ACTIVE,
+  options: { handOff?: boolean } = {},
 ): Promise<{ element: HTMLElement; finalUrl: string }> {
   TestBed.configureTestingModule({
     providers: [
@@ -42,8 +49,13 @@ async function navigate(
       { provide: ChapterRepository, useValue: new FakeChapterRepository() },
       { provide: CardRepository, useValue: new FakeCardRepository() },
       { provide: DailyStatsRepository, useValue: new FakeDailyStatsRepository() },
+      { provide: SchedulingPort, useValue: new FakeSchedulingPort() },
+      { provide: GradePersistencePort, useValue: new FakeGradePersistence() },
     ],
   });
+  if (options.handOff) {
+    TestBed.inject(StudyHandoffService).hand({ cards: [aCard()], source: { kind: 'today' } });
+  }
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
   harness.detectChanges();
@@ -86,7 +98,7 @@ describe('mapa de rutas', () => {
     ['/repaso', ACTIVE],
     ['/practicar', ACTIVE],
   ] as const)('%s se pinta a pantalla completa, sin navegación', async (url, session) => {
-    const { element, finalUrl } = await navigate(url, session);
+    const { element, finalUrl } = await navigate(url, session, { handOff: url === '/repaso' });
 
     expect(finalUrl).toBe(url);
     expect(element.querySelector('app-main-nav')).toBeNull();
@@ -110,10 +122,15 @@ describe('pantallas de las secciones', () => {
     );
   });
 
-  it('/repaso sigue siendo la página provisional hasta la sesión de repaso', async () => {
-    const { element } = await navigate('/repaso');
+  it('/repaso con una lista entregada pinta la sesión, sin la navegación principal', async () => {
+    const { element } = await navigate('/repaso', ACTIVE, { handOff: true });
 
-    expect(element.querySelector('app-pending-page')).not.toBeNull();
+    expect(element.querySelector('app-repaso-page app-flip-card')).not.toBeNull();
+    expect(element.querySelector('app-main-nav')).toBeNull();
+  });
+
+  it('/repaso sin una lista entregada (recarga, URL directa, "atrás") vuelve a Hoy', async () => {
+    expect((await navigate('/repaso')).finalUrl).toBe('/hoy');
   });
 
   it('/biblioteca pinta la Biblioteca y /biblioteca/b1 el detalle, dentro del caparazón', async () => {

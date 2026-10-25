@@ -47,4 +47,11 @@ describe('archivo de tema: claro, oscuro y preferencias del sistema', () => {
   it('la luz orbital del bloque principal de Hoy tarda 7 s por vuelta', () => {
     expect(theme).toMatch(/--duration-orbit: 7s;/);
   });
+
+  it('la sesión de repaso tiene su cascada y su cierre en la tabla de movimiento', () => {
+    expect(theme).toMatch(/--duration-cascade: 280ms;/);
+    expect(theme).toMatch(/--delay-cascade: 40ms;/);
+    expect(theme).toMatch(/--duration-ring: 900ms;/);
+    expect(theme).toMatch(/--duration-check: 380ms;/);
+  });
 });

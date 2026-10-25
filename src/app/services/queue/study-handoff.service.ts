@@ -20,15 +20,17 @@ export interface PreparedStudy {
 // `state` de la navegación se tipa débil y también se pierde al recargar).
 @Injectable({ providedIn: 'root' })
 export class StudyHandoffService {
-  private readonly prepared = signal<PreparedStudy | null>(null);
+  private readonly tray = signal<PreparedStudy | null>(null);
+  /** Lo entregado, sin consumirlo (la guardia de /repaso solo mira). */
+  readonly prepared = this.tray.asReadonly();
 
   hand(prepared: PreparedStudy): void {
-    this.prepared.set(prepared);
+    this.tray.set(prepared);
   }
 
   take(): PreparedStudy | null {
-    const prepared = this.prepared();
-    this.prepared.set(null);
+    const prepared = this.tray();
+    this.tray.set(null);
     return prepared;
   }
 }

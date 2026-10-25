@@ -1,0 +1,46 @@
+// Volteo 3D sobre el eje vertical: dos caras de espaldas, la de atrás girada 180°. Al revelar
+// gira el conjunto. Cada aparición entra desde la derecha. Con reducir movimiento, el cambio es
+// inmediato: sin volteo ni desplazamiento (además de la regla global de styles.scss).
+
+:host {
+  display: block;
+  animation: card-enter var(--duration-base) var(--ease-out-soft) both;
+}
+
+.scene {
+  perspective: 1200px;
+}
+
+.card-inner {
+  transform-style: preserve-3d;
+  transition: transform var(--duration-flip) var(--ease-out-soft);
+
+  &.flipped {
+    transform: rotateY(180deg);
+  }
+}
+
+.face {
+  backface-visibility: hidden;
+}
+
+.back {
+  transform: rotateY(180deg);
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+
+  .card-inner {
+    transition: none;
+  }
+}

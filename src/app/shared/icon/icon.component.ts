@@ -24,7 +24,9 @@ export const ICON_NAMES = [
 
 export type IconName = (typeof ICON_NAMES)[number];
 
-const SIZE_CLASSES = { sm: 'size-4', md: 'size-5' } as const;
+// `lg` (los cerebros de la calificación): cuatro deben caber en fila en un cuarto de pantalla de
+// móvil, así que crece desde `sm`.
+const SIZE_CLASSES = { sm: 'size-4', md: 'size-5', lg: 'size-[1.125rem] sm:size-6' } as const;
 
 // Icono de trazo: toma el color del texto que lo rodea (`currentColor`) y es decorativo (el
 // significado lo da el texto vecino), así que se oculta a tecnologías de asistencia.

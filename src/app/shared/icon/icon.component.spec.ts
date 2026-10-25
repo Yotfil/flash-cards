@@ -4,7 +4,7 @@ import { ICON_NAMES, IconComponent, type IconName } from './icon.component';
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
-function render(name: IconName, size?: 'sm' | 'md'): SVGSVGElement {
+function render(name: IconName, size?: 'sm' | 'md' | 'lg'): SVGSVGElement {
   const fixture = TestBed.createComponent(IconComponent);
   fixture.componentRef.setInput('name', name);
   if (size) {
@@ -56,8 +56,10 @@ describe('IconComponent', () => {
     expect((fixture.nativeElement as HTMLElement).getAttribute('data-icon')).toBe('spark');
   });
 
-  it('es mediano por defecto y admite el tamaño pequeño', () => {
+  it('es mediano por defecto y admite el tamaño pequeño y el grande', () => {
     expect(render('check').getAttribute('class')).toContain('size-5');
     expect(render('check', 'sm').getAttribute('class')).toContain('size-4');
+    // Grande: los cerebros de la calificación.
+    expect(render('brain', 'lg').getAttribute('class')).toContain('sm:size-6');
   });
 });

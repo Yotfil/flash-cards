@@ -97,6 +97,10 @@
   --duration-flip: 500ms; // volteo de la tarjeta
   --duration-shimmer: 1600ms; // brillo del esqueleto de carga (un ciclo completo)
   --duration-orbit: 7s; // una vuelta de la luz del borde del bloque principal de Hoy
+  --duration-cascade: 280ms; // entrada de cada cerebro de la calificación
+  --delay-cascade: 40ms; // escalón entre cerebros en la cascada
+  --duration-ring: 900ms; // anillo del cierre de la sesión
+  --duration-check: 380ms; // marca de verificación del cierre, tras el anillo
 
   // Atenuación de lo apartado (tarjeta suspendida); siempre va con una etiqueta de texto.
   --opacity-dimmed: 0.55;

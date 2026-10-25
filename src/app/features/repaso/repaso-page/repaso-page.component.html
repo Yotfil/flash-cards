@@ -1,0 +1,44 @@
+<main class="safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4 pt-4">
+  @switch (session.status()) {
+    @case ('active') {
+      <app-review-top-bar
+        [progress]="session.progress()"
+        [remaining]="session.remaining()"
+        (exitRequested)="exit()"
+      />
+      <app-offline-indicator />
+      @for (message of alertMessages(); track $index) {
+        <p role="alert" class="text-center text-sm text-danger">{{ message }}</p>
+      }
+
+      @if (session.current(); as appearance) {
+        <!-- Una aparición nueva crea una tarjeta nueva: entra con su animación y sus relojes. -->
+        @for (current of [appearance]; track current.id) {
+          <app-flip-card
+            [card]="current.card"
+            [revealed]="session.revealed()"
+            (revealRequested)="session.reveal()"
+          />
+        }
+        @if (session.revealed() && session.previews(); as previews) {
+          <app-rating-bar
+            [previews]="previews"
+            [suggested]="session.suggested()"
+            [now]="session.shownAt()"
+            (graded)="session.grade($event)"
+          />
+        }
+      }
+    }
+    @case ('finished') {
+      <div class="flex flex-1 items-center">
+        <app-session-summary
+          [distinctCount]="session.distinctCount()"
+          [ratingCounts]="session.ratingCounts()"
+          [rejectedAfterFinish]="session.rejectedAfterFinish()"
+          (homeRequested)="home()"
+        />
+      </div>
+    }
+  }
+</main>

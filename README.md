@@ -198,6 +198,18 @@ recurso aparte: si falla se omite sin tumbar la cola. Quien prepara una sesión 
 `StudyHandoffService` (`hand`/`take`, una sola entrega) y navega a `/repaso`; el botón compartido
 es `StudyLaunchButtonComponent` (`features/estudio/`).
 
+**Sesión de repaso.** Es efímera: `/repaso` solo se abre con una lista entregada en
+`StudyHandoffService` (si no, `studyHandoffGuard` lleva a Hoy), la pantalla la consume al entrar y
+cada entrada arranca de cero. El núcleo es puro (`services/review/review-session-state.ts`): la
+unidad es la **aparición**, y tras calificar una tarjeta que **sigue lista** para hoy vuelve al
+final como aparición nueva; si no, sale. El guardado es **optimista**: `ReviewSessionService.grade`
+avanza al instante y envía sin esperar un lote atómico (`GradePersistencePort`: tarjeta, historial
+e indicadores del día) que el SDK guarda en el dispositivo y sincroniza al volver la red; si el
+servidor lo rechaza, la tarjeta vuelve al final con su programación anterior y un aviso. Dos
+tiempos: la **latencia de recuerdo** (mostrar → revelar) solo sugiere un grado; la **duración del
+repaso** (mostrar → calificar) se guarda en cada registro. El cierre cuenta las tarjetas distintas
+y las calificaciones por grado, y deja el hueco `[practice]` para la práctica con IA.
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.

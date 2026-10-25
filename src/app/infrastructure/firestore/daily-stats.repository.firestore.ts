@@ -3,13 +3,15 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   limit,
   orderBy,
   query,
   type Firestore,
 } from 'firebase/firestore';
 
-import type { DailyStats } from '@domain/models/daily-stats.model';
+import { ratingCountKey, type DailyStats } from '@domain/models/daily-stats.model';
+import type { GradeRecord } from '@domain/models/grade-record';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 
 import { parseDocument, parseDocuments } from './document-boundary';
@@ -41,4 +43,22 @@ export class FirestoreDailyStatsRepository extends DailyStatsRepository {
   private daysOf(uid: string) {
     return collection(this.firestore, 'users', uid, 'dailyStats');
   }
+}
+
+/**
+ * Lo que una calificación suma al documento de su día (para `set(..., { merge: true })`): ÚNICA
+ * definición de esos incrementos. Una nueva introducida cuenta para la tanda de nuevas del libro;
+ * una que no lo era, para su tope de repasos. Nadie escribe indicadores fuera del lote atómico de
+ * la calificación.
+ */
+export function dailyStatsIncrements(
+  record: Pick<GradeRecord, 'dayId' | 'bookId' | 'stat'>,
+): Record<string, unknown> {
+  const perBook = { [record.bookId]: increment(1) };
+  return {
+    date: record.dayId,
+    reviewsCompleted: increment(1),
+    ratingCounts: { [ratingCountKey(record.stat.rating)]: increment(1) },
+    ...(record.stat.wasNew ? { newCardsIntroduced: perBook } : { reviewsCompletedByBook: perBook }),
+  };
 }

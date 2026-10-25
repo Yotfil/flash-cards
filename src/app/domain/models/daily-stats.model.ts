@@ -1,3 +1,5 @@
+import type { Rating } from './rating';
+
 // Indicadores del día de estudio (`/users/{uid}/dailyStats/{YYYY-MM-DD}`). Hacen cumplir los topes
 // diarios de cada libro, alimentan la racha y las estadísticas. El id del documento ES la fecha
 // del día de estudio, así que leer "hoy" es directo. Mismo modelo que la 0.1.1 (datos compatibles).
@@ -24,4 +26,14 @@ export interface DailyStats {
    */
   reviewsCompletedByBook: Record<string, number>;
   ratingCounts: RatingCounts;
+}
+
+const RATING_COUNT_KEYS = { 1: 'again', 2: 'hard', 3: 'good', 4: 'easy' } as const satisfies Record<
+  Rating,
+  keyof RatingCounts
+>;
+
+/** El contador de `ratingCounts` que suma cada grado. */
+export function ratingCountKey(rating: Rating): keyof RatingCounts {
+  return RATING_COUNT_KEYS[rating];
 }
