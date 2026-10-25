@@ -1,0 +1,42 @@
+<main class="flex min-h-dvh items-center justify-center px-4 py-10">
+  <section
+    class="glass w-full max-w-sm rounded-3xl p-7 text-center shadow-card"
+    aria-labelledby="no-access-title"
+  >
+    <p
+      class="mb-6 flex items-center justify-center gap-2.5 text-lg font-extrabold tracking-tight text-text"
+    >
+      <span
+        class="inline-grid size-[26px] place-items-center rounded-lg bg-linear-135 from-accent to-accent-deep text-accent-ink"
+      >
+        <app-icon name="spark" size="sm" />
+      </span>
+      {{ copy.brand }}
+    </p>
+
+    <h1 id="no-access-title" class="text-2xl font-extrabold tracking-tight text-text">
+      {{ copy.noAccess.title }}
+    </h1>
+    <p class="mt-2 text-sm leading-relaxed text-text-dim">{{ copy.noAccess.explanation }}</p>
+
+    @if (email(); as pendingEmail) {
+      <p
+        class="mt-5 truncate rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-text"
+      >
+        {{ pendingEmail }}
+      </p>
+    }
+
+    <p class="mt-5 text-sm leading-relaxed text-text-dim">{{ copy.noAccess.shareEmail }}</p>
+    <p class="mt-2 text-sm leading-relaxed text-text-dim">{{ copy.noAccess.comeBack }}</p>
+
+    <button
+      type="button"
+      class="press mt-7 w-full rounded-xl border border-glass-border bg-surface px-4 py-3 font-semibold text-text disabled:opacity-60"
+      [disabled]="signingOut()"
+      (click)="signOut()"
+    >
+      {{ signingOut() ? copy.noAccess.signingOut : copy.noAccess.signOut }}
+    </button>
+  </section>
+</main>

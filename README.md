@@ -25,7 +25,8 @@ siempre un anverso y un reverso genéricos. El repositorio se llama `flash-cards
 | Comando                    | Qué hace                                                                               |
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | `npm start`                | Servidor de desarrollo en `http://localhost:4200/`, contra los emuladores.             |
-| `npm run emulators`        | Emuladores locales de Firestore (`:8080`) y Auth (`:9099`), proyecto `demo-cadence`.   |
+| `npm run emulators`        | Emuladores locales de Firestore (`:8080`) y Auth (`:9099`), con datos persistentes.    |
+| `npm run seed:allowlist`   | Autoriza un correo en la lista del emulador: `npm run seed:allowlist -- correo`.       |
 | `npm run build`            | Build de producción en `dist/flash-cards/browser` (con service worker).                |
 | `npm run lint`             | ESLint, incluidas las fronteras de capas.                                              |
 | `npm run format:check`     | Prettier en modo comprobación (`npm run format` corrige).                              |
@@ -49,9 +50,21 @@ npm run emulators
 npm start
 ```
 
-Los datos del emulador se pierden al detenerlo. Hasta que llegue la semilla de la lista de acceso
-(capacidad `autenticacion-y-acceso`), un usuario creado en el emulador verá "sin acceso": es el
-comportamiento correcto de las reglas, no un fallo.
+Los datos del emulador **persisten entre arranques**: al detenerlo con Ctrl+C se exportan a
+`.emulator-data/` (ignorada por git) y se importan al volver a arrancar. Borra esa carpeta para
+empezar de cero.
+
+La app está en **acceso anticipado**: solo entra quien tiene su correo en la colección `allowlist`.
+En el emulador, autoriza un correo una vez (con los emuladores corriendo):
+
+```sh
+npm run seed:allowlist -- prueba@ejemplo.com
+```
+
+Después crea la cuenta con ese correo en `http://localhost:4200/login`, o entra con
+"Continuar con Google": el emulador abre una ventana falsa donde se elige o inventa la cuenta.
+Un correo fuera de la lista no crea cuenta; uno de Google fuera de la lista se borra al instante
+y la app muestra "sin acceso".
 
 **Probar contra los datos reales** (proyecto `flash-cards-aca86`): se sirve el build de
 producción, que usa `environment.production.ts` y ningún emulador. Nunca con `npm start`.
@@ -78,6 +91,15 @@ Ports & Adapters en `src/app/` (ADR 0001), con las fronteras exigidas por ESLint
 Stack: Angular 22 standalone (zoneless), TypeScript estricto, Tailwind 4 con tokens semánticos en
 `src/styles.scss` (archivo de tema único del sistema visual Cadence), Firebase SDK web directo,
 ts-fsrs, Zod, Signal Forms, Angular CDK, Vitest, Netlify.
+
+## Acceso anticipado en producción
+
+- La lista vive en la colección **`allowlist`** (en minúsculas) del proyecto real. Cada documento
+  tiene como id el correo EXACTO con el que la persona entra (Google lo entrega en minúsculas) y se
+  crea a mano desde la consola de Firebase; la app nunca escribe en ella.
+- Las reglas permiten comprobar un correo exacto sin sesión (para detener un registro no
+  autorizado antes de crear la cuenta) y prohíben listar la colección. Al publicar un release que
+  cambie `firestore.rules`, despliégalas con `firebase deploy --only firestore:rules`.
 
 ## Caparazón y piezas compartidas
 
