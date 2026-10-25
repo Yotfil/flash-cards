@@ -1,0 +1,57 @@
+<svg
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"
+  [attr.class]="sizeClass()"
+>
+  @switch (name()) {
+    @case ('calendar') {
+      <svg:rect x="3" y="4" width="18" height="17" rx="3" />
+      <svg:path d="M3 9h18M8 2v4M16 2v4" />
+    }
+    @case ('books') {
+      <svg:path d="M5 4h11a2 2 0 0 1 2 2v14l-6.5-3L5 20V4z" />
+    }
+    @case ('chart') {
+      <svg:path d="M5 20V9M12 20V4M19 20v-7" />
+    }
+    @case ('sliders') {
+      <svg:path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <svg:circle cx="16" cy="7" r="2.2" />
+      <svg:circle cx="10" cy="17" r="2.2" />
+    }
+    @case ('alert') {
+      <svg:path
+        d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z"
+      />
+      <svg:path d="M12 9v4M12 17h.01" />
+    }
+    @case ('brain') {
+      <svg:path
+        d="M11.5 4.2c-1.2-1-3.1-.9-4.1.3-1.3-.2-2.6.7-2.8 2-1.2.5-1.9 1.9-1.5 3.2-.9.8-1.1 2.2-.4 3.3-.4 1.3.2 2.7 1.5 3.2.2 1.4 1.5 2.4 2.9 2.2 1 1.2 2.9 1.3 4.1.3z"
+      />
+      <svg:path
+        d="M12.5 4.2c1.2-1 3.1-.9 4.1.3 1.3-.2 2.6.7 2.8 2 1.2.5 1.9 1.9 1.5 3.2.9.8 1.1 2.2.4 3.3.4 1.3-.2 2.7-1.5 3.2-.2 1.4-1.5 2.4-2.9 2.2-1 1.2-2.9 1.3-4.1.3z"
+      />
+    }
+    @case ('check') {
+      <svg:path d="M5 12.5l4.5 4.5L19 7.5" />
+    }
+    @case ('x') {
+      <svg:path d="M6 6l12 12M18 6L6 18" />
+    }
+    @case ('spark') {
+      <svg:path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" />
+    }
+    @case ('offline') {
+      <svg:path
+        d="M2 8.8a15 15 0 0 1 4.2-2.6M9.6 5.2A15 15 0 0 1 22 8.8M5 12.4a10 10 0 0 1 3.4-2M16.3 11a10 10 0 0 1 2.7 1.4M8.5 15.9a5 5 0 0 1 7 0M12 19.5h.01M3 3l18 18"
+      />
+    }
+  }
+</svg>

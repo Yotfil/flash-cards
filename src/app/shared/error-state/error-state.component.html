@@ -1,0 +1,13 @@
+<div role="alert" class="flex flex-col items-center gap-2 px-6 py-12 text-center">
+  <h2 class="text-lg font-bold tracking-tight text-text">{{ title() }}</h2>
+  @if (message()) {
+    <p class="max-w-sm text-sm leading-relaxed text-text-dim">{{ message() }}</p>
+  }
+  <button
+    type="button"
+    class="press mt-3 rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-accent-text hover:border-accent-line"
+    (click)="retry.emit()"
+  >
+    {{ copy.retry }}
+  </button>
+</div>

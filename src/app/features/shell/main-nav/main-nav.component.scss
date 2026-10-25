@@ -1,0 +1,9 @@
+// La píldora se desliza al destino activo según `--nav-index` (fijado por el componente): en
+// móvil avanza una columna por índice; en escritorio, una fila de 44px más el hueco de 2px.
+.nav-pill {
+  transform: translateX(calc(var(--nav-index, 0) * 100%));
+
+  @media (min-width: 48rem) {
+    transform: translateY(calc(var(--nav-index, 0) * (100% + 2px)));
+  }
+}

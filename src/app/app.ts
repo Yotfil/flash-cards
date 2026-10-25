@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
-// Componente raíz del esqueleto. Las pantallas y la navegación llegan con `navegacion-y-shell`;
-// hasta entonces solo pinta el nombre del producto.
+// Componente raíz: solo aloja el router. El caparazón y las pantallas completas son rutas.
 @Component({
   selector: 'app-root',
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

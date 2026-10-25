@@ -79,6 +79,44 @@ Stack: Angular 22 standalone (zoneless), TypeScript estricto, Tailwind 4 con tok
 `src/styles.scss` (archivo de tema único del sistema visual Cadence), Firebase SDK web directo,
 ts-fsrs, Zod, Signal Forms, Angular CDK, Vitest, Netlify.
 
+## Caparazón y piezas compartidas
+
+- `src/app/app.routes.ts`: el mapa de rutas completo. Cada pantalla carga bajo demanda y, mientras
+  su capacidad no llega, pinta `PendingPageComponent`; cada change sustituye su `loadComponent`.
+- `features/shell/`: el caparazón (`shell`), la navegación (`main-nav`), el indicador sin conexión
+  (`offline-indicator`), la página provisional (`pending-page`), el pie de versión
+  (`version-footer`, lo coloca Ajustes) y `shell.copy.ts` con los textos y destinos.
+- `shared/`: `icon` (catálogo en `ICON_NAMES`), `empty-state`, `error-state`, `skeleton` y `dialog`.
+
+**Abrir un diálogo.** El contenido es un componente que inyecta `AppDialogRef` y `DIALOG_DATA`; solo
+se cierra con éxito (si su acción falla, se queda abierto mostrando el error):
+
+```ts
+const ref = inject(DialogService).open<Book, { bookId: string }>(BookFormDialogComponent, {
+  label: 'Editar libro', // nombre accesible, obligatorio
+  size: 'md', // 'sm' | 'md' | 'lg'
+  data: { bookId },
+});
+const saved = await ref.closed; // undefined si se canceló
+// Dentro del contenido: dialogRef.setPending(true) mientras guarda; dialogRef.close(resultado).
+```
+
+**Pintar una pantalla que lee datos.** El servicio expone un `resource()` de Angular y la
+plantilla distingue cuatro estados; un fallo nunca se pinta como vacío:
+
+<!-- prettier-ignore -->
+```html
+@switch (books.status()) {
+  @case ('loading') { <app-skeleton [lines]="4" /> }
+  @case ('reloading') { <app-skeleton [lines]="4" /> }
+  @case ('error') { <app-error-state (retry)="books.reload()" /> }
+  @default {
+    @if (books.value()?.length) { <!-- contenido --> }
+    @else { <app-empty-state title="Tu biblioteca está vacía" /> }
+  }
+}
+```
+
 ## Especificaciones y diseño
 
 - `openspec/specs/`: las 14 capacidades como specs base (comportamiento observable). Índice y

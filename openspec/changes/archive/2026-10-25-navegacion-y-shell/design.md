@@ -31,6 +31,8 @@ Decisiones del explore: hallazgos 1 y 2 y transversales 1 y 2 en `docs/hallazgos
 
 `app.routes.ts` declara: `''` → `hoy`; el caparazón (`ShellComponent`, `loadComponent`) con hijos `hoy`, `biblioteca`, `importar`, `biblioteca/:bookId`, `biblioteca/:bookId/:chapterId`, `progreso`, `ajustes`; fuera del caparazón `login`, `sin-acceso`, `repaso`, `practicar`; `**` → `''`. Cada hoja carga bajo demanda `PendingPageComponent` (estado vacío con título "Pronto" y mensaje "Esta pantalla llega en un próximo paso."). Cada capacidad sustituye su `loadComponent`; `autenticacion-y-acceso` añade `canActivate`.
 
+*Nota de apply (2026-10-24, fase B):* `**` redirige a `hoy`, no a `''`: con `''` el router casa la URL vacía con el padre del caparazón (también `path: ''`) y no vuelve a aplicar la redirección de la raíz, así que la URL inexistente se quedaba en `/` (lo detectó `app.routes.spec`).
+
 *Por qué:* los escenarios de la spec citan `/importar` y las pantallas completas; el branch deploy muestra el caparazón real navegable. *Alternativa descartada:* declarar solo las rutas del caparazón (cada capacidad tocaría el mapa y el shell a la vez).
 
 ### 2. Caparazón y navegación (`features/shell/shell`, `features/shell/main-nav`; capa UI)
@@ -58,6 +60,7 @@ Decisiones del explore: hallazgos 1 y 2 y transversales 1 y 2 en `docs/hallazgos
 ### 5. Conectividad (`domain/ports/connectivity.port.ts`, `infrastructure/browser/navigator-connectivity.adapter.ts`, `features/shell/offline-indicator`)
 
 - Puerto `ConnectivityPort`: `readonly online: Signal<boolean>`.
+  - *Nota de apply (2026-10-24, fase B):* ESLint (ADR 0002) prohíbe cualquier import de `@angular/*` en `domain/`, así que el puerto se tipa estructuralmente como `readonly online: () => boolean`. El adaptador y `FakeConnectivity` lo implementan con una `Signal<boolean>`, que cumple ese tipo; leerla en plantillas, `computed` o `resource` sigue siendo reactivo. Mismo nombre y mismo uso para los consumidores (`connectivity.online()`).
 - Adaptador: `navigator.onLine` inicial y eventos `online`/`offline` del `window` (escuchados con `DestroyRef` para limpiar).
 - `OfflineIndicatorComponent`: `@if (!online())` pinta `<p role="status">` con el texto de la spec, superficie `glass-soft` (segunda capa permitida junto a la navegación; no anima). Lo inyecta el `ShellComponent` a través del puerto (la UI inyecta puertos del dominio; no hay lógica que justifique un servicio).
 - Fake `testing/fake-connectivity.ts` con `setOnline(boolean)`.
@@ -87,6 +90,7 @@ Cada servicio de lectura expone un `ResourceRef<T>` de Angular (`resource()` o `
 
 - `IconComponent`: `name` (catálogo de la spec), `size`; SVG inline por `@switch`, `aria-hidden="true"`, `stroke="currentColor"`, trazo 1.8 como en el prototipo.
 - `VersionFooterComponent` pinta `formatVersionLine(version, commit)` y `formatBuildDate(isoDate, timeZone?)` de `services/version/version-format.ts` (funciones puras; `timeZone` por defecto la del dispositivo). `core/app-version.ts` importa `package.json` (`resolveJsonModule`); `BUILD_INFO` sigue generándose en `core/build-info.ts`. El componente no se coloca en ninguna pantalla en este change.
+  - *Nota de apply (2026-10-24, fase B):* el componente vive en `features/shell/version-footer/`, no en `shared/`: ESLint (ADR 0002) prohíbe a `shared/` importar `core/` (`APP_VERSION`, `BUILD_INFO`) y `services/` (`formatVersionLine`, `formatBuildDate`), y `features/` sí puede. Mismo selector (`app-version-footer`), mismas pruebas, sigue fuera del caparazón; `ajustes-de-usuario` lo importa desde `@features/shell/version-footer/version-footer.component`.
 
 ### 10. Tokens nuevos en `styles.scss`
 
@@ -112,9 +116,9 @@ Con `prefers-reduced-transparency` las tres primeras se vuelven sólidas por los
 | Política: el diálogo solo se cierra con éxito | `libros` (ConfirmDialog) y todos los formularios |
 | `EmptyState`, `ErrorState` (`retry`), `Skeleton` + contrato de `resource()` (decisión 8) | Toda pantalla que lee datos |
 | `ThemeService.preference` (signal escribible) y `ThemePort` | `ajustes-de-usuario` conecta el perfil |
-| `ConnectivityPort.online` y `OfflineIndicatorComponent` | `sesion-de-repaso` puede reutilizar el indicador a pantalla completa |
+| `ConnectivityPort.online` (tipo `() => boolean`, implementado con una señal; ver nota de la decisión 5) y `OfflineIndicatorComponent` | `sesion-de-repaso` puede reutilizar el indicador a pantalla completa |
 | `IconComponent` con catálogo ampliable | Todas las pantallas |
-| `VersionFooterComponent` y `formatBuildDate` | `ajustes-de-usuario` lo coloca al final |
+| `VersionFooterComponent` (en `features/shell/version-footer/`, ver nota de la decisión 9) y `formatBuildDate` | `ajustes-de-usuario` lo coloca al final |
 | `shell.copy.ts` como patrón de copy por feature | Todas las features |
 | Fakes `FakeThemePort`, `FakeConnectivity` en `testing/` | Specs de pantallas |
 

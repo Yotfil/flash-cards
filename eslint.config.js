@@ -12,6 +12,12 @@ function layer(name) {
   return [`@${name}/*`, `**/${name}/**`];
 }
 
+// El patrón relativo `**/core/**` también atrapa paquetes de Angular con una carpeta del mismo
+// nombre (`@angular/core/testing`, `@angular/core/rxjs-interop`). Esta excepción va DESPUÉS de los
+// patrones de capa de cada grupo (en gitignore manda el último patrón que coincide); en domain/
+// la sigue la prohibición explícita de Angular, que vuelve a mandar.
+const NOT_ANGULAR_PACKAGES = '!@angular/**';
+
 // Librerías de datos y algoritmo: solo entran como adaptadores en infrastructure/.
 const DATA_LIBRARIES = ['firebase', 'firebase/*', '@firebase/*', 'ts-fsrs'];
 
@@ -88,6 +94,7 @@ module.exports = defineConfig([
         ...layer('features'),
         ...layer('shared'),
         ...layer('core'),
+        NOT_ANGULAR_PACKAGES,
         '@angular/*',
         ...DATA_LIBRARIES,
         'zod',
@@ -102,6 +109,7 @@ module.exports = defineConfig([
         ...layer('features'),
         ...layer('shared'),
         ...layer('core'),
+        NOT_ANGULAR_PACKAGES,
         ...DATA_LIBRARIES,
       ],
       message:
@@ -109,13 +117,19 @@ module.exports = defineConfig([
     },
     {
       layer: 'infrastructure',
-      forbidden: [...layer('services'), ...layer('features'), ...layer('shared'), ...layer('core')],
+      forbidden: [
+        ...layer('services'),
+        ...layer('features'),
+        ...layer('shared'),
+        ...layer('core'),
+        NOT_ANGULAR_PACKAGES,
+      ],
       message:
         'infrastructure/ implementa puertos de domain/; no conoce servicios, UI ni la raíz de composición.',
     },
     {
       layer: 'features',
-      forbidden: [...layer('infrastructure'), ...DATA_LIBRARIES],
+      forbidden: [...layer('infrastructure'), NOT_ANGULAR_PACKAGES, ...DATA_LIBRARIES],
       message:
         'features/ solo pinta y captura eventos: usa services/ y shared/, nunca infrastructure/ ni librerías de datos.',
     },
@@ -126,6 +140,7 @@ module.exports = defineConfig([
         ...layer('services'),
         ...layer('features'),
         ...layer('core'),
+        NOT_ANGULAR_PACKAGES,
         ...DATA_LIBRARIES,
       ],
       message: 'shared/ es UI presentacional reutilizable: solo tipos de domain/.',
