@@ -1,173 +1,158 @@
-# Práctica con IA (lotes de difíciles) Specification
+# Práctica con IA (paquetes de práctica) Specification
 
 ## Purpose
 
-Convertir las tarjetas que al usuario le cuestan en una conversación de práctica con un asistente de IA externo, sin que la app hable con ningún modelo ni pague por ello: la app arma un prompt, el usuario lo copia y lo lleva a su chat de IA. Las tarjetas calificadas "Otra vez" o "Difícil" en el repaso van llenando un lote cerrado de tamaño fijo; el usuario practica ese lote con la IA las veces que quiera, marca a mano cuáles ya domina y, solo cuando domina todas, empieza un lote nuevo. Los lotes completados quedan en un historial para volver a practicarlos más adelante. Es una modalidad aparte del repaso: nunca altera la programación de ninguna tarjeta, ni el historial de repasos, ni las estadísticas del día.
+Dar al usuario una rama de estudio alternativa a los libros: **paquetes de práctica** que él mismo llena con las palabras, frases o conceptos que se cruza en el día (una película, una reunión) y que quiere reforzar conversando con un asistente de IA externo. Cada paquete admite hasta 20 ítems (ajustable), se practica a diario en la misma pantalla de repaso con los cuatro cerebros pero **sin algoritmo de programación**: la calificación solo decide si el ítem vuelve mañana. Al terminar cada práctica la app arma un **prompt** con todo lo repasado hoy y énfasis en lo difícil; el usuario lo copia y lo lleva a su chat de IA. La app no habla con ningún modelo ni paga por ello. El paquete se completa solo cuando el usuario dice que ya se sabe todos sus ítems. Nunca toca los libros, la programación de las tarjetas, el historial de repasos ni las estadísticas del día.
 
-Capacidad nueva (no existe en v0.1.1), diseñada el 2026-10-17. El formato de exportación que el prompt pide a la IA es el mismo de la spec de importación, para que lo nuevo que surja en la conversación entre a la app sin parser adicional.
+Capacidad nueva (no existe en v0.1.1). Primera versión diseñada el 2026-10-17 como "lotes de difíciles del repaso"; **rediseñada el 2026-10-24 en su explore** como paquetes de contenido propio, a partir de cómo el usuario quiere usarla. Los ítems cloze se admiten **a prueba** en esta rama: si al usarlos no cuadran, se retiran sin tocar los libros.
 
 ## Requirements
 
-### Requirement: La práctica con IA no toca la programación ni deja registro
-El sistema SHALL tratar la práctica con IA como una modalidad aparte del repaso: NO SHALL modificar la programación de ninguna tarjeta, NO SHALL añadir registros al historial de repasos, NO SHALL alterar las estadísticas del día y NO SHALL crear, editar ni borrar tarjetas. Los lotes SHALL guardarse como datos privados del usuario en una colección propia, separada de las tarjetas, de modo que la capacidad pueda apagarse o vaciarse sin tocar el modelo principal.
+### Requirement: La práctica con IA es una rama aparte que no toca libros, programación ni estadísticas
+El sistema SHALL guardar los paquetes y sus ítems en una colección propia bajo los datos privados del usuario, separada de libros, capítulos y tarjetas. Practicar un paquete NO SHALL modificar la programación de ninguna tarjeta, NO SHALL añadir registros al historial de repasos, NO SHALL alterar los indicadores del día (repasos completados, calificaciones, nuevas introducidas) ni la racha, y NO SHALL crear, editar ni borrar tarjetas de ningún libro. Los ítems de un paquete NO SHALL aparecer en la cola de Hoy, en Progreso ni en la práctica (mini-quiz) de los libros.
 
-#### Scenario: Marcar dominadas no cambia la cola de Hoy
-- **WHEN** el usuario marca como dominadas varias tarjetas del lote
-- **THEN** las fechas de vencimiento, estados y conteos de la cola diaria permanecen idénticos
+#### Scenario: Practicar un paquete no cambia Hoy ni Progreso
+- **WHEN** el usuario practica un paquete y califica varios ítems "Otra vez"
+- **THEN** la cola de Hoy, "Repasadas hoy", la distribución de calificaciones y la racha permanecen idénticos
 
-#### Scenario: Copiar el prompt no cuenta como repaso
-- **WHEN** el usuario copia el prompt y practica con la IA
-- **THEN** "Repasadas hoy" y la distribución de calificaciones de Progreso no cambian
+#### Scenario: Los ítems no son tarjetas
+- **WHEN** el usuario agrega un ítem a un paquete
+- **THEN** no se crea ninguna tarjeta en ningún libro y el contador de ningún libro cambia
 
-### Requirement: Una tarjeta es "difícil" cuando recibe grado 1 o 2 en una sesión de repaso
-El sistema SHALL considerar difícil toda tarjeta calificada "Otra vez" (1) o "Difícil" (2) dentro de una sesión de repaso cuya calificación se guardó con éxito. Una tarjeta calificada varias veces en la misma sesión SHALL contarse una sola vez. Las calificaciones de la práctica (mini-quiz) NO producen difíciles.
+### Requirement: Un paquete tiene nombre, capacidad propia y estado
+Un paquete SHALL tener un nombre (obligatorio tras recortar, máximo 120 caracteres), una capacidad fijada al crearse igual al ajuste "Ítems por paquete" vigente (20 por defecto), su lista de ítems, la fecha de creación y, si está completado, la fecha de completado. Un paquete SHALL estar "abierto" (admite ítems y práctica) o "completado" (solo lectura, en el historial). El usuario SHALL poder tener varios paquetes abiertos a la vez. Cambiar después el ajuste de capacidad NO SHALL afectar a los paquetes ya creados.
 
-#### Scenario: Grados que cuentan
-- **WHEN** en una sesión se califican cinco tarjetas con grados 1, 2, 3, 4 y 2
-- **THEN** las difíciles de la sesión son las tres calificadas con 1 o 2
+#### Scenario: Crear un paquete
+- **WHEN** el usuario crea el paquete "Película del viernes" con el ajuste en 20
+- **THEN** existe un paquete abierto, vacío, con capacidad 20
 
-#### Scenario: Calificación fallida no cuenta
-- **WHEN** el usuario califica "Otra vez" y el guardado falla
-- **THEN** la tarjeta no se considera difícil hasta que una calificación de la misma tarjeta tenga éxito
+#### Scenario: Varios abiertos
+- **WHEN** el usuario tiene el paquete A con 14 ítems y crea el paquete B
+- **THEN** ambos están abiertos y cada uno se practica por separado
 
-### Requirement: Las difíciles de la sesión entran al lote abierto al terminar o al salir
-Al mostrarse la pantalla de cierre de la sesión, o al pulsar "Salir" con al menos una difícil, el sistema SHALL añadir las difíciles de la sesión al lote abierto, en el orden en que se calificaron. Si no existe un lote abierto, el sistema SHALL crear uno nuevo en estado "llenando" con la capacidad vigente del ajuste de tamaño de lote. Si la escritura falla, el sistema SHALL conservar en memoria las difíciles no añadidas, mostrar "No se pudieron añadir las difíciles al lote de práctica." y ofrecer "Reintentar" en el bloque de práctica con IA, tanto en la pantalla de cierre como en Hoy, hasta que se añadan con éxito o la app se recargue.
+#### Scenario: El ajuste cambia con paquetes abiertos
+- **WHEN** existe un paquete de capacidad 20 con 15 ítems y el usuario cambia el ajuste a 10
+- **THEN** ese paquete sigue admitiendo hasta 20; el ajuste de 10 aplica a los paquetes que se creen después
 
-#### Scenario: Primer lote del usuario
-- **WHEN** el usuario sin lotes termina una sesión con cuatro difíciles
-- **THEN** se crea un lote en estado "llenando" con esas cuatro tarjetas
+### Requirement: Los ítems se agregan a mano o pegando texto, con la gramática de la importación
+Cada ítem SHALL tener anverso y reverso (o ser cloze, a prueba), con ejemplo opcional, con las mismas reglas de validez que una tarjeta. El detalle del paquete SHALL ofrecer "Agregar" (el mismo formulario de tarjeta, sin selector de capítulo) e "Importar" (el mismo diálogo de pegar texto, en modo agregar, con previsualización; los encabezados `#` se ignoran como capítulos). El sistema SHALL rechazar agregar más ítems de los que caben: la previsualización SHALL indicar "Caben N más en este paquete." y el botón de confirmar SHALL limitarse a ese número; con el paquete lleno, "Agregar" e "Importar" SHALL mostrarse deshabilitados con "Este paquete está lleno.". Los ítems SHALL poder editarse y borrarse como las tarjetas; borrar un ítem no exige confirmación extra más allá de la de tarjeta.
 
-#### Scenario: Salir a mitad de sesión
-- **WHEN** el usuario califica seis tarjetas (dos con grado 1) y pulsa "Salir"
-- **THEN** las dos difíciles entran al lote abierto antes de volver a Biblioteca
+#### Scenario: Agregar a mano
+- **WHEN** el usuario agrega `to call it a day | dar el día por terminado` a un paquete con 7 ítems
+- **THEN** el paquete tiene 8 ítems y el nuevo está "para hoy"
 
-#### Scenario: Falla la escritura del lote
-- **WHEN** termina la sesión con difíciles y la escritura del lote falla
-- **THEN** la pantalla de cierre muestra el mensaje de error con "Reintentar" y el resumen de la sesión sigue visible
+#### Scenario: Pegar más de lo que cabe
+- **WHEN** el paquete tiene 18 ítems de 20 y el usuario pega 5 líneas válidas
+- **THEN** la previsualización muestra "5 ítems" y "Caben 2 más en este paquete.", el botón dice "Importar 2" y al confirmar entran las 2 primeras válidas
 
-#### Scenario: Reintento exitoso
-- **WHEN** tras el fallo el usuario pulsa "Reintentar" y la escritura tiene éxito
-- **THEN** el mensaje desaparece y el bloque muestra el lote con las difíciles añadidas
+#### Scenario: Paquete lleno
+- **WHEN** el paquete tiene 20 ítems de 20
+- **THEN** "Agregar" e "Importar" están deshabilitados con "Este paquete está lleno."
 
-### Requirement: Cada ítem del lote guarda una copia del contenido de la tarjeta
-Cada ítem del lote SHALL guardar el identificador de la tarjeta, el libro al que pertenecía, una copia del anverso y del reverso en el momento de entrar, el instante en que entró y el instante en que se marcó dominada (vacío mientras no lo esté). Editar o borrar la tarjeta original NO SHALL modificar ni eliminar el ítem.
+#### Scenario: Ítem cloze a prueba
+- **WHEN** el usuario pega `She {{gave up}} too early`
+- **THEN** entra como ítem cloze y en la práctica se muestra con el hueco como una tarjeta cloze
 
-#### Scenario: Tarjeta editada después de entrar
-- **WHEN** una tarjeta entra al lote con anverso "to give up" y luego el usuario la edita a "give up"
-- **THEN** el ítem del lote sigue mostrando "to give up"
+### Requirement: "Para hoy" son los ítems nuevos y los difíciles de días anteriores, y el conjunto se fija en la primera práctica del día
+El sistema SHALL considerar "para hoy" los ítems del paquete que nunca se han practicado y los que en su última práctica, en un día de estudio anterior, recibieron "Otra vez" o "Difícil". Los ítems cuya última calificación fue "Bien" o "Fácil" SHALL descansar: no vuelven a la práctica diaria. El día SHALL ser el día de estudio del usuario (zona horaria y hora de inicio de Ajustes), el mismo de Hoy. En la primera práctica del día el sistema SHALL fijar el conjunto del día; los ítems agregados después de esa primera práctica NO SHALL entrar ese día (entran al siguiente como nuevos) ni reactivar el aviso de Hoy. Antes de la primera práctica del día, los ítems agregados SÍ cuentan.
 
-#### Scenario: Tarjeta borrada después de entrar
-- **WHEN** el usuario borra una tarjeta que está en el lote abierto
-- **THEN** el ítem sigue en el lote, se puede marcar dominado y sale en el prompt
+#### Scenario: Día uno
+- **WHEN** el usuario agrega 8 ítems y practica
+- **THEN** la práctica tiene 8 ítems
 
-### Requirement: Solo hay un lote abierto y pasa por tres estados
-El sistema SHALL mantener como máximo un lote abierto por usuario. Un lote SHALL estar en uno de tres estados: "llenando" (recibe difíciles hasta alcanzar su capacidad), "cerrado" (alcanzó su capacidad y ya no recibe difíciles) o "completado" (en el historial, no cambia más). Al alcanzar su capacidad, el lote SHALL pasar de "llenando" a "cerrado" en la misma operación en que recibe la difícil que lo llena. Cada lote SHALL recordar su propia capacidad, fijada al crearse; cambiar después el ajuste de tamaño NO SHALL afectar a lotes ya creados.
+#### Scenario: Día dos
+- **WHEN** ayer 5 de 8 salieron "Otra vez" o "Difícil" y hoy el usuario agrega 6 ítems antes de practicar
+- **THEN** la práctica de hoy tiene 11 ítems: los 6 nuevos y los 5 difíciles
 
-#### Scenario: Llega a la capacidad
-- **WHEN** un lote "llenando" de capacidad 20 tiene 18 ítems y la sesión aporta tres difíciles
-- **THEN** entran dos, el lote pasa a "cerrado" y la tercera no entra
+#### Scenario: Agregar después de practicar
+- **WHEN** el usuario ya practicó hoy y agrega 4 ítems
+- **THEN** el bloque de Hoy no vuelve a avisar y los 4 entran a la práctica de mañana
 
-#### Scenario: El ajuste cambia con un lote abierto
-- **WHEN** existe un lote "llenando" de capacidad 20 con 15 ítems y el usuario cambia el ajuste a 10
-- **THEN** ese lote sigue admitiendo hasta 20; el ajuste de 10 aplica al siguiente lote
+#### Scenario: Las de Bien descansan
+- **WHEN** un ítem recibió "Bien" ayer
+- **THEN** no está "para hoy" aunque siga en el paquete
 
-### Requirement: Las difíciles que no caben se informan y se descartan sin pozo de espera
-Cuando el lote abierto está "cerrado", o se llena a mitad de una entrega, las difíciles sobrantes NO SHALL guardarse en ninguna lista de espera: el sistema SHALL informar en el bloque de práctica cuántas quedaron fuera con el texto "N difícil(es) quedaron fuera: el lote está lleno. Volverán a aparecer si siguen costándote." y confiar en que el repaso las vuelva a presentar.
+#### Scenario: Cambio de día de estudio
+- **WHEN** el usuario tiene hora de inicio 4 y practica a la 01:30 local
+- **THEN** la práctica se acredita al día de estudio anterior, igual que en la cola diaria
 
-#### Scenario: Lote cerrado durante una sesión
-- **WHEN** el lote abierto está "cerrado" y la sesión termina con tres difíciles
-- **THEN** no se añade ninguna y el bloque de cierre indica que tres quedaron fuera
+### Requirement: La práctica se repite las veces que se quiera en el día sobre el mismo conjunto, y manda la última calificación
+"Practicar hoy" SHALL seguir disponible tras la primera práctica del día, siempre sobre el conjunto fijado ese día. Cada ítem SHALL guardar su última calificación y el día en que se practicó; una práctica posterior en el mismo día SHALL sobrescribirlas. Para decidir si un ítem vuelve mañana SHALL contar únicamente la última calificación del día.
 
-### Requirement: Una tarjeta no se repite dentro del lote abierto, pero sí puede volver en lotes posteriores
-Al añadir difíciles, el sistema SHALL omitir las que ya tienen un ítem en el lote abierto (dominado o no). Una tarjeta presente solo en lotes completados SHALL poder entrar de nuevo al lote abierto.
+#### Scenario: Repetir en el día
+- **WHEN** a las 9 un ítem salió "Otra vez" y a las 21 el usuario vuelve a practicar y lo califica "Bien"
+- **THEN** mañana ese ítem no está "para hoy"
 
-#### Scenario: Vuelve a fallar estando en el lote
-- **WHEN** una tarjeta ya está en el lote abierto, marcada dominada, y recibe grado 1 en una sesión nueva
-- **THEN** no se añade un segundo ítem ni se desmarca el existente
+#### Scenario: Conjunto estable
+- **WHEN** el usuario practica por segunda vez en el día
+- **THEN** la práctica tiene exactamente los mismos ítems que la primera, en orden barajado
 
-#### Scenario: Vuelve a fallar tras completar su lote
-- **WHEN** una tarjeta estuvo en un lote completado y recibe grado 2 en una sesión nueva
-- **THEN** entra al lote abierto como ítem nuevo
+### Requirement: La práctica usa la pantalla de repaso con los cuatro cerebros, sin programación
+"Practicar hoy" SHALL abrir la pantalla de repaso a pantalla completa (anverso, revelar, cuatro cerebros con los textos "Otra vez", "Difícil", "Bien", "Fácil") con los ítems del conjunto del día en orden barajado. NO SHALL mostrarse intervalos de retorno bajo los cerebros ni sugerencia por tiempo. Cada calificación SHALL guardarse de inmediato sin esperar al servidor, como en el repaso; si el servidor la rechaza, el ítem vuelve al final con el aviso del repaso. "Salir" SHALL volver al detalle del paquete sin cerrar nada. Entrar a la pantalla sin una práctica preparada SHALL redirigir a la Biblioteca. La práctica es efímera: nunca se retoma una anterior.
 
-### Requirement: El usuario marca y desmarca dominadas en el lote abierto
-El sistema SHALL mostrar los ítems del lote abierto como una lista con una casilla por ítem, etiquetada con el anverso y el reverso. Marcar la casilla SHALL guardar el instante de dominio; desmarcarla SHALL vaciarlo. Cada cambio SHALL persistirse de inmediato; si el guardado falla, la casilla SHALL volver al valor guardado y mostrarse "No se pudo guardar el cambio. Inténtalo de nuevo.". En un lote completado las casillas SHALL verse pero NO SHALL poder cambiarse.
+#### Scenario: Calificar un ítem
+- **WHEN** el usuario revela un ítem y toca "Difícil"
+- **THEN** el ítem guarda última calificación 2 y el día de hoy, y la práctica pasa al siguiente
 
-#### Scenario: Marcar dominada
-- **WHEN** el usuario marca la casilla de "to give up" y el guardado tiene éxito
-- **THEN** el ítem queda dominado y el progreso del lote sube en uno
+#### Scenario: Sin intervalos
+- **WHEN** el usuario revela un ítem
+- **THEN** los cuatro cerebros no muestran "en 3 días" ni ninguna previsualización de intervalo
 
-#### Scenario: Desmarcar por error
-- **WHEN** el usuario desmarca una casilla marcada en un lote abierto
-- **THEN** el ítem vuelve a no dominado y el progreso baja en uno
+#### Scenario: Salir a mitad
+- **WHEN** el usuario toca "Salir" con ítems pendientes
+- **THEN** vuelve al detalle del paquete; las calificaciones ya dadas se conservan y las pendientes quedan como estaban
 
-#### Scenario: Falla el guardado de la marca
-- **WHEN** el usuario marca una casilla y el guardado falla
-- **THEN** la casilla vuelve a desmarcada y aparece el mensaje de error
+### Requirement: El cierre de la práctica ofrece el prompt y vuelve al paquete
+Al terminar la práctica, la pantalla de cierre SHALL mostrar "Práctica terminada", "Practicaste N ítems" (plural real), las pastillas por calificación y, en el bloque de práctica con IA, cuántos salieron difíciles ("5 para reforzar con la IA" o "Ninguno difícil esta vez"), el botón "Copiar prompt" y el botón "Volver al paquete". Al salir o terminar, el cierre NO SHALL ofrecer "Volver a Hoy".
 
-### Requirement: El lote se completa cuando está cerrado y todo está dominado, o a mano
-El sistema SHALL pasar el lote a "completado", registrando la fecha, en la misma operación en que se marca dominado el último ítem de un lote "cerrado". Un lote "llenando" con todos sus ítems dominados SHALL seguir "llenando". El bloque del lote abierto SHALL ofrecer además "Cerrar lote", que tras una confirmación ("¿Cerrar este lote? Pasará al historial tal como está y el siguiente empezará vacío.") lo pasa a "completado" aunque tenga ítems sin dominar o no esté lleno.
+#### Scenario: Cierre con difíciles
+- **WHEN** termina una práctica de 8 ítems con 5 calificados "Otra vez" o "Difícil"
+- **THEN** el cierre muestra "Practicaste 8 ítems", "5 para reforzar con la IA", "Copiar prompt" y "Volver al paquete"
 
-#### Scenario: Última dominada de un lote cerrado
-- **WHEN** un lote "cerrado" tiene 19 de 20 dominadas y el usuario marca la que falta
-- **THEN** el lote queda "completado" con la fecha de hoy y el bloque de Hoy muestra que no hay lote abierto
+#### Scenario: Cierre sin difíciles
+- **WHEN** termina una práctica con todo "Bien" o "Fácil"
+- **THEN** el cierre muestra "Ninguno difícil esta vez" y "Copiar prompt" sigue disponible
 
-#### Scenario: Lote a medio llenar todo dominado
-- **WHEN** un lote "llenando" tiene 7 ítems y los 7 están dominados
-- **THEN** el lote sigue "llenando" y seguirá recibiendo difíciles
+### Requirement: El prompt se arma con una plantilla editable, todo lo repasado hoy y énfasis en lo difícil
+El sistema SHALL generar el prompt sustituyendo en la plantilla del usuario `[[REPASADAS]]` por la lista de todos los ítems del conjunto del día y `[[DIFICILES]]` por la lista de los que tienen última calificación "Otra vez" o "Difícil" hoy, una por línea en el formato `anverso | reverso` con el contenido actual del ítem; un ítem cloze SHALL listarse como su anverso sin los marcadores `{{` y `}}` y sin separador. Si la plantilla no contiene un marcador, su lista SHALL añadirse al final precedida de una línea en blanco y de un rótulo ("Reviewed today:" / "Hard today:"). Si no hay difíciles, la lista de difíciles queda vacía. "Copiar prompt de hoy" en el detalle del paquete SHALL estar disponible solo si hoy ya se practicó; en el cierre siempre.
 
-#### Scenario: Cierre manual
-- **WHEN** el usuario pulsa "Cerrar lote" en un lote con 12 ítems y 9 dominados y confirma
-- **THEN** el lote pasa a "completado" con 9 de 12 dominadas y la siguiente sesión con difíciles abre un lote nuevo
+#### Scenario: Repasadas y difíciles
+- **WHEN** el conjunto del día tiene 11 ítems y 8 quedaron difíciles
+- **THEN** el prompt lista 11 bajo `[[REPASADAS]]` y esos 8 bajo `[[DIFICILES]]`
 
-#### Scenario: Cancelar el cierre manual
-- **WHEN** el usuario cancela la confirmación de "Cerrar lote"
-- **THEN** el lote sigue abierto sin cambios
-
-### Requirement: Los lotes completados quedan en un historial consultable y de solo lectura
-El sistema SHALL ofrecer, desde el bloque de práctica con IA, el enlace "Lotes anteriores" a una lista de los lotes completados, del más reciente al más antiguo, mostrando por cada uno su fecha de cierre, "dominadas / total" y el botón "Copiar prompt". Abrir un lote completado SHALL mostrar sus ítems con sus marcas. Copiar el prompt de un lote completado NO SHALL cambiar su estado ni sus marcas ni crear un lote nuevo.
-
-#### Scenario: Historial con dos lotes
-- **WHEN** el usuario tiene dos lotes completados, uno 20/20 del 2026-10-10 y otro 9/12 del 2026-10-15
-- **THEN** la lista muestra primero el del 2026-10-15 con "9 / 12" y después el del 2026-10-10 con "20 / 20"
-
-#### Scenario: Volver a practicar un lote viejo
-- **WHEN** el usuario copia el prompt de un lote completado
-- **THEN** el prompt contiene todos sus ítems y el lote sigue completado con las mismas marcas
-
-#### Scenario: Sin historial
-- **WHEN** el usuario no tiene lotes completados
-- **THEN** la lista muestra el estado vacío "Aún no has completado ningún lote."
-
-### Requirement: El prompt se arma con una plantilla editable y los términos del lote
-El sistema SHALL generar el prompt sustituyendo en la plantilla del usuario el marcador `[[TERMINOS]]` por la lista de términos, una por línea. Para un lote abierto SHALL incluir solo los ítems no dominados; para un lote completado SHALL incluir todos. Cada línea SHALL tener el formato `anverso | reverso` con la copia guardada en el ítem; para un ítem de tarjeta cloze, la línea SHALL ser el texto del anverso con los marcadores `{{` y `}}` eliminados y sin separador. Si la plantilla no contiene el marcador, la lista SHALL añadirse al final, precedida de una línea en blanco.
-
-#### Scenario: Lote abierto con dominadas
-- **WHEN** un lote abierto tiene 20 ítems y 12 dominados
-- **THEN** el prompt lista exactamente los 8 no dominados
-
-#### Scenario: Ítem cloze
-- **WHEN** un ítem proviene de la tarjeta cloze "She {{gave up}} too early"
+#### Scenario: Ítem cloze en el prompt
+- **WHEN** un ítem es la cloze "She {{gave up}} too early"
 - **THEN** su línea en el prompt es "She gave up too early"
 
-#### Scenario: Plantilla sin marcador
-- **WHEN** la plantilla del usuario no contiene `[[TERMINOS]]`
-- **THEN** el prompt es la plantilla seguida de una línea en blanco y la lista de términos
+#### Scenario: Plantilla sin un marcador
+- **WHEN** la plantilla no contiene `[[DIFICILES]]`
+- **THEN** el prompt es la plantilla, una línea en blanco, "Hard today:" y la lista de difíciles
 
-### Requirement: La plantilla por defecto es un prompt de conversación en inglés orientado a los términos
-El sistema SHALL usar como plantilla por defecto el siguiente texto, en el que `[[TERMINOS]]` recibe la lista. La plantilla pide a la IA que no defina los términos al inicio, que cree oportunidades para que el usuario los use, que mantenga turnos cortos, que corrija en línea y que al cerrar entregue un reporte por término (OK / HELP / SKIP) y un bloque de nuevas palabras en el formato de importación de la app (`término | significado`), excluyendo los términos del lote.
+#### Scenario: Aún no se practicó hoy
+- **WHEN** el usuario abre el detalle de un paquete sin haber practicado hoy
+- **THEN** "Copiar prompt de hoy" está deshabilitado con "Practica primero para armar el prompt de hoy."
+
+### Requirement: La plantilla por defecto es un prompt de conversación en inglés con énfasis en lo difícil
+El sistema SHALL usar como plantilla por defecto el siguiente texto, en el que `[[REPASADAS]]` y `[[DIFICILES]]` reciben sus listas. La plantilla pide a la IA conversar usando todos los términos repasados, insistir en los difíciles sin definirlos de entrada, turnos cortos, corrección en línea y, al cerrar, un reporte por término y un bloque de nuevas palabras en el formato de importación de la app.
 
 ```
 You're my English conversation partner. We'll have a natural, friendly chat, like two friends talking, and you'll help me improve along the way. I'm a native Spanish speaker.
 
-TODAY'S TARGET TERMS
-These are the terms I struggled with in my flashcard review. The right side is the meaning I'm learning, in Spanish. The main goal of this session is for me to end up using all of them confidently.
+TODAY'S TERMS
+These are the words and phrases I practiced today. The right side is the meaning I'm learning, in Spanish.
 
-<target_terms>
-[[TERMINOS]]
-</target_terms>
+<reviewed_terms>
+[[REPASADAS]]
+</reviewed_terms>
 
-HOW TO USE THE TARGET TERMS
-- Don't list or define them at the start. Weave them naturally into the conversation and steer topics so they come up.
+The ones below are the ones I struggled with. They matter most: the main goal of this session is for me to end up using all of them confidently.
+
+<hard_terms>
+[[DIFICILES]]
+</hard_terms>
+
+HOW TO USE THE TERMS
+- Don't list or define them at the start. Weave them naturally into the conversation and steer topics so they come up, the hard ones first and more often.
 - Create openings for ME to use them: ask questions whose natural answer needs one of these terms.
 - If I avoid a term or use it wrong, nudge me ("How would you say that using 'give up'?") before giving me the answer.
 - Keep a private tally of which terms I used correctly on my own.
@@ -187,9 +172,9 @@ CORRECTIONS
 
 END OF SESSION
 When I say "feedback" or "session over", stop the conversation and give me:
-1. Target terms report, one line per term: OK = used correctly on my own · HELP = used, but needed help or had errors · SKIP = never came up. I use this to decide what I've mastered.
+1. Terms report, one line per term: OK = used correctly on my own · HELP = used, but needed help or had errors · SKIP = never came up.
 2. Patterns you noticed (good and bad) and 2-3 things to practice.
-3. A code block I can import into my flashcard app with the NEW words and phrases from this session: things I didn't know, misused, or asked about. Do NOT include any of the target terms. One per line, exactly this format, nothing else inside the block:
+3. A code block I can import into my flashcard app with the NEW words and phrases from this session: things I didn't know, misused, or asked about. Do NOT include any of today's terms. One per line, exactly this format, nothing else inside the block:
    english term or phrase | meaning in Spanish
 
 Let's start. Say hi and get us talking.
@@ -197,25 +182,10 @@ Let's start. Say hi and get us talking.
 
 #### Scenario: Usuario sin plantilla propia
 - **WHEN** el usuario nunca editó la plantilla y copia el prompt
-- **THEN** el prompt es la plantilla por defecto con los términos del lote en lugar de `[[TERMINOS]]`
-
-### Requirement: La plantilla y el tamaño del lote se editan en Ajustes
-El sistema SHALL ofrecer en Ajustes la sección "Práctica con IA" con: (a) un área de texto con la plantilla del prompt, el aviso "Usa [[TERMINOS]] donde quieras que vayan tus tarjetas." y el botón "Restaurar plantilla por defecto"; y (b) el campo "Tarjetas por lote" (entero entre 5 y 100, por defecto 20). Ambos ajustes SHALL guardarse en las preferencias del usuario con un botón explícito "Guardar", con el mismo feedback de resultado que los demás ajustes; si el guardado falla, los campos SHALL conservar lo escrito y mostrarse el error. Una plantilla vacía o de solo espacios SHALL rechazarse con "La plantilla no puede estar vacía.".
-
-#### Scenario: Editar la plantilla
-- **WHEN** el usuario cambia la plantilla, pulsa "Guardar" y el guardado tiene éxito
-- **THEN** el siguiente prompt copiado usa la plantilla nueva
-
-#### Scenario: Restaurar la plantilla
-- **WHEN** el usuario pulsa "Restaurar plantilla por defecto" y guarda
-- **THEN** la plantilla vuelve al texto por defecto
-
-#### Scenario: Tamaño fuera de rango
-- **WHEN** el usuario escribe 3 o 2.5 en "Tarjetas por lote"
-- **THEN** el botón "Guardar" queda deshabilitado y se muestra "Entre 5 y 100, sin decimales."
+- **THEN** el prompt es la plantilla por defecto con las dos listas en lugar de sus marcadores
 
 ### Requirement: Copiar el prompt da confirmación visible y tiene salida manual si el portapapeles falla
-El botón "Copiar prompt" SHALL escribir el prompt en el portapapeles. Si tiene éxito, SHALL mostrar "Prompt copiado. Pégalo en tu chat de IA." en una región anunciada por lectores de pantalla, durante unos segundos. Si el portapapeles no está disponible o falla, el sistema SHALL mostrar el prompt completo en un área de texto de solo lectura con el aviso "No se pudo copiar automáticamente. Selecciona el texto y cópialo." El botón SHALL estar deshabilitado, con la pista "No hay términos pendientes en este lote.", cuando un lote abierto no tiene ítems sin dominar.
+"Copiar prompt" SHALL escribir el prompt en el portapapeles. Si tiene éxito, SHALL mostrar "Prompt copiado. Pégalo en tu chat de IA." en una región anunciada por lectores de pantalla, durante unos segundos. Si el portapapeles no está disponible o falla, el sistema SHALL mostrar el prompt completo en un área de texto de solo lectura con el aviso "No se pudo copiar automáticamente. Selecciona el texto y cópialo.". Copiar SHALL funcionar sin conexión.
 
 #### Scenario: Copia exitosa
 - **WHEN** el usuario pulsa "Copiar prompt" y el portapapeles acepta el texto
@@ -225,32 +195,84 @@ El botón "Copiar prompt" SHALL escribir el prompt en el portapapeles. Si tiene 
 - **WHEN** el usuario pulsa "Copiar prompt" y la escritura en el portapapeles falla
 - **THEN** aparece el área de texto con el prompt y el aviso para copiarlo a mano
 
-#### Scenario: Lote abierto sin pendientes
-- **WHEN** el lote "llenando" tiene 5 ítems y los 5 están dominados
-- **THEN** "Copiar prompt" está deshabilitado con la pista de que no hay pendientes
+### Requirement: El paquete se completa solo a mano y pasa al historial
+El detalle de un paquete abierto SHALL ofrecer "Marcar como completado", que tras la confirmación "¿Ya te sabes todos los ítems de este paquete? Pasará al historial y dejará de practicarse." lo pasa a "completado" con la fecha de hoy. El sistema NO SHALL completar un paquete automáticamente, ni por estar lleno ni por tener todo "Bien". Un paquete completado SHALL verse en solo lectura (ítems y sus últimas calificaciones), SHALL permitir "Copiar prompt" con todos sus ítems bajo `[[REPASADAS]]` y ninguno bajo `[[DIFICILES]]`, y NO SHALL admitir agregar, editar, practicar ni volver a abrir.
 
-### Requirement: El bloque de práctica con IA vive en el cierre de sesión y en Hoy
-La pantalla de cierre de la sesión de repaso SHALL mostrar, debajo del resumen, el bloque "Práctica con IA" con: cuántas difíciles de esta sesión entraron al lote, el progreso del lote abierto ("dominadas / ítems · estado"), el aviso de las que quedaron fuera si las hubo, y el botón "Copiar prompt". La pantalla Hoy SHALL mostrar el mismo bloque debajo de la cola del día, ampliado con la lista de casillas del lote abierto, "Cerrar lote" y el enlace "Lotes anteriores". Sin lote abierto, el bloque de Hoy SHALL mostrar "Las tarjetas que califiques Otra vez o Difícil irán llenando aquí tu lote de práctica." y el enlace al historial. No se añade ninguna pestaña a la navegación principal.
+#### Scenario: Completar
+- **WHEN** el usuario pulsa "Marcar como completado" en un paquete con 20 ítems y confirma
+- **THEN** el paquete queda completado con la fecha de hoy, desaparece de los abiertos y aparece en el historial
 
-#### Scenario: Cierre con difíciles
-- **WHEN** termina una sesión con tres difíciles y el lote abierto queda en 10 de 20 con 4 dominadas
-- **THEN** el cierre muestra "3 tarjetas difíciles entraron al lote", "4 / 10 dominadas · llenando" y "Copiar prompt"
+#### Scenario: Lleno no es completado
+- **WHEN** un paquete llega a 20 ítems y todos tienen "Bien"
+- **THEN** sigue abierto hasta que el usuario lo marque
 
-#### Scenario: Cierre sin difíciles
-- **WHEN** termina una sesión sin ninguna calificación 1 ni 2
-- **THEN** el bloque muestra "Ninguna tarjeta difícil en esta sesión." y, si hay lote abierto, su progreso y "Copiar prompt"
+#### Scenario: Cancelar
+- **WHEN** el usuario cancela la confirmación
+- **THEN** el paquete sigue abierto sin cambios
 
-#### Scenario: Hoy sin lote
-- **WHEN** el usuario abre Hoy sin ningún lote abierto
-- **THEN** el bloque muestra el texto de invitación y el enlace "Lotes anteriores"
+### Requirement: Los paquetes viven en la Biblioteca y el detalle muestra lo de hoy
+La Biblioteca SHALL mostrar, debajo de los libros, la sección "Práctica con IA" con los paquetes abiertos como filas (nombre, "ítems / capacidad", "N para hoy" o "Ya practicaste hoy" o "Nada para hoy"), el botón "Nuevo paquete" y el enlace "Paquetes completados" al historial. Sin paquetes, la sección SHALL mostrar "Guarda aquí las palabras y frases que te cruces en el día y practícalas con tu IA." y "Nuevo paquete". El detalle de un paquete SHALL mostrar su nombre, "ítems / capacidad", la lista de ítems con la etiqueta "Para hoy" en los que tocan y la última calificación en los demás, y las acciones "Practicar hoy", "Agregar", "Importar", "Copiar prompt de hoy" y "Marcar como completado". El paquete SHALL poder renombrarse y borrarse (confirmación "¿Borrar este paquete? Se pierden sus N ítems. No se puede deshacer.").
 
-### Requirement: Los datos de los lotes se validan en la frontera y cargan con estados visibles
-Al leer lotes del almacén, el sistema SHALL validar cada documento antes de usarlo; un documento malformado SHALL registrarse como error y tratarse como si la carga del bloque hubiera fallado. Mientras carga, el bloque SHALL mostrar un esqueleto; si la carga falla, SHALL mostrar el estado de error "No se pudo cargar tu práctica con IA." con "Reintentar"; sin conexión, SHALL mostrar lo último conocido si existe.
+#### Scenario: Sección con paquetes
+- **WHEN** el usuario tiene el paquete A (14 / 20, 8 para hoy) y el B (3 / 20, ya practicado hoy)
+- **THEN** la Biblioteca muestra la sección con las dos filas y sus textos, "Nuevo paquete" y "Paquetes completados"
 
-#### Scenario: Carga fallida
-- **WHEN** la lectura de los lotes falla al abrir Hoy
-- **THEN** el bloque muestra el estado de error con "Reintentar" y el resto de Hoy sigue funcionando
+#### Scenario: Sin paquetes
+- **WHEN** el usuario no tiene paquetes
+- **THEN** la sección muestra el texto de invitación y "Nuevo paquete"
+
+#### Scenario: Historial
+- **WHEN** el usuario tiene dos paquetes completados, uno del 2026-10-10 y otro del 2026-10-15
+- **THEN** "Paquetes completados" lista primero el del 2026-10-15, cada uno con nombre, fecha y "ítems", y sin historial muestra "Aún no has completado ningún paquete."
+
+### Requirement: Hoy avisa de lo pendiente en los paquetes sin robar el foco
+Hoy SHALL mostrar, debajo de las filas por libro, el bloque "Práctica con IA" con una fila por paquete abierto que tenga ítems para hoy ("Película del viernes · 11 para hoy") y su botón de practicar; un paquete ya practicado hoy SHALL mostrarse como "Ya practicaste hoy · Volver a practicar" sin aviso; sin paquetes con pendientes ni practicados hoy, el bloque SHALL decir "Nada pendiente en tus paquetes." con el enlace "Ver paquetes". Sin ningún paquete, el bloque NO SHALL mostrarse. Si la lectura de los paquetes falla, el bloque SHALL mostrar "No pudimos cargar tus paquetes." con "Reintentar" y el resto de Hoy SHALL seguir funcionando.
+
+#### Scenario: Pendientes en dos paquetes
+- **WHEN** el paquete A tiene 11 para hoy y el B 3
+- **THEN** Hoy muestra dos filas con sus números y un botón de practicar cada una
+
+#### Scenario: Ya practicado
+- **WHEN** el usuario ya practicó el paquete A hoy
+- **THEN** su fila dice "Ya practicaste hoy · Volver a practicar" y no cuenta como aviso
+
+#### Scenario: Falla la lectura
+- **WHEN** la lectura de los paquetes falla al abrir Hoy
+- **THEN** el bloque muestra el error con "Reintentar" y el bloque principal de Hoy sigue visible
+
+### Requirement: La plantilla y la capacidad se editan en Ajustes
+Ajustes SHALL ofrecer la sección "Práctica con IA" con: (a) el área de texto de la plantilla, el aviso "Usa [[REPASADAS]] y [[DIFICILES]] donde quieras que vayan tus términos." y el botón "Restaurar plantilla por defecto"; y (b) el campo "Ítems por paquete" (entero entre 5 y 100, por defecto 20). Ambos SHALL guardarse en las preferencias del usuario con el botón "Guardar" y el mismo feedback que los demás ajustes; una plantilla vacía o de solo espacios SHALL rechazarse con "La plantilla no puede estar vacía.".
+
+#### Scenario: Editar la plantilla
+- **WHEN** el usuario cambia la plantilla, pulsa "Guardar" y el guardado tiene éxito
+- **THEN** el siguiente prompt copiado usa la plantilla nueva
+
+#### Scenario: Restaurar la plantilla
+- **WHEN** el usuario pulsa "Restaurar plantilla por defecto" y guarda
+- **THEN** la plantilla vuelve al texto por defecto
+
+#### Scenario: Capacidad fuera de rango
+- **WHEN** el usuario escribe 3 o 2.5 en "Ítems por paquete"
+- **THEN** el botón "Guardar" queda deshabilitado y se muestra "Entre 5 y 100, sin decimales."
+
+### Requirement: Sin conexión, practicar y copiar funcionan; la gestión necesita red
+Sin conexión, el sistema SHALL permitir practicar un paquete con los datos que el dispositivo tenga (las calificaciones se guardan sin esperar al servidor) y copiar el prompt. Crear, renombrar y borrar paquetes, agregar, importar, editar y borrar ítems, marcar como completado y los Ajustes SHALL deshabilitar su acción principal con "Necesitas conexión para guardar cambios.".
+
+#### Scenario: Practicar sin red
+- **WHEN** no hay conexión y el usuario toca "Practicar hoy"
+- **THEN** la práctica arranca con los ítems guardados y las calificaciones se aceptan
+
+#### Scenario: Agregar sin red
+- **WHEN** no hay conexión y el usuario abre "Agregar"
+- **THEN** el botón de guardar está deshabilitado con "Necesitas conexión para guardar cambios."
+
+### Requirement: Los datos de los paquetes se validan en la frontera y cargan con estados visibles
+Al leer paquetes del almacén, el sistema SHALL validar cada documento antes de usarlo; un documento malformado SHALL registrarse como error y tratarse como fallo de carga. Mientras carga, las secciones SHALL mostrar un esqueleto; si la carga falla, SHALL mostrar "No pudimos cargar tus paquetes." con "Reintentar".
 
 #### Scenario: Documento malformado
-- **WHEN** un lote guardado no cumple la forma esperada
-- **THEN** se registra el error y el bloque muestra el estado de error, sin romper la pantalla
+- **WHEN** un paquete guardado no cumple la forma esperada
+- **THEN** se registra el error y la sección muestra el estado de error, sin romper la pantalla
+
+#### Scenario: Reintentar
+- **WHEN** el usuario toca "Reintentar" y la lectura tiene éxito
+- **THEN** la sección muestra los paquetes

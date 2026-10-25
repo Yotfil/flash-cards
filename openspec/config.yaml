@@ -61,4 +61,4 @@ operations:
     guidance:
       - Verificar que las specs base en openspec/specs/ quedaron sincronizadas con el delta
       - Anotar el cierre en MEMORY.md (bitácora del repo)
-      - Borrar la rama feature/<spec-id> tras el merge (local y remota)
+      - "Fase B: el archive va dentro del commit de cierre de esa spec en la rama única feature/reescritura-cadence; sin PR por change"
