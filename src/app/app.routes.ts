@@ -84,7 +84,13 @@ export const routes: Routes = [
             (module) => module.ImportarLibroPageComponent,
           ),
       },
-      { path: 'progreso', loadComponent: pendingPage },
+      {
+        path: 'progreso',
+        loadComponent: () =>
+          import('@features/progreso/progreso-page/progreso-page.component').then(
+            (module) => module.ProgresoPageComponent,
+          ),
+      },
       {
         path: 'ajustes',
         loadComponent: () =>

@@ -224,3 +224,38 @@ describe('FirestoreBookRepository · totales por estado', () => {
     });
   });
 });
+
+describe('FirestoreBookRepository · colección', () => {
+  it('cuenta por estado todas las tarjetas de la cuenta, de todos los libros', async () => {
+    const states = [0, 0, 0, 1, 3, 2, 2, 2, 2, 2];
+    await seed(async (db) => {
+      const batch = writeBatch(db);
+      states.forEach((state, index) =>
+        batch.set(doc(db, 'users', OWNER_UID, 'cards', `c${index}`), {
+          bookId: index % 2 === 0 ? 'libro-a' : 'libro-b',
+          scheduling: { state },
+          suspended: index === 0,
+        }),
+      );
+      batch.set(doc(db, 'users', 'otra-cuenta', 'cards', 'ajena'), {
+        bookId: 'libro-a',
+        scheduling: { state: 2 },
+      });
+      await batch.commit();
+    });
+
+    expect(await repository.countCollectionByState(OWNER_UID)).toEqual({
+      newCards: 3,
+      learning: 2,
+      review: 5,
+    });
+  });
+
+  it('una cuenta sin tarjetas cuenta cero en los tres grupos', async () => {
+    expect(await repository.countCollectionByState(OWNER_UID)).toEqual({
+      newCards: 0,
+      learning: 0,
+      review: 0,
+    });
+  });
+});

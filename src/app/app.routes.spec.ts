@@ -125,6 +125,14 @@ describe('pantallas de las secciones', () => {
     );
   });
 
+  it('/progreso pinta Progreso dentro del caparazón', async () => {
+    const { element } = await navigate('/progreso');
+
+    expect(element.querySelector('app-shell main app-progreso-page h1')?.textContent?.trim()).toBe(
+      'Progreso',
+    );
+  });
+
   it('/repaso con una lista entregada pinta la sesión, sin la navegación principal', async () => {
     const { element } = await navigate('/repaso', ACTIVE, { handOff: true });
 

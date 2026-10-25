@@ -1,0 +1,58 @@
+<section
+  class="glass-soft flex flex-col gap-4 rounded-2xl px-5 py-4"
+  aria-labelledby="collection-title"
+>
+  <h2 id="collection-title" class="text-sm font-bold text-text">{{ copy.collectionTitle }}</h2>
+  @switch (status()) {
+    @case ('loading') {
+      <app-skeleton [lines]="2" />
+    }
+    @case ('offline') {
+      <p class="text-sm text-text-dim">{{ copy.collectionOffline }}</p>
+    }
+    @case ('error') {
+      <div role="alert" class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-text-dim">{{ copy.collectionError }}</p>
+        <button
+          type="button"
+          class="press rounded-xl border border-glass-border px-4 py-2 text-sm font-semibold text-accent-text hover:border-accent-line"
+          (click)="retry.emit()"
+        >
+          {{ copy.retry }}
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <p class="text-2xl font-extrabold tracking-tight text-text">{{ total() }}</p>
+      <div
+        role="img"
+        class="flex h-3 overflow-hidden rounded-full bg-track"
+        [attr.aria-label]="barLabel()"
+      >
+        @for (segment of segments(); track segment.key) {
+          <span
+            data-collection-segment
+            class="h-full transition-[width] duration-(--duration-fill) ease-out-soft"
+            [class]="segment.segmentClass"
+            [style.width]="segment.width"
+          ></span>
+        }
+      </div>
+      <ul class="grid grid-cols-3 gap-2">
+        @for (segment of segments(); track segment.key) {
+          <li data-collection-count class="flex flex-col">
+            <span class="text-lg font-bold text-text">{{ segment.count }}</span>
+            <span class="flex items-center gap-1.5 text-xs text-text-dim">
+              <span
+                aria-hidden="true"
+                class="size-2 rounded-full"
+                [class]="segment.segmentClass"
+              ></span>
+              {{ segment.label }}
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

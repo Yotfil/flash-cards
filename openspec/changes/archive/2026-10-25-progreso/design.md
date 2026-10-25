@@ -29,7 +29,7 @@ Ver `proposal.md` (Why) y el delta `specs/progreso/spec.md`. Estado esperado de 
 
 ### 2. Cerebro puro (`services/progress/`; capa servicios)
 
-- `rating-rows.ts`: `ratingRows(stats: DailyStats | null): RatingRow[]` devuelve SIEMPRE cuatro filas en orden fijo `{ rating: 1..4; label: 'Otra vez' | 'Difícil' | 'Bien' | 'Fácil'; count; share }`, con ausentes = 0 y `share = count / reviewsCompleted` (0 si no hay repasos). `label` sale de la copia compartida de calificaciones (la misma que usan los cerebros, en `shared/text` o la copia de `sesion-de-repaso`), no de un literal nuevo.
+- `rating-rows.ts`: `ratingRows(stats: DailyStats | null): RatingRow[]` devuelve SIEMPRE cuatro filas en orden fijo `{ rating: 1..4; count; share }`, con ausentes = 0 y `share = count / reviewsCompleted` (0 si no hay repasos). La etiqueta la pone el componente con la copia compartida de calificaciones (ver sección 5).
 - `collection-shares.ts`: `collectionShares(counts: StateCounts): { total; segments: { key; count; share }[] }` con las tres proporciones sobre el total (0 si total 0).
 - `progress.service.ts`: `ProgressService` (`providedIn: 'root'`):
   - `refresh()` → `queue.refresh()` y `collection.reload()` si está habilitado.
@@ -49,6 +49,10 @@ Ver `proposal.md` (Why) y el delta `specs/progreso/spec.md`. Estado esperado de 
 ### 4. Accesibilidad de las barras
 
 Cada barra lleva el número visible junto a ella (diferenciador redundante al color, spec). La barra apilada tiene `role="img"` con `aria-label` que enumera los tres conteos ("3 nuevas, 2 en aprendizaje, 5 dominadas"). Las barras de calificación son decorativas (`aria-hidden`) porque la fila ya dice etiqueta y número.
+
+### 5. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+1. **`RatingRow` no lleva `label`:** `services/` no puede importar `features/` ni `shared/` (capas de ESLint, ADR 0002) y las etiquetas de calificación viven en `REPASO_COPY.ratingLabels` (`features/repaso/repaso.copy.ts`), las mismas de los cerebros. `ratingRows` devuelve `{ rating; count; share }` y `RatingDistributionComponent` toma la etiqueta de `REPASO_COPY.ratingLabels[rating]` (sin literal nuevo). La prueba de "las etiquetas son las compartidas" pasa de `rating-rows.spec` (1.1) a `rating-distribution.component.spec` (4.2).
 
 ## Superficies con acrílico (ADR 0003)
 

@@ -10,6 +10,7 @@ import {
   updateDoc,
   where,
   type Firestore,
+  type Query,
 } from 'firebase/firestore';
 
 import type { Book, BookContents, BookDraft, CardStateTotals } from '@domain/models/book.model';
@@ -76,18 +77,13 @@ export class FirestoreBookRepository extends BookRepository {
    * Totales por estado de FSRS con agregaciones en el servidor: nuevas (0), en aprendizaje
    * (aprendiendo 1 y reaprendiendo 3) y dominadas (en repaso, 2). No descarga las tarjetas.
    */
-  async countCardsByState(uid: string, bookId: string): Promise<CardStateTotals> {
-    const cardsOfBook = this.ofBook(uid, 'cards', bookId);
-    const [newCards, learning, review] = await Promise.all([
-      getCountFromServer(query(cardsOfBook, where('scheduling.state', '==', 0))),
-      getCountFromServer(query(cardsOfBook, where('scheduling.state', 'in', [1, 3]))),
-      getCountFromServer(query(cardsOfBook, where('scheduling.state', '==', 2))),
-    ]);
-    return {
-      newCards: newCards.data().count,
-      learning: learning.data().count,
-      review: review.data().count,
-    };
+  countCardsByState(uid: string, bookId: string): Promise<CardStateTotals> {
+    return countByState(this.ofBook(uid, 'cards', bookId));
+  }
+
+  // Sin filtro de libro: `scheduling.state` usa el índice automático de un solo campo.
+  countCollectionByState(uid: string): Promise<CardStateTotals> {
+    return countByState(query(collection(this.firestore, 'users', uid, 'cards')));
   }
 
   private booksOf(uid: string) {
@@ -109,4 +105,18 @@ export class FirestoreBookRepository extends BookRepository {
 function toBook(document: BookDocument & { readonly id: string }): Book {
   const { cardCount, ...rest } = document;
   return { ...rest, ...(cardCount !== undefined ? { cardCount } : {}) };
+}
+
+/** Tres agregaciones en el servidor (nunca se leen las tarjetas): aprendiendo y reaprendiendo suman. */
+async function countByState(cards: Query): Promise<CardStateTotals> {
+  const [newCards, learning, review] = await Promise.all([
+    getCountFromServer(query(cards, where('scheduling.state', '==', 0))),
+    getCountFromServer(query(cards, where('scheduling.state', 'in', [1, 3]))),
+    getCountFromServer(query(cards, where('scheduling.state', '==', 2))),
+  ]);
+  return {
+    newCards: newCards.data().count,
+    learning: learning.data().count,
+    review: review.data().count,
+  };
 }

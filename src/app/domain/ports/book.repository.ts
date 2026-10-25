@@ -13,4 +13,6 @@ export abstract class BookRepository {
   /** Borra las tarjetas, los capítulos y por último el libro. El historial de repasos se conserva. */
   abstract deleteWithContents(uid: string, bookId: string): Promise<void>;
   abstract countCardsByState(uid: string, bookId: string): Promise<CardStateTotals>;
+  /** Las mismas tres agregaciones sobre todas las tarjetas de la cuenta (incluidas suspendidas). */
+  abstract countCollectionByState(uid: string): Promise<CardStateTotals>;
 }

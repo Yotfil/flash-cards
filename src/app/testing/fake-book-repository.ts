@@ -8,7 +8,8 @@ type FailableMethod =
   | 'incrementCardCount'
   | 'countContents'
   | 'deleteWithContents'
-  | 'countCardsByState';
+  | 'countCardsByState'
+  | 'countCollectionByState';
 
 // Fake en memoria del repositorio de libros. `failWith` hace fallar un método; `calls` cuenta las
 // llamadas para afirmar que algo NO se pidió (por ejemplo, conteos sin red).
@@ -16,6 +17,8 @@ export class FakeBookRepository extends BookRepository {
   readonly books = new Map<string, Book>();
   readonly contents = new Map<string, BookContents>();
   readonly stateTotals = new Map<string, CardStateTotals>();
+  /** Lo que devuelve el conteo de toda la cuenta. */
+  collectionTotals: CardStateTotals = { newCards: 0, learning: 0, review: 0 };
   readonly failWith: Partial<Record<FailableMethod, unknown>> = {};
   readonly calls: Record<FailableMethod, number> = {
     listByUser: 0,
@@ -25,6 +28,7 @@ export class FakeBookRepository extends BookRepository {
     countContents: 0,
     deleteWithContents: 0,
     countCardsByState: 0,
+    countCollectionByState: 0,
   };
   readonly listedUids: string[] = [];
   private nextId = 1;
@@ -84,6 +88,12 @@ export class FakeBookRepository extends BookRepository {
   async countCardsByState(_uid: string, bookId: string): Promise<CardStateTotals> {
     this.record('countCardsByState');
     return this.stateTotals.get(bookId) ?? { newCards: 0, learning: 0, review: 0 };
+  }
+
+  async countCollectionByState(uid: string): Promise<CardStateTotals> {
+    this.record('countCollectionByState');
+    this.listedUids.push(uid);
+    return this.collectionTotals;
   }
 
   private record(method: FailableMethod): void {

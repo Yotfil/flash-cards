@@ -101,6 +101,7 @@
   --delay-cascade: 40ms; // escalón entre cerebros en la cascada
   --duration-ring: 900ms; // anillo del cierre de la sesión
   --duration-check: 380ms; // marca de verificación del cierre, tras el anillo
+  --duration-fill: 600ms; // relleno de las barras de Progreso al cambiar su valor
 
   // Atenuación de lo apartado (tarjeta suspendida); siempre va con una etiqueta de texto.
   --opacity-dimmed: 0.55;
@@ -305,6 +306,36 @@
 // Elemento apartado pero presente (tarjeta suspendida): se atenúa sin desaparecer.
 @utility dimmed {
   opacity: var(--opacity-dimmed);
+}
+
+// Barras de Progreso. La escala de calificación solo pinta calificaciones (ADR 0003); la colección
+// usa matices del acento.
+@utility bar-rating-again {
+  background-color: var(--color-rating-again);
+}
+
+@utility bar-rating-hard {
+  background-color: var(--color-rating-hard);
+}
+
+@utility bar-rating-good {
+  background-color: var(--color-rating-good);
+}
+
+@utility bar-rating-easy {
+  background-color: var(--color-rating-easy);
+}
+
+@utility bar-accent-new {
+  background-color: var(--color-accent-line);
+}
+
+@utility bar-accent-learning {
+  background-color: var(--color-accent-deep);
+}
+
+@utility bar-accent-review {
+  background-color: var(--color-accent);
 }
 
 @utility skeleton-block {
