@@ -1,0 +1,189 @@
+<div class="flex flex-col gap-4">
+  <h1 class="text-2xl font-extrabold tracking-tight text-text">{{ copy.title }}</h1>
+
+  @if (!online()) {
+    <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+
+  @if (user(); as currentUser) {
+    <section aria-labelledby="settings-session" class="glass-soft rounded-2xl p-5">
+      <h2 id="settings-session" class="text-base font-bold text-text">
+        {{ copy.session.heading }}
+      </h2>
+      <p class="mt-3 text-sm text-text-faint">{{ copy.session.signedInAs }}</p>
+      <p class="font-semibold text-text">{{ currentUser.displayName }}</p>
+      <p class="text-sm text-text-dim">{{ currentUser.email }}</p>
+    </section>
+
+    <section aria-labelledby="settings-study" class="glass-soft rounded-2xl p-5">
+      <h2 id="settings-study" class="text-base font-bold text-text">{{ copy.study.heading }}</h2>
+
+      <form class="mt-4" novalidate (submit)="saveNewCards($event)">
+        <label for="default-new-cards" class="block text-sm font-semibold text-text">
+          {{ copy.study.newCardsLabel }}
+        </label>
+        <p id="default-new-cards-help" class="mt-1 text-sm leading-relaxed text-text-dim">
+          {{ copy.study.newCardsHelp }}
+        </p>
+        <div class="mt-3 flex items-center gap-3">
+          <input
+            id="default-new-cards"
+            type="number"
+            inputmode="numeric"
+            class="w-24 rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+            aria-describedby="default-new-cards-help"
+            [formField]="settingsForm.defaultNewCardsPerDay"
+            [attr.aria-invalid]="showNewCardsInvalid()"
+            (input)="resetNewCardsResult()"
+          />
+          <button
+            id="save-new-cards"
+            type="submit"
+            class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+            [disabled]="!canSaveNewCards()"
+          >
+            {{ newCardsState() === 'saving' ? copy.study.saving : copy.study.save }}
+          </button>
+        </div>
+        @if (showNewCardsInvalid()) {
+          <p class="mt-2 text-sm text-danger">{{ copy.study.newCardsInvalid }}</p>
+        } @else if (newCardsState() === 'saved') {
+          <p id="new-cards-result" role="status" class="mt-2 text-sm text-text-dim">
+            {{ copy.study.saved }}
+          </p>
+        } @else if (newCardsState() === 'error') {
+          <p id="new-cards-result" role="alert" class="mt-2 text-sm text-danger">
+            {{ copy.saveError }}
+          </p>
+        }
+      </form>
+
+      <div class="mt-6">
+        <label class="flex items-start gap-3">
+          <input
+            id="auto-grade"
+            type="checkbox"
+            class="mt-0.5 size-4 shrink-0 accent-accent disabled:opacity-50"
+            aria-describedby="auto-grade-help"
+            [checked]="autoGrade.value()"
+            [disabled]="autoGrade.saving() || !online()"
+            (change)="changeAutoGrade($event)"
+          />
+          <span>
+            <span class="block text-sm font-semibold text-text">
+              {{ copy.study.autoGradeLabel }}
+            </span>
+            <span id="auto-grade-help" class="mt-0.5 block text-sm leading-relaxed text-text-dim">
+              {{ copy.study.autoGradeHelp }}
+            </span>
+          </span>
+        </label>
+        @if (autoGrade.error(); as error) {
+          <p id="auto-grade-error" role="alert" class="mt-2 text-sm text-danger">{{ error }}</p>
+        }
+      </div>
+    </section>
+
+    <section aria-labelledby="settings-study-day" class="glass-soft rounded-2xl p-5">
+      <h2 id="settings-study-day" class="text-base font-bold text-text">
+        {{ copy.studyDay.heading }}
+      </h2>
+
+      <div class="mt-4">
+        <label for="time-zone" class="block text-sm font-semibold text-text">
+          {{ copy.studyDay.timeZoneLabel }}
+        </label>
+        <select
+          id="time-zone"
+          class="mt-2 w-full rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text disabled:opacity-50"
+          [disabled]="timeZone.saving() || !online()"
+          (change)="changeTimeZone($event)"
+        >
+          @for (zone of timeZones(); track zone) {
+            <option [value]="zone" [selected]="zone === timeZone.value()">{{ zone }}</option>
+          }
+        </select>
+        @if (deviceZoneDiffers()) {
+          <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-dim">
+            {{ copy.studyDay.deviceDiffers(deviceZone) }}
+            <button
+              type="button"
+              class="font-semibold text-accent-text underline-offset-4 hover:underline disabled:opacity-50"
+              [disabled]="timeZone.saving() || !online()"
+              (click)="useDeviceZone()"
+            >
+              {{ copy.studyDay.useDeviceZone }}
+            </button>
+          </p>
+        }
+        @if (timeZone.error(); as error) {
+          <p role="alert" class="mt-2 text-sm text-danger">{{ error }}</p>
+        }
+      </div>
+
+      <div class="mt-5">
+        <label for="day-start-hour" class="block text-sm font-semibold text-text">
+          {{ copy.studyDay.startHourLabel }}
+        </label>
+        <p id="day-start-hour-help" class="mt-1 text-sm leading-relaxed text-text-dim">
+          {{ copy.studyDay.startHourHelp }}
+        </p>
+        <select
+          id="day-start-hour"
+          class="mt-2 w-32 rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text disabled:opacity-50"
+          aria-describedby="day-start-hour-help"
+          [disabled]="dayStartHour.saving() || !online()"
+          (change)="changeDayStartHour($event)"
+        >
+          @for (hour of hours; track hour.value) {
+            <option [value]="hour.value" [selected]="hour.value === dayStartHour.value()">
+              {{ hour.label }}
+            </option>
+          }
+        </select>
+        @if (dayStartHour.error(); as error) {
+          <p role="alert" class="mt-2 text-sm text-danger">{{ error }}</p>
+        }
+      </div>
+    </section>
+
+    <section aria-labelledby="settings-appearance" class="glass-soft rounded-2xl p-5">
+      <h2 id="settings-appearance" class="text-base font-bold text-text">
+        {{ copy.appearance.heading }}
+      </h2>
+
+      <div
+        role="radiogroup"
+        [attr.aria-label]="copy.appearance.themeLabel"
+        class="mt-4 inline-flex gap-1 rounded-xl border border-glass-border bg-surface p-1"
+      >
+        @for (option of themeOptions; track option) {
+          <button
+            type="button"
+            role="radio"
+            class="press rounded-lg px-3.5 py-2 text-sm font-semibold text-text-dim disabled:opacity-50 aria-checked:bg-accent-tint aria-checked:text-accent-text"
+            [attr.aria-checked]="option === theme.value()"
+            [disabled]="theme.saving() || !online()"
+            (click)="chooseTheme(option)"
+          >
+            {{ copy.appearance.themes[option] }}
+          </button>
+        }
+      </div>
+      @if (theme.error(); as error) {
+        <p id="theme-error" role="alert" class="mt-2 text-sm text-danger">{{ error }}</p>
+      }
+    </section>
+  }
+
+  <button
+    type="button"
+    class="press self-start rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+    [disabled]="signingOut()"
+    (click)="signOut()"
+  >
+    {{ signingOut() ? copy.signingOut : copy.signOut }}
+  </button>
+
+  <app-version-footer class="mt-6 block" />
+</div>

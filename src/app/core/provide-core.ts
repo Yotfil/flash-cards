@@ -19,6 +19,7 @@ import { FIREBASE_AUTH, FIRESTORE } from '@infrastructure/firebase/firebase.toke
 import { FirestoreAllowlistRepository } from '@infrastructure/firestore/allowlist.repository.firestore';
 import { FirestoreUserRepository } from '@infrastructure/firestore/user.repository.firestore';
 import { ConsoleLoggerAdapter } from '@infrastructure/logging/console-logger.adapter';
+import { ProfileThemeSync } from '@services/settings/profile-theme-sync';
 import { ThemeService } from '@services/theme/theme.service';
 
 import { GlobalErrorHandler } from './global-error-handler';
@@ -39,9 +40,11 @@ export function provideCore(): EnvironmentProviders {
       provide: AllowlistRepository,
       useFactory: () => new FirestoreAllowlistRepository(inject(FIRESTORE)),
     },
-    // El tema recordado se aplica antes del primer render, para no arrancar con el equivocado.
+    // El tema recordado se aplica antes del primer render, para no arrancar con el equivocado; al
+    // cargar la sesión, el tema del perfil toma el mando.
     provideAppInitializer(() => {
       inject(ThemeService);
+      inject(ProfileThemeSync);
     }),
   ]);
 }

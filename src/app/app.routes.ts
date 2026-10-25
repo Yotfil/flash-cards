@@ -47,7 +47,13 @@ export const routes: Routes = [
       { path: 'biblioteca/:bookId/:chapterId', loadComponent: pendingPage },
       { path: 'importar', loadComponent: pendingPage },
       { path: 'progreso', loadComponent: pendingPage },
-      { path: 'ajustes', loadComponent: pendingPage },
+      {
+        path: 'ajustes',
+        loadComponent: () =>
+          import('@features/ajustes/ajustes-page/ajustes-page.component').then(
+            (module) => module.AjustesPageComponent,
+          ),
+      },
     ],
   },
 

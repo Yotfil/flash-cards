@@ -123,6 +123,13 @@ const saved = await ref.closed; // undefined si se canceló
 // Dentro del contenido: dialogRef.setPending(true) mientras guarda; dialogRef.close(resultado).
 ```
 
+**Guardar ajustes.** Los controles de elección (casilla, selector, tema) guardan al tocar con
+`createImmediateSetting` (`features/ajustes/immediate-setting.ts`): el valor nuevo se ve al
+instante, el control queda deshabilitado mientras guarda y, si falla, vuelve al valor guardado con
+"No se pudo guardar. Inténtalo de nuevo." junto a él. Los campos de texto guardan con su propio
+botón "Guardar", deshabilitado si no hay cambios. Sin red, nada se guarda: la pantalla deshabilita
+esos controles y muestra una sola vez `NEEDS_CONNECTION_MESSAGE` (`shared/text/connection.copy.ts`).
+
 **Pintar una pantalla que lee datos.** El servicio expone un `resource()` de Angular y la
 plantilla distingue cuatro estados; un fallo nunca se pinta como vacío:
 

@@ -1,11 +1,12 @@
 import type { User } from '@domain/models/user.model';
 import { UserRepository } from '@domain/ports/user.repository';
 
-// Fake en memoria del repositorio de perfiles. `failOnFind` simula una lectura que falla (sin red,
-// documento inválido); `saved` deja ver cada escritura.
+// Fake en memoria del repositorio de perfiles. `failOnFind` y `failOnSave` simulan una lectura o
+// una escritura que falla (sin red, documento inválido); `saved` deja ver cada escritura.
 export class FakeUserRepository extends UserRepository {
   readonly saved: User[] = [];
   failOnFind: unknown = null;
+  failOnSave: unknown = null;
   private readonly users = new Map<string, User>();
 
   seed(user: User): void {
@@ -20,6 +21,9 @@ export class FakeUserRepository extends UserRepository {
   }
 
   async save(user: User): Promise<void> {
+    if (this.failOnSave !== null) {
+      throw this.failOnSave;
+    }
     this.saved.push(user);
     this.users.set(user.id, user);
   }

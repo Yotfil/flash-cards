@@ -5,10 +5,12 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import type { SessionState } from '@domain/models/session-state';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { ThemePort } from '@domain/ports/theme.port';
 import { SessionService } from '@services/session/session.service';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
+import { FakeThemePort } from '@testing/fake-theme-port';
 import { aUser } from '@testing/fake-user-repository';
 
 import { routes } from './app.routes';
@@ -27,6 +29,7 @@ async function navigate(
       { provide: ConnectivityPort, useValue: new FakeConnectivity() },
       { provide: SessionService, useValue: new FakeSessionService(session) },
       { provide: Logger, useValue: new FakeLogger() },
+      { provide: ThemePort, useValue: new FakeThemePort() },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -83,6 +86,16 @@ describe('pantallas de acceso', () => {
     const { element } = await navigate('/login', SIGNED_OUT);
 
     expect(element.querySelector('app-login-page h1')?.textContent?.trim()).toBe('Iniciar sesión');
+  });
+});
+
+describe('pantallas de las secciones', () => {
+  it('/ajustes pinta Ajustes dentro del caparazón', async () => {
+    const { element } = await navigate('/ajustes');
+
+    expect(element.querySelector('app-shell main app-ajustes-page h1')?.textContent?.trim()).toBe(
+      'Ajustes',
+    );
   });
 });
 

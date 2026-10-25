@@ -375,3 +375,62 @@ describe('SessionService · error de perfil y cierre de sesión', () => {
     expect(session.state()).toEqual({ kind: 'signedOut' });
   });
 });
+
+describe('SessionService · ajustes', () => {
+  async function activeSession() {
+    const context = setup();
+    context.users.seed(
+      aUser({
+        id: 'u1',
+        settings: {
+          timezone: 'America/Bogota',
+          dayStartHour: 4,
+          theme: 'dark',
+          defaultNewCardsPerDay: 15,
+          autoGradeByTime: true,
+        },
+      }),
+    );
+    context.authPort.emit(anIdentity({ uid: 'u1' }));
+    await settle();
+    return context;
+  }
+
+  it('guarda el perfil completo con el ajuste cambiado y los demás intactos', async () => {
+    const { session, users } = await activeSession();
+
+    await session.updateSettings({ defaultNewCardsPerDay: 5 });
+
+    const expectedSettings = {
+      timezone: 'America/Bogota',
+      dayStartHour: 4,
+      theme: 'dark',
+      defaultNewCardsPerDay: 5,
+      autoGradeByTime: true,
+    };
+    expect(users.saved).toHaveLength(1);
+    expect(users.saved[0]).toEqual({ ...aUser({ id: 'u1' }), settings: expectedSettings });
+    expect(session.user()?.settings).toEqual(expectedSettings);
+  });
+
+  it('si el guardado falla el error sube y la sesión conserva el valor anterior', async () => {
+    const { session, users } = await activeSession();
+    const cause = new Error('offline');
+    users.failOnSave = cause;
+
+    await expect(session.updateSettings({ defaultNewCardsPerDay: 5 })).rejects.toBe(cause);
+
+    expect(session.user()?.settings.defaultNewCardsPerDay).toBe(15);
+  });
+
+  it('sin sesión lanza un error explícito y no escribe nada', async () => {
+    const { session, authPort, users } = setup();
+    authPort.emit(null);
+    await settle();
+
+    await expect(session.updateSettings({ dayStartHour: 2 })).rejects.toThrow(
+      'No hay una sesión activa.',
+    );
+    expect(users.saved).toEqual([]);
+  });
+});

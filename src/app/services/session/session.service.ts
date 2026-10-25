@@ -3,12 +3,17 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import { AuthError } from '@domain/models/auth-error';
 import type { AuthIdentity } from '@domain/models/auth-identity.model';
 import type { SessionState } from '@domain/models/session-state';
-import { DEFAULT_NEW_CARDS_PER_DAY } from '@domain/models/study-defaults';
-import type { User } from '@domain/models/user.model';
+import {
+  DEFAULT_AUTO_GRADE_BY_TIME,
+  DEFAULT_NEW_CARDS_PER_DAY,
+} from '@domain/models/study-defaults';
+import type { User, UserSettings } from '@domain/models/user.model';
 import { AllowlistRepository } from '@domain/ports/allowlist.repository';
 import { AuthPort, type EmailCredentials, type Registration } from '@domain/ports/auth.port';
 import { Logger } from '@domain/ports/logger.port';
 import { UserRepository } from '@domain/ports/user.repository';
+
+import { requireSessionUser } from './require-session';
 
 // Máquina de estados de la sesión. Todo nace del observador del proveedor: cada identidad que
 // avisa se comprueba contra la lista de acceso y, si entra, se carga (o crea) su perfil. Los
@@ -141,6 +146,17 @@ export class SessionService {
     this.setState({ kind: 'signedOut' });
   }
 
+  /**
+   * Guarda ajustes del perfil: escribe el perfil completo con los cambios y, solo si el guardado
+   * termina bien, la sesión pasa a reflejarlos. Si falla, el error sube y la sesión no cambia.
+   */
+  async updateSettings(changes: Partial<UserSettings>): Promise<void> {
+    const user = requireSessionUser(this.user());
+    const updated: User = { ...user, settings: { ...user.settings, ...changes } };
+    await this.users.save(updated);
+    this.setState({ kind: 'active', user: updated });
+  }
+
   /** La consulta de la lista sin red se explica como "sin conexión". */
   private async isAllowedForRegistration(email: string): Promise<boolean> {
     try {
@@ -221,7 +237,7 @@ export class SessionService {
         dayStartHour: DEFAULT_DAY_START_HOUR,
         theme: 'system',
         defaultNewCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
-        autoGradeByTime: true,
+        autoGradeByTime: DEFAULT_AUTO_GRADE_BY_TIME,
       },
     };
     await this.users.save(profile);
