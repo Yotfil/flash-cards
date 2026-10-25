@@ -1,0 +1,64 @@
+<h2 class="text-lg font-bold tracking-tight text-text">{{ title }}</h2>
+
+<form class="mt-5 flex flex-col gap-4" novalidate (submit)="submitForm($event)">
+  <div class="flex flex-col gap-1.5">
+    <label for="new-cards-per-day" class="text-sm font-semibold text-text">
+      {{ copy.newCardsLabel }}
+    </label>
+    <input
+      id="new-cards-per-day"
+      type="number"
+      inputmode="numeric"
+      class="w-28 rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+      [formField]="settingsForm.newCardsPerDay"
+      [attr.aria-invalid]="fieldError(settingsForm.newCardsPerDay) !== null"
+    />
+    @if (fieldError(settingsForm.newCardsPerDay); as error) {
+      <p class="text-xs text-danger">{{ error }}</p>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label for="max-reviews-per-day" class="text-sm font-semibold text-text">
+      {{ copy.maxReviewsLabel }}
+    </label>
+    <input
+      id="max-reviews-per-day"
+      type="number"
+      inputmode="numeric"
+      class="w-28 rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+      aria-describedby="max-reviews-hint"
+      [formField]="settingsForm.maxReviewsPerDay"
+      [attr.aria-invalid]="fieldError(settingsForm.maxReviewsPerDay) !== null"
+    />
+    @if (fieldError(settingsForm.maxReviewsPerDay); as error) {
+      <p class="text-xs text-danger">{{ error }}</p>
+    }
+    <p id="max-reviews-hint" class="text-xs text-text-faint">{{ copy.noLimitHint }}</p>
+  </div>
+
+  @if (!online()) {
+    <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+  @if (failed()) {
+    <p role="alert" class="text-sm text-danger">{{ copy.saveError }}</p>
+  }
+
+  <div class="mt-2 flex justify-end gap-2">
+    <button
+      type="button"
+      class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+      [disabled]="saving()"
+      (click)="cancel()"
+    >
+      {{ copy.cancel }}
+    </button>
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+      [disabled]="!canSubmit()"
+    >
+      {{ saving() ? copy.saving : copy.save }}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,55 @@
+// Bloque principal de Hoy: superficie sólida con un tinte radial de acento (todo por tokens). La
+// luz es un pseudo-elemento con un degradado cónico que gira detrás; la capa interior tapa el
+// centro y deja ver solo un filo, que es el borde. Asentado, o con "reducir movimiento", la luz se
+// apaga y el borde queda fijo.
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  // Lo que se ve en el filo cuando la luz no pasa: el borde sutil de siempre.
+  background: var(--color-glass-border);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: -2;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 72%,
+    var(--color-accent-line) 84%,
+    var(--color-accent) 92%,
+    transparent 100%
+  );
+  animation: hero-orbit var(--duration-orbit) linear infinite;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--color-accent-tint), transparent 70%),
+    var(--color-surface);
+}
+
+.hero.settled::before {
+  display: none;
+}
+
+@keyframes hero-orbit {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::before {
+    display: none;
+  }
+}

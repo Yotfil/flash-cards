@@ -1,0 +1,116 @@
+@switch (view()) {
+  @case ('loading') {
+    <app-skeleton variant="card" [lines]="3" />
+  }
+  @case ('error') {
+    <app-error-state
+      [title]="copy.cardList.loadError"
+      [message]="copy.cardList.loadErrorMessage"
+      (retry)="retry()"
+    />
+  }
+  @case ('empty') {
+    <app-empty-state [title]="copy.cardList.emptyTitle" [message]="copy.cardList.emptyMessage">
+      <div class="flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink shadow-btn disabled:opacity-50"
+          [disabled]="!online()"
+          (click)="create()"
+        >
+          {{ copy.cardList.create }}
+        </button>
+        <button
+          type="button"
+          class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+          (click)="importRequested.emit()"
+        >
+          {{ copy.cardList.import }}
+        </button>
+      </div>
+    </app-empty-state>
+  }
+  @case ('list') {
+    <div class="flex flex-col gap-3">
+      @if (selectionMode()) {
+        <div
+          class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-glass-border bg-surface p-3"
+        >
+          <label class="flex items-center gap-2 text-sm font-semibold text-text">
+            <input
+              type="checkbox"
+              class="size-5 accent-accent"
+              [checked]="allSelected()"
+              (change)="toggleAll()"
+            />
+            {{ copy.cardList.selectAll }}
+          </label>
+          <span aria-live="polite" class="text-sm text-text-dim">
+            {{ copy.cardList.selectedCount(selectedCount()) }}
+          </span>
+          <div class="ml-auto flex gap-2">
+            <button
+              type="button"
+              class="press rounded-xl border border-glass-border px-3.5 py-2 text-sm font-semibold text-text"
+              (click)="cancelSelection()"
+            >
+              {{ copy.cardList.cancelSelection }}
+            </button>
+            <button
+              type="button"
+              class="press rounded-xl bg-danger px-3.5 py-2 text-sm font-semibold text-danger-contrast disabled:opacity-50"
+              [disabled]="selectedCount() === 0"
+              (click)="askDeleteSelected()"
+            >
+              {{ copy.cardList.deleteSelected }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            class="press rounded-xl border border-glass-border px-3.5 py-2 text-sm font-semibold text-text disabled:opacity-50"
+            [disabled]="!online()"
+            (click)="startSelection()"
+          >
+            {{ copy.cardList.select }}
+          </button>
+          <div class="ml-auto flex gap-2">
+            <button
+              type="button"
+              class="press rounded-xl border border-glass-border px-3.5 py-2 text-sm font-semibold text-text"
+              (click)="importRequested.emit()"
+            >
+              {{ copy.cardList.import }}
+            </button>
+            <button
+              type="button"
+              class="press rounded-xl bg-accent px-3.5 py-2 text-sm font-semibold text-accent-ink shadow-btn disabled:opacity-50"
+              [disabled]="!online()"
+              (click)="create()"
+            >
+              {{ copy.cardList.newCard }}
+            </button>
+          </div>
+        </div>
+      }
+
+      <ul class="flex flex-col gap-2">
+        @for (card of cards(); track card.id) {
+          <li>
+            <app-card-row
+              [card]="card"
+              [isDuplicate]="duplicateIds().has(card.id)"
+              [selectionMode]="selectionMode()"
+              [selected]="isSelected(card)"
+              (edit)="edit(card)"
+              (toggleSelect)="toggle(card)"
+              (delete)="askDelete(card)"
+            />
+          </li>
+        }
+      </ul>
+    </div>
+  }
+}

@@ -1,16 +1,20 @@
 import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withViewTransitions } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 
 import { provideCore } from '@core/provide-core';
+import { provideFirebase } from '@core/provide-firebase';
 
-// Raíz de composición de la app. Las rutas llegan con `navegacion-y-shell`;
-// los proveedores de datos, con `plataforma-datos-y-offline`.
+import { routes } from './app.routes';
+
+// Raíz de composición de la app. Los puertos y adaptadores se enlazan en `provideCore`; el cambio
+// entre pantallas usa View Transitions (instantáneo con "reducir movimiento").
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter([]),
+    provideRouter(routes, withViewTransitions()),
     provideCore(),
+    provideFirebase(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',

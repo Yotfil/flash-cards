@@ -21,10 +21,12 @@ service cloud.firestore {
 
     // Lista de acceso (early access). El doc id es el email autorizado.
     // Se administra SOLO a mano desde la consola de Firebase (la consola salta las reglas);
-    // el cliente nunca escribe aquí. Cada usuario puede leer ÚNICAMENTE su propia entrada,
-    // para que la app sepa si tiene acceso y muestre la pantalla adecuada en vez de un error.
+    // el cliente nunca escribe aquí. Cualquiera, con o sin sesión, puede comprobar si existe la
+    // entrada de un correo EXACTO: así el registro se detiene antes de crear una identidad que no
+    // entraría. Listar la colección está prohibido (no se puede enumerar quién tiene acceso).
     match /allowlist/{email} {
-      allow read: if request.auth != null && request.auth.token.email == email;
+      allow get: if true;
+      allow list: if false;
       allow write: if false;
     }
 

@@ -1,0 +1,4 @@
+// La barra avanza (o retrocede, si un guardado se rechaza) con una transición suave.
+.progress-fill {
+  transition: width var(--duration-base) var(--ease-out-soft);
+}

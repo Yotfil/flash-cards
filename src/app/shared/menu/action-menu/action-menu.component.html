@@ -1,0 +1,26 @@
+<button
+  type="button"
+  class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text disabled:opacity-50"
+  [attr.aria-label]="label()"
+  [disabled]="disabled()"
+  [cdkMenuTriggerFor]="menu"
+>
+  <app-icon name="more" />
+</button>
+
+<ng-template #menu>
+  <div cdkMenu class="menu-panel">
+    @for (item of items(); track item.id) {
+      <button
+        type="button"
+        cdkMenuItem
+        class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-accent-tint focus-visible:bg-accent-tint"
+        [class.text-danger]="item.destructive"
+        (cdkMenuItemTriggered)="selected.emit(item.id)"
+      >
+        <app-icon [name]="item.icon" size="sm" />
+        {{ item.label }}
+      </button>
+    }
+  </div>
+</ng-template>

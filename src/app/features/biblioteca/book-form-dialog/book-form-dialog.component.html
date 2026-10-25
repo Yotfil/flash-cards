@@ -1,0 +1,62 @@
+<h2 class="text-lg font-bold tracking-tight text-text">
+  {{ isEdit ? copy.editTitle : copy.createTitle }}
+</h2>
+
+<form class="mt-5 flex flex-col gap-4" novalidate (submit)="submitForm($event)">
+  <div class="flex flex-col gap-1.5">
+    <label for="book-name" class="text-sm font-semibold text-text">{{ copy.nameLabel }}</label>
+    <input
+      id="book-name"
+      type="text"
+      autocomplete="off"
+      class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+      [formField]="bookForm.name"
+      [attr.aria-invalid]="nameError() !== null"
+      [attr.aria-describedby]="nameError() ? 'book-name-error' : null"
+    />
+    @if (nameError(); as error) {
+      <p id="book-name-error" class="text-xs text-danger">{{ error }}</p>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label for="book-subject" class="text-sm font-semibold text-text">
+      {{ copy.subjectLabel }}
+    </label>
+    <input
+      id="book-subject"
+      type="text"
+      autocomplete="off"
+      placeholder="general"
+      class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text placeholder:text-text-faint"
+      aria-describedby="book-subject-hint"
+      [formField]="bookForm.subject"
+    />
+    <p id="book-subject-hint" class="text-xs text-text-faint">{{ copy.subjectHint }}</p>
+  </div>
+
+  @if (!online()) {
+    <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+  @if (failed()) {
+    <p role="alert" class="text-sm text-danger">{{ copy.saveError }}</p>
+  }
+
+  <div class="mt-2 flex justify-end gap-2">
+    <button
+      type="button"
+      class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+      [disabled]="saving()"
+      (click)="cancel()"
+    >
+      {{ copy.cancel }}
+    </button>
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+      [disabled]="!canSubmit()"
+    >
+      {{ saving() ? copy.saving : isEdit ? copy.save : copy.create }}
+    </button>
+  </div>
+</form>

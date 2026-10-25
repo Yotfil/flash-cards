@@ -58,6 +58,9 @@
   // botones ni en Repaso (colisionaría con el rojo de "Otra vez").
   --color-wine: rgb(128 22 66 / 0.22);
 
+  // Fondo oscurecido detrás de un diálogo (no desenfoca: el panel ya es la capa de vidrio).
+  --color-scrim: rgb(4 5 18 / 0.62);
+
   // Errores de formulario y acciones destructivas. Distinto en intención de rating-again.
   --color-danger: #ef4444;
   --color-danger-contrast: #ffffff;
@@ -77,6 +80,9 @@
   --shadow-card: 0 26px 60px -26px rgb(0 0 0 / 0.75);
   --shadow-btn: 0 10px 26px -8px rgb(56 189 248 / 0.6);
 
+  // Ancho máximo de lectura del contenido en escritorio (`max-w-(--content-max-width)`).
+  --content-max-width: 760px;
+
   // Curvas de movimiento: salida suave para casi todo; entrada solo para lo que se va.
   --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-soft: cubic-bezier(0.5, 0, 0.75, 0);
@@ -89,6 +95,16 @@
   --duration-base: 320ms; // píldora de navegación, entrada de la siguiente tarjeta
   --duration-view: 360ms; // cambio de pantalla
   --duration-flip: 500ms; // volteo de la tarjeta
+  --duration-shimmer: 1600ms; // brillo del esqueleto de carga (un ciclo completo)
+  --duration-orbit: 7s; // una vuelta de la luz del borde del bloque principal de Hoy
+  --duration-cascade: 280ms; // entrada de cada cerebro de la calificación
+  --delay-cascade: 40ms; // escalón entre cerebros en la cascada
+  --duration-ring: 900ms; // anillo del cierre de la sesión
+  --duration-check: 380ms; // marca de verificación del cierre, tras el anillo
+  --duration-fill: 600ms; // relleno de las barras de Progreso al cambiar su valor
+
+  // Atenuación de lo apartado (tarjeta suspendida); siempre va con una etiqueta de texto.
+  --opacity-dimmed: 0.55;
 
   // Degradado de página con los brillos de acento y púrpura.
   --bg-page:
@@ -124,6 +140,7 @@
   --color-off: #d7dbea;
   --color-track: rgb(20 30 80 / 0.1);
   --color-wine: rgb(128 22 66 / 0.07);
+  --color-scrim: rgb(20 30 80 / 0.35);
 
   --color-danger: #dc2626;
 
@@ -197,6 +214,19 @@
   border: 1px solid var(--color-glass-border-soft);
 }
 
+// La navegación lleva el mismo vidrio con un desenfoque mayor: queda encima de contenido que se
+// desplaza por debajo.
+@utility glass-nav {
+  @apply glass;
+  -webkit-backdrop-filter: blur(var(--blur-glass-nav));
+  backdrop-filter: blur(var(--blur-glass-nav));
+}
+
+// Zona segura inferior (barra de inicio del teléfono): la navegación inferior no queda debajo.
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 // Hundimiento al presionar (120 ms): funciona igual con mouse y con el dedo.
 @utility press {
   transition:
@@ -209,6 +239,108 @@
   &:active {
     transform: scale(0.97);
   }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Diálogos: el contenedor lo crea el CDK fuera de cualquier componente nuestro, así que su
+// apariencia vive aquí, por clases que DialogService asigna. Panel de acrílico (sólido con
+// "reducir transparencia" por los tokens), tres anchos, altura máxima con scroll interno.
+// ───────────────────────────────────────────────────────────────────────────
+.dialog-backdrop {
+  background-color: var(--color-scrim);
+}
+
+.dialog-sm {
+  width: min(calc(100vw - 2rem), 24rem);
+}
+
+.dialog-md {
+  width: min(calc(100vw - 2rem), 32rem);
+}
+
+.dialog-lg {
+  width: min(calc(100vw - 2rem), 44rem);
+}
+
+.dialog-panel {
+  max-height: 90dvh;
+
+  > .cdk-dialog-container {
+    @apply glass;
+    max-height: 90dvh;
+    overflow-y: auto;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
+    color: var(--color-text);
+  }
+}
+
+// Panel de los menús de acciones (`⋯`): SÓLIDO, porque flota sobre filas de acrílico y nunca debe
+// haber vidrio sobre vidrio (ADR 0003).
+.menu-panel {
+  display: flex;
+  min-width: 11rem;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-glass-border);
+  border-radius: 0.875rem;
+  background-color: var(--color-surface);
+  padding: 0.375rem;
+  box-shadow: var(--shadow-card);
+  color: var(--color-text);
+}
+
+// Silueta del esqueleto de carga: un bloque tenue que respira. Bajo "reducir movimiento" la regla
+// global deja la animación en un solo fotograma, así que el bloque queda quieto.
+@keyframes skeleton-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+// Elemento apartado pero presente (tarjeta suspendida): se atenúa sin desaparecer.
+@utility dimmed {
+  opacity: var(--opacity-dimmed);
+}
+
+// Barras de Progreso. La escala de calificación solo pinta calificaciones (ADR 0003); la colección
+// usa matices del acento.
+@utility bar-rating-again {
+  background-color: var(--color-rating-again);
+}
+
+@utility bar-rating-hard {
+  background-color: var(--color-rating-hard);
+}
+
+@utility bar-rating-good {
+  background-color: var(--color-rating-good);
+}
+
+@utility bar-rating-easy {
+  background-color: var(--color-rating-easy);
+}
+
+@utility bar-accent-new {
+  background-color: var(--color-accent-line);
+}
+
+@utility bar-accent-learning {
+  background-color: var(--color-accent-deep);
+}
+
+@utility bar-accent-review {
+  background-color: var(--color-accent);
+}
+
+@utility skeleton-block {
+  background-color: var(--color-track);
+  animation: skeleton-shimmer var(--duration-shimmer) var(--ease-out-soft) infinite;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -242,6 +374,14 @@
   }
 }
 
+// Cambio entre pantallas (View Transitions del router): un fundido breve con la curva suave.
+// Los navegadores sin soporte cambian de pantalla al instante, sin error.
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-view);
+  animation-timing-function: var(--ease-out-soft);
+}
+
 // Respeto de "reducir movimiento" como base, no como retoque. Los cambios de estado ocurren
 // igual, sin animación; la luz orbital de Hoy se queda quieta (lo aplica su componente).
 @media (prefers-reduced-motion: reduce) {
@@ -253,5 +393,11 @@
     transition-duration: 0.01ms !important;
     transition-delay: 0s !important;
     scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

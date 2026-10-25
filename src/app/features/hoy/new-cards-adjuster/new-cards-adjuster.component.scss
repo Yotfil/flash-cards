@@ -1,0 +1,4 @@
+// El marcador nativo del pliegue se oculta: el chevron lo dibuja `IconComponent`.
+summary::-webkit-details-marker {
+  display: none;
+}

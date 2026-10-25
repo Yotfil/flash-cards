@@ -1,0 +1,41 @@
+// El anillo se completa en el color de acento y después aparece la marca. Con reducir
+// movimiento, todo aparece completo de inmediato.
+
+.ring-track {
+  fill: none;
+  stroke: var(--color-track);
+  stroke-width: 8;
+}
+
+.ring-progress {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  animation: ring-fill var(--duration-ring) var(--ease-out-soft) both;
+}
+
+.check {
+  animation: check-in var(--duration-check) var(--ease-out-soft) var(--duration-ring) both;
+}
+
+@keyframes ring-fill {
+  from {
+    stroke-dashoffset: 100;
+  }
+}
+
+@keyframes check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress,
+  .check {
+    animation: none;
+  }
+}

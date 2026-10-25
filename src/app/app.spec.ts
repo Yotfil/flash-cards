@@ -1,18 +1,16 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { App } from './app';
 
 describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [App],
-    }).compileComponents();
-  });
-
-  it('muestra el nombre del producto, Cadence', () => {
+  it('solo aloja el router', () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(fixture.nativeElement.textContent).toContain('Cadence');
+    expect(element.querySelector('router-outlet')).not.toBeNull();
+    expect(element.children).toHaveLength(1);
   });
 });

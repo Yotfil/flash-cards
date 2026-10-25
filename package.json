@@ -14,6 +14,8 @@
     "test": "ng test --watch=false",
     "test:watch": "ng test",
     "test:integration": "firebase emulators:exec --only firestore --project demo-cadence \"vitest run --config vitest.integration.config.ts\"",
+    "emulators": "node scripts/emulators.mjs",
+    "seed:allowlist": "node scripts/seed-allowlist.mjs",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "format": "prettier --write .",

@@ -1,0 +1,18 @@
+<section class="hero flex flex-col items-start gap-1 px-6 py-7" [class.settled]="settled()">
+  @if (settled()) {
+    <h2 class="text-2xl font-extrabold tracking-tight text-text">{{ copy.settledTitle }}</h2>
+    <p class="text-sm text-text-dim">{{ copy.settledMessage }}</p>
+  } @else {
+    <p class="text-4xl font-extrabold tracking-tight text-text">{{ countLabel() }}</p>
+    <p class="text-sm text-text-dim">{{ copy.heroSubtitle }}</p>
+    <div class="mt-4">
+      <app-study-launch-button
+        [label]="copy.studyNow"
+        [prepare]="prepare()"
+        [destination]="destination"
+        [errorMessage]="copy.studyError"
+        [disabled]="disabled()"
+      />
+    </div>
+  }
+</section>

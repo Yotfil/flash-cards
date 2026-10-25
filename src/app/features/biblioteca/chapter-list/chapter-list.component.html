@@ -1,0 +1,49 @@
+<section aria-labelledby="chapters-heading" class="flex flex-col gap-3">
+  <h2 id="chapters-heading" class="text-base font-bold text-text">{{ copy.chapters.heading }}</h2>
+
+  @switch (view()) {
+    @case ('loading') {
+      <app-skeleton variant="card" [lines]="3" />
+    }
+    @case ('error') {
+      <app-error-state
+        [title]="copy.chapters.loadError"
+        [message]="copy.chapters.loadErrorMessage"
+        (retry)="retry()"
+      />
+    }
+    @case ('empty') {
+      <app-empty-state [title]="copy.chapters.emptyTitle" [message]="copy.chapters.emptyMessage">
+        <button
+          type="button"
+          class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink shadow-btn"
+          (click)="create()"
+        >
+          {{ copy.chapters.create }}
+        </button>
+      </app-empty-state>
+    }
+    @case ('list') {
+      <ol class="flex flex-col gap-3">
+        @for (chapter of chapters(); track chapter.id; let index = $index) {
+          <li>
+            <app-chapter-row
+              [chapter]="chapter"
+              [position]="index + 1"
+              [bookId]="bookId()"
+              (renameRequested)="rename(chapter)"
+              (deleteRequested)="askDelete(chapter)"
+            />
+          </li>
+        }
+      </ol>
+      <button
+        type="button"
+        class="press self-start rounded-xl border border-dashed border-glass-border px-4 py-2.5 text-sm font-semibold text-text-dim hover:text-text"
+        (click)="create()"
+      >
+        {{ copy.chapters.add }}
+      </button>
+    }
+  }
+</section>

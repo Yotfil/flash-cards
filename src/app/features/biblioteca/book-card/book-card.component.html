@@ -1,0 +1,42 @@
+<article class="glass-soft flex items-center gap-2 rounded-2xl p-2 pr-3">
+  <button
+    type="button"
+    data-open
+    class="press flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 text-left"
+    (click)="opened.emit()"
+  >
+    <span
+      class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent-text"
+      aria-hidden="true"
+    >
+      <app-icon name="books" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block truncate font-bold text-text">{{ book().name }}</span>
+      <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-faint">
+        <span class="rounded-md border border-glass-border-soft px-1.5 py-0.5 text-text-dim">
+          {{ book().subject }}
+        </span>
+        <span>{{ cards() }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ newPerDay() }}</span>
+      </span>
+    </span>
+  </button>
+  <button
+    type="button"
+    class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text"
+    [attr.aria-label]="copy.settingsOf(book().name)"
+    (click)="settingsRequested.emit()"
+  >
+    <app-icon name="sliders" />
+  </button>
+  <button
+    type="button"
+    class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text"
+    [attr.aria-label]="copy.deleteOf(book().name)"
+    (click)="deleteRequested.emit()"
+  >
+    <app-icon name="trash" />
+  </button>
+</article>

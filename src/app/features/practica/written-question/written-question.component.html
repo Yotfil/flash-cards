@@ -1,0 +1,35 @@
+<section class="flex flex-col gap-5" aria-labelledby="question-prompt">
+  <div class="rounded-3xl border border-glass-border bg-surface px-6 py-8 text-center shadow-card">
+    <p class="text-xs font-semibold tracking-wide text-text-faint uppercase">
+      {{ copy.writeAnswer }}
+    </p>
+    <h2
+      id="question-prompt"
+      class="mt-2 text-2xl font-extrabold tracking-tight break-words text-text"
+    >
+      {{ prompt() }}
+    </h2>
+  </div>
+  <form class="flex gap-2" novalidate (submit)="send($event)">
+    <input
+      #field
+      type="text"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      class="min-w-0 flex-1 rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint disabled:opacity-70"
+      [attr.aria-label]="copy.answerLabel"
+      [placeholder]="copy.answerLabel"
+      [value]="text()"
+      [disabled]="answered()"
+      (input)="typeText($event)"
+    />
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+      [disabled]="!canCheck()"
+    >
+      {{ copy.check }}
+    </button>
+  </form>
+</section>
