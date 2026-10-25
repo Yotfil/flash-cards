@@ -62,7 +62,11 @@
       </div>
 
       <section [attr.aria-label]="copy.chapterDetail.cards">
-        <app-card-list [bookId]="current.book.id" [chapterId]="current.chapter.id" />
+        <app-card-list
+          [bookId]="current.book.id"
+          [chapterId]="current.chapter.id"
+          (importRequested)="importCards(current.book.id, current.chapter)"
+        />
       </section>
     </div>
   }

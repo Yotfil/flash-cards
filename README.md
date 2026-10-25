@@ -210,6 +210,16 @@ tiempos: la **latencia de recuerdo** (mostrar → revelar) solo sugiere un grado
 repaso** (mostrar → calificar) se guarda en cada registro. El cierre cuenta las tarjetas distintas
 y las calificaciones por grado, y deja el hueco `[practice]` para la práctica con IA.
 
+**Importar.** "Un archivo = un libro" (`/importar`) o pegar en un capítulo ("Importar tarjetas").
+La convención, línea a línea: `# Nombre` abre un capítulo; `anverso | reverso` (o separado por
+tabulador) es una tarjeta básica; un texto con huecos `{{así}}` es una cloze; y `::` con un
+espacio a cada lado añade un ejemplo al final (`to give up | rendirse :: I gave up smoking.`). El parser
+(`services/import/parse-import-text.ts`) valida con los mismos esquemas Zod que los formularios y
+nunca aborta: cada línea que no entra se omite con su motivo y su número, y la previsualización lo
+muestra antes de escribir nada. El libro se escribe en lotes con su documento en el último (nunca
+aparece a medias) y, si un lote falla, se borra lo escrito; reemplazar un capítulo es atómico si
+cabe en un lote (`writeInCountedBatches` con delta por operación).
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.

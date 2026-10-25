@@ -9,6 +9,7 @@ import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
+import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
@@ -21,6 +22,7 @@ import { FakeChapterRepository } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeDailyStatsRepository } from '@testing/fake-daily-stats-repository';
 import { FakeGradePersistence } from '@testing/fake-grade-persistence';
+import { FakeImportRepository } from '@testing/fake-import-repository';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSchedulingPort } from '@testing/fake-scheduling-port';
 import { FakeSessionService } from '@testing/fake-session';
@@ -51,6 +53,7 @@ async function navigate(
       { provide: DailyStatsRepository, useValue: new FakeDailyStatsRepository() },
       { provide: SchedulingPort, useValue: new FakeSchedulingPort() },
       { provide: GradePersistencePort, useValue: new FakeGradePersistence() },
+      { provide: ImportRepository, useValue: new FakeImportRepository() },
     ],
   });
   if (options.handOff) {
@@ -144,6 +147,14 @@ describe('pantallas de las secciones', () => {
 
     const chapter = await navigate('/biblioteca/b1/c1');
     expect(chapter.element.querySelector('app-shell main app-capitulo-detail-page')).not.toBeNull();
+  });
+
+  it('/importar pinta "Importar un libro" dentro del caparazón', async () => {
+    const { element } = await navigate('/importar');
+
+    expect(
+      element.querySelector('app-shell main app-importar-libro-page h1')?.textContent?.trim(),
+    ).toBe('Importar un libro');
   });
 
   it('/ajustes pinta Ajustes dentro del caparazón', async () => {

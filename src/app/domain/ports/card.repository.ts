@@ -18,6 +18,18 @@ export abstract class CardRepository {
   abstract createMany(uid: string, cards: readonly NewCard[]): Promise<Card[]>;
   abstract updateContent(uid: string, cardId: string, changes: CardContentChanges): Promise<void>;
   abstract setSuspended(uid: string, cardId: string, suspended: boolean): Promise<void>;
+  /**
+   * Borra las tarjetas indicadas del capítulo y crea las nuevas, ajustando el contador del libro en
+   * la diferencia. Si todo cabe en un lote es una sola operación: o se reemplaza todo o nada.
+   * Devuelve las creadas.
+   */
+  abstract replaceInChapter(
+    uid: string,
+    bookId: string,
+    chapterId: string,
+    cardIdsToDelete: readonly string[],
+    cards: readonly NewCard[],
+  ): Promise<Card[]>;
   /** Borra una tarjeta y resta 1 al libro. El historial de repasos se conserva. */
   abstract deleteWithCount(uid: string, bookId: string, cardId: string): Promise<void>;
   /**

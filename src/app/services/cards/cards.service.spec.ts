@@ -252,3 +252,39 @@ describe('CardsService · suspender y borrar', () => {
     expect(changeCardCount).toHaveBeenCalledWith('b1', -1);
   });
 });
+
+describe('CardsService · reemplazar las del capítulo', () => {
+  async function opened() {
+    const context = setup();
+    context.repository.seed(
+      aCard({ id: 'k1', chapterId: 'c1' }),
+      aCard({ id: 'k2', chapterId: 'c1' }),
+    );
+    context.service.openChapter('c1');
+    await context.settle();
+    const changeCardCount = vi.spyOn(TestBed.inject(BooksService), 'changeCardCount');
+    return { ...context, changeCardCount };
+  }
+  const drafts = ['a', 'b', 'c'].map((front) => ({ cardType: 'basic' as const, front, back: 'x' }));
+
+  it('borra las cargadas, crea las nuevas, deja el recurso con ellas y suma la diferencia', async () => {
+    const { service, repository, changeCardCount } = await opened();
+    const replace = vi.spyOn(repository, 'replaceInChapter');
+
+    await service.replaceAll('b1', 'c1', drafts);
+
+    expect(replace.mock.calls[0]?.[3]).toEqual(['k1', 'k2']);
+    expect(service.cards.value()?.map((card) => card.front)).toEqual(['a', 'b', 'c']);
+    expect(changeCardCount).toHaveBeenCalledWith('b1', 1);
+  });
+
+  it('si el almacén falla, nada cambia', async () => {
+    const { service, repository, changeCardCount } = await opened();
+    repository.failWith.replaceInChapter = new Error('offline');
+
+    await expect(service.replaceAll('b1', 'c1', drafts)).rejects.toThrow('offline');
+
+    expect(service.cards.value()?.map((card) => card.id)).toEqual(['k1', 'k2']);
+    expect(changeCardCount).not.toHaveBeenCalled();
+  });
+});

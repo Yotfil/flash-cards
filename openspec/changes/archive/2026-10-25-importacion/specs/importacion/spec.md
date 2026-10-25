@@ -158,10 +158,6 @@ La página "Importar un libro" SHALL pedir el nombre y una materia opcional con 
 - **WHEN** el usuario escribe "  Francés  " en la materia y confirma
 - **THEN** el libro se crea con `subject = Francés` y la Biblioteca lo muestra con esa etiqueta
 
-#### Scenario: Materia demasiado larga
-- **WHEN** la materia escrita supera el máximo del diálogo "Nuevo libro"
-- **THEN** el botón de confirmar queda deshabilitado y el campo muestra el mismo mensaje que ese diálogo
-
 ### Requirement: La escritura del libro es consistente y por lotes, y al terminar lleva al libro
 El sistema SHALL escribir los capítulos y las tarjetas en lotes de como máximo 450 escrituras y SHALL escribir el documento del libro en el último lote, de modo que el libro nunca aparezca en la Biblioteca a medias. Si un lote falla, el sistema SHALL intentar borrar todo lo que ya se había escrito, SHALL registrar el resultado de ese intento y SHALL mostrar "No se pudo importar el libro. Inténtalo de nuevo." conservando el nombre, la materia y el texto para reintentar. Al terminar bien, el nuevo libro SHALL aparecer en la Biblioteca sin recargar y el usuario SHALL ser llevado a la pantalla del libro creado.
 

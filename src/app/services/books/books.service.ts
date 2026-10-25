@@ -147,8 +147,11 @@ export class BooksService {
     });
   }
 
-  private nextOrder(): number {
-    const books = this.books.hasValue() ? this.books.value() : [];
+  /**
+   * La posición de un libro nuevo: al final de la Biblioteca (0 si es el primero). Quien acaba de
+   * esperar `ensureLoaded()` le pasa esa lista: el recurso puede no haberla recibido aún.
+   */
+  nextOrder(books: readonly Book[] = this.books.hasValue() ? this.books.value() : []): number {
     return books.length === 0 ? 0 : Math.max(...books.map((book) => book.order)) + 1;
   }
 

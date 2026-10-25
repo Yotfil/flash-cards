@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 
+import type { Chapter } from '@domain/models/chapter.model';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { CardsService } from '@services/cards/cards.service';
@@ -10,12 +11,17 @@ import { resolveChapterDetail } from '@services/chapters/chapter-detail-state';
 import { ChaptersService } from '@services/chapters/chapters.service';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
 import type { StudySource } from '@services/queue/study-handoff.service';
+import { DialogService } from '@shared/dialog/dialog.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
 
 import { StudyLaunchButtonComponent } from '../../estudio/study-launch-button/study-launch-button.component';
+import {
+  CardImportDialogComponent,
+  type CardImportDialogData,
+} from '../../importacion/card-import-dialog/card-import-dialog.component';
 import { BIBLIOTECA_COPY, chapterDisplayName } from '../biblioteca.copy';
 import { CardListComponent } from '../card-list/card-list.component';
 
@@ -42,6 +48,7 @@ export class CapituloDetailPageComponent {
   private readonly chaptersService = inject(ChaptersService);
   private readonly cardsService = inject(CardsService);
   private readonly bookReady = inject(BookReadyCardsService);
+  private readonly dialogs = inject(DialogService);
   private readonly logger = inject(Logger);
 
   protected readonly copy = BIBLIOTECA_COPY;
@@ -97,6 +104,20 @@ export class CapituloDetailPageComponent {
   }
 
   protected displayName = chapterDisplayName;
+
+  /** "Importar tarjetas" en este capítulo: las nuevas aparecen en la lista al cerrar. */
+  protected importCards(bookId: string, chapter: Chapter): void {
+    this.dialogs.open<boolean, CardImportDialogData>(CardImportDialogComponent, {
+      label: this.copy.importCards,
+      size: 'lg',
+      data: {
+        bookId,
+        chapterId: chapter.id,
+        chapterName: chapterDisplayName(chapter),
+        chapterCards: this.cardsService.sorted,
+      },
+    });
+  }
 
   protected retry(failed: 'books' | 'chapters'): void {
     if (failed === 'books') {

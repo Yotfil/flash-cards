@@ -1,10 +1,4 @@
-import {
-  increment,
-  type DocumentData,
-  type DocumentReference,
-  type Firestore,
-  type WithFieldValue,
-} from 'firebase/firestore';
+import { increment, type DocumentReference, type Firestore } from 'firebase/firestore';
 
 import {
   BatchCommitError,
@@ -13,13 +7,15 @@ import {
   type BatchCommitResult,
 } from './batch-writer';
 
-export type CountedOperation =
-  | {
-      readonly kind: 'set';
-      readonly ref: DocumentReference;
-      readonly data: WithFieldValue<DocumentData>;
-    }
-  | { readonly kind: 'delete'; readonly ref: DocumentReference };
+/**
+ * Una escritura del lote y cuánto mueve el contador de tarjetas del libro: +1 un alta, −1 una baja,
+ * 0 lo que no es una tarjeta (el capítulo, el libro). Así un mismo lote puede mezclar altas y
+ * bajas (reemplazar las tarjetas de un capítulo) con un único ajuste del contador.
+ */
+export interface CountedOperation {
+  readonly apply: (writer: BatchWriter) => void;
+  readonly delta: -1 | 0 | 1;
+}
 
 /** Operaciones de tarjeta por lote: deja sitio a la suma del libro y a la operación final. */
 export const COUNTED_GROUP_SIZE = MAX_BATCH_SIZE - 2;
@@ -28,18 +24,16 @@ export interface CountedBatchOptions {
   readonly firestore: Firestore;
   /** El libro cuyo `cardCount` se ajusta. */
   readonly bookRef: DocumentReference;
-  /** Altas o bajas de tarjetas, cada una vale `delta` en el contador. */
   readonly operations: readonly CountedOperation[];
-  /** +1 por alta o -1 por baja. */
-  readonly delta: number;
   /** Operación que va solo en el último lote (borrar el capítulo, escribir el libro importado). */
   readonly trailing?: CountedOperation;
 }
 
 /**
- * Escribe altas o bajas de tarjetas en lotes de hasta 448, cada lote con su ajuste del contador del
- * libro en la misma escritura atómica: si un lote falla a mitad, el contador sigue cuadrando con lo
- * que de verdad quedó, y la operación final no llega a escribirse. El error lleva lo ya escrito.
+ * Escribe altas y bajas de tarjetas en lotes de hasta 448, cada lote con el ajuste del contador
+ * del libro (la suma de los deltas de sus operaciones) en la misma escritura atómica: si un lote
+ * falla a mitad, el contador sigue cuadrando con lo que de verdad quedó, y la operación final no
+ * llega a escribirse. El error lleva lo ya escrito.
  */
 export async function writeInCountedBatches(
   options: CountedBatchOptions,
@@ -56,12 +50,12 @@ export async function writeInCountedBatches(
   let batches = 0;
   for (const [index, group] of groups.entries()) {
     const writer = new BatchWriter(options.firestore);
-    group.forEach((operation) => addTo(writer, operation));
-    if (group.length > 0) {
-      writer.update(options.bookRef, { cardCount: increment(options.delta * group.length) });
-    }
-    if (options.trailing && index === groups.length - 1) {
-      addTo(writer, options.trailing);
+    const isLast = index === groups.length - 1;
+    const inBatch = options.trailing && isLast ? [...group, options.trailing] : group;
+    inBatch.forEach((operation) => operation.apply(writer));
+    const delta = inBatch.reduce((sum, operation) => sum + operation.delta, 0);
+    if (delta !== 0) {
+      writer.update(options.bookRef, { cardCount: increment(delta) });
     }
     try {
       written.push(...(await writer.commit()).written);
@@ -71,14 +65,6 @@ export async function writeInCountedBatches(
     batches++;
   }
   return { batches, written };
-}
-
-function addTo(writer: BatchWriter, operation: CountedOperation): void {
-  if (operation.kind === 'set') {
-    writer.set(operation.ref, operation.data);
-  } else {
-    writer.delete(operation.ref);
-  }
 }
 
 function chunksOf<T>(items: readonly T[], size: number): T[][] {

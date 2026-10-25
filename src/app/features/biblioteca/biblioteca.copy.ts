@@ -1,5 +1,7 @@
 import type { Card } from '@domain/models/card.model';
 import type { Chapter } from '@domain/models/chapter.model';
+import { BOOK_FORM_MESSAGES } from '@services/books/book-form.schema';
+import { CARD_FORM_MESSAGES } from '@services/cards/card-form.schema';
 import { clozeQuestion } from '@services/cards/cloze/parse-cloze';
 import { pluralize } from '@shared/text/pluralize';
 
@@ -23,8 +25,8 @@ export const BIBLIOTECA_COPY = {
     createTitle: 'Nuevo libro',
     editTitle: 'Editar libro',
     nameLabel: 'Nombre',
-    nameRequired: 'El nombre es obligatorio.',
-    nameTooLong: 'Usa como máximo 120 caracteres.',
+    nameRequired: BOOK_FORM_MESSAGES.nameRequired,
+    nameTooLong: BOOK_FORM_MESSAGES.nameTooLong,
     subjectLabel: 'Materia',
     subjectHint: 'Si la dejas vacía, será «general»',
     create: 'Crear libro',
@@ -91,10 +93,10 @@ export const BIBLIOTECA_COPY = {
     backLabel: 'Reverso',
     clozeLabel: 'Texto con huecos',
     clozeHint: 'Marca lo que quieras ocultar con {{…}}. Ej.: El {{gato}} es negro.',
-    frontRequired: 'El anverso es obligatorio.',
-    backRequired: 'El reverso es obligatorio.',
-    clozeRequired: 'Escribe un texto con al menos un hueco marcado con {{…}}.',
-    tooLong: 'Usa como máximo 2000 caracteres.',
+    frontRequired: CARD_FORM_MESSAGES.frontRequired,
+    backRequired: CARD_FORM_MESSAGES.backRequired,
+    clozeRequired: CARD_FORM_MESSAGES.clozeRequired,
+    tooLong: CARD_FORM_MESSAGES.tooLong,
     moreOptions: 'Más opciones',
     exampleLabel: 'Ejemplo',
     duplicate: 'Ya tienes una tarjeta igual en este capítulo.',
@@ -151,6 +153,7 @@ export const BIBLIOTECA_COPY = {
     chapterSettled: 'Estás al día con este capítulo. No hay tarjetas para repasar ahora.',
     error: 'No se pudo preparar la sesión. Inténtalo de nuevo.',
   },
+  importCards: 'Importar tarjetas',
   chapterDetail: {
     backTo: (bookName: string) => `Volver a ${bookName}`,
     notFoundTitle: 'Capítulo no encontrado',

@@ -77,7 +77,13 @@ export const routes: Routes = [
             (module) => module.CapituloDetailPageComponent,
           ),
       },
-      { path: 'importar', loadComponent: pendingPage },
+      {
+        path: 'importar',
+        loadComponent: () =>
+          import('@features/importacion/importar-libro-page/importar-libro-page.component').then(
+            (module) => module.ImportarLibroPageComponent,
+          ),
+      },
       { path: 'progreso', loadComponent: pendingPage },
       {
         path: 'ajustes',

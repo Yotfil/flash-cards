@@ -9,6 +9,7 @@ import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { ChaptersService } from '@services/chapters/chapters.service';
@@ -19,6 +20,8 @@ import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeImportRepository } from '@testing/fake-import-repository';
+import { allowDialogFocusInJsdom } from '@testing/dialog-test-helpers';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
@@ -58,6 +61,7 @@ async function open(
       { provide: BookRepository, useValue: books },
       { provide: ChapterRepository, useValue: chapters },
       { provide: CardRepository, useValue: cards },
+      { provide: ImportRepository, useValue: new FakeImportRepository() },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
@@ -263,5 +267,41 @@ describe('CapituloDetailPageComponent · estudiar este capítulo', () => {
 
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(prepare).toHaveBeenCalledWith('c1');
+  });
+});
+
+describe('CapituloDetailPageComponent · importar tarjetas', () => {
+  beforeEach(() => allowDialogFocusInJsdom());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('"Importar tarjetas" abre el diálogo del capítulo y lo importado aparece sin recargar', async () => {
+    const { page, update } = await open('/biblioteca/b1/c1');
+    await update();
+    await update();
+
+    Array.from(page().querySelectorAll('button'))
+      .find((button) => button.textContent?.trim() === 'Importar tarjetas')
+      ?.click();
+    await update();
+    const dialog = document.querySelector<HTMLElement>('.cdk-overlay-container [role="dialog"]');
+    expect(dialog?.querySelector('h2')?.textContent?.trim()).toBe('Importar tarjetas');
+
+    const area = dialog?.querySelector('textarea');
+    if (area) {
+      area.value = 'to give up | rendirse\nto look up | buscar';
+      area.dispatchEvent(new Event('input'));
+    }
+    await update();
+    // Repetida contra la tarjeta que ya tiene el capítulo: el diálogo recibió sus tarjetas.
+    expect(dialog?.textContent).toContain('2 tarjetas · 1 repetida');
+    dialog?.querySelector('form')?.dispatchEvent(new Event('submit'));
+    await update();
+    await update();
+
+    expect(document.querySelector('.cdk-overlay-container [role="dialog"]')).toBeNull();
+    const fronts = Array.from(
+      page().querySelectorAll('app-card-row [data-card-body] > span:first-child'),
+    ).map((row) => row.textContent?.replace(/\s+/g, ' ').trim());
+    expect(fronts).toContain('to look up → buscar');
   });
 });

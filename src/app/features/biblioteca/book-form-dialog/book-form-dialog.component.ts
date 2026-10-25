@@ -9,7 +9,7 @@ import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
 import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
-import { bookFormSchema, type BookFormValue } from '../book-form.schema';
+import { bookFormSchema, type BookFormValue } from '@services/books/book-form.schema';
 
 export type BookFormDialogData = { mode: 'create' } | { mode: 'edit'; book: Book };
 

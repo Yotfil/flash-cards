@@ -14,6 +14,7 @@ import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
+import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
@@ -28,6 +29,7 @@ import { FirestoreCardRepository } from '@infrastructure/firestore/card.reposito
 import { FirestoreChapterRepository } from '@infrastructure/firestore/chapter.repository.firestore';
 import { FirestoreDailyStatsRepository } from '@infrastructure/firestore/daily-stats.repository.firestore';
 import { FirestoreGradePersistence } from '@infrastructure/firestore/grade-persistence.firestore';
+import { FirestoreImportRepository } from '@infrastructure/firestore/import.repository.firestore';
 import { FirestoreUserRepository } from '@infrastructure/firestore/user.repository.firestore';
 import { ConsoleLoggerAdapter } from '@infrastructure/logging/console-logger.adapter';
 import { TsFsrsSchedulingAdapter } from '@infrastructure/scheduling/ts-fsrs-scheduling.adapter';
@@ -67,6 +69,10 @@ export function provideCore(): EnvironmentProviders {
     {
       provide: GradePersistencePort,
       useFactory: () => new FirestoreGradePersistence(inject(FIRESTORE)),
+    },
+    {
+      provide: ImportRepository,
+      useFactory: () => new FirestoreImportRepository(inject(FIRESTORE)),
     },
     // El tema recordado se aplica antes del primer render, para no arrancar con el equivocado; al
     // cargar la sesión, el tema del perfil toma el mando.

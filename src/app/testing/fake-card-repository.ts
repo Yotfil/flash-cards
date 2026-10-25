@@ -15,7 +15,8 @@ type FailableMethod =
   | 'updateContent'
   | 'setSuspended'
   | 'deleteWithCount'
-  | 'deleteManyWithCount';
+  | 'deleteManyWithCount'
+  | 'replaceInChapter';
 
 // Fake en memoria del repositorio de tarjetas. Simula también el contador de tarjetas de cada
 // libro (`bookCardCounts`) para afirmar las sumas y restas; `failWith` hace fallar un método.
@@ -33,6 +34,7 @@ export class FakeCardRepository extends CardRepository {
     setSuspended: 0,
     deleteWithCount: 0,
     deleteManyWithCount: 0,
+    replaceInChapter: 0,
   };
   readonly listedUids: string[] = [];
   readonly contentChanges: { cardId: string; changes: CardContentChanges }[] = [];
@@ -117,6 +119,19 @@ export class FakeCardRepository extends CardRepository {
     cardIds.forEach((cardId) => this.cards.delete(cardId));
     this.addToBook(bookId, -cardIds.length);
     return cardIds.length;
+  }
+
+  async replaceInChapter(
+    _uid: string,
+    bookId: string,
+    _chapterId: string,
+    cardIdsToDelete: readonly string[],
+    cards: readonly NewCard[],
+  ): Promise<Card[]> {
+    this.record('replaceInChapter');
+    cardIdsToDelete.forEach((cardId) => this.cards.delete(cardId));
+    this.addToBook(bookId, -cardIdsToDelete.length);
+    return cards.map((card) => this.store(card));
   }
 
   private store(card: NewCard): Card {

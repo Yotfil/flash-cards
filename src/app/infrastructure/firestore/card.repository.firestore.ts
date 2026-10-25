@@ -15,7 +15,7 @@ import type { Card, CardContentChanges, NewCard } from '@domain/models/card.mode
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { CardRepository } from '@domain/ports/card.repository';
 
-import { BatchCommitError } from './batch-writer';
+import { BatchCommitError, type BatchWriter } from './batch-writer';
 import { writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
@@ -60,23 +60,54 @@ export class FirestoreCardRepository extends CardRepository {
     if (bookId === undefined) {
       return [];
     }
+    return this.replaceCards(uid, bookId, [], cards);
+  }
+
+  async replaceInChapter(
+    uid: string,
+    bookId: string,
+    chapterId: string,
+    cardIdsToDelete: readonly string[],
+    cards: readonly NewCard[],
+  ): Promise<Card[]> {
+    if (cards.some((card) => card.chapterId !== chapterId)) {
+      throw new Error('Las tarjetas nuevas de un reemplazo deben ser del mismo capítulo.');
+    }
+    return this.replaceCards(uid, bookId, cardIdsToDelete, cards);
+  }
+
+  /**
+   * Bajas (−1) seguidas de altas (+1) en lotes con su ajuste del contador. Con 448 operaciones o
+   * menos es un único lote: o se escribe todo o nada.
+   */
+  private async replaceCards(
+    uid: string,
+    bookId: string,
+    cardIdsToDelete: readonly string[],
+    cards: readonly NewCard[],
+  ): Promise<Card[]> {
     if (cards.some((card) => card.bookId !== bookId)) {
-      throw new Error('Todas las tarjetas de una creación en lote deben ser del mismo libro.');
+      throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo libro.');
     }
     const now = new Date();
-    const created = cards.map((card) => {
-      const ref = doc(this.cardsOf(uid));
-      return { ref, card: toStoredCard(card), now };
-    });
+    const created = cards.map((card) => ({
+      ref: doc(this.cardsOf(uid)),
+      card: toStoredCard(card),
+    }));
     await writeInCountedBatches({
       firestore: this.firestore,
       bookRef: this.bookRef(uid, bookId),
-      operations: created.map(({ ref, card }) => ({
-        kind: 'set' as const,
-        ref,
-        data: { ...card, createdAt: now, updatedAt: now },
-      })),
-      delta: 1,
+      operations: [
+        ...cardIdsToDelete.map((cardId) => ({
+          apply: (writer: BatchWriter) => writer.delete(this.cardRef(uid, cardId)),
+          delta: -1 as const,
+        })),
+        ...created.map(({ ref, card }) => ({
+          apply: (writer: BatchWriter) =>
+            writer.set(ref, { ...card, createdAt: now, updatedAt: now }),
+          delta: 1 as const,
+        })),
+      ],
     });
     return created.map(({ ref, card }) => ({
       id: ref.id,
@@ -115,8 +146,7 @@ export class FirestoreCardRepository extends CardRepository {
       await writeInCountedBatches({
         firestore: this.firestore,
         bookRef: this.bookRef(uid, bookId),
-        operations: refs.map((ref) => ({ kind: 'delete' as const, ref })),
-        delta: -1,
+        operations: refs.map((ref) => ({ apply: (writer) => writer.delete(ref), delta: -1 })),
       });
     } catch (error) {
       if (error instanceof BatchCommitError) {

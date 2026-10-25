@@ -9,7 +9,7 @@ import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
 import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
-import { chapterFormSchema, type ChapterFormValue } from '../chapter-form.schema';
+import { chapterFormSchema, type ChapterFormValue } from '@services/chapters/chapter-form.schema';
 
 export type ChapterFormDialogData = { mode: 'create' } | { mode: 'rename'; chapter: Chapter };
 

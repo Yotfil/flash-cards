@@ -1,0 +1,84 @@
+<form class="flex flex-col gap-5" novalidate (submit)="importBook($event)">
+  <header class="flex flex-col gap-2">
+    <h1 class="text-2xl font-extrabold tracking-tight text-text">{{ copy.bookTitle }}</h1>
+    <p class="text-sm text-text-dim">{{ copy.bookIntro }}</p>
+  </header>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="flex flex-col gap-1.5">
+      <label for="import-name" class="text-sm font-semibold text-text">{{ copy.nameLabel }}</label>
+      <input
+        id="import-name"
+        type="text"
+        autocomplete="off"
+        class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text placeholder:text-text-faint"
+        [placeholder]="copy.namePlaceholder"
+        [formField]="bookForm.name"
+        [attr.aria-invalid]="nameError() !== null"
+        [attr.aria-describedby]="nameError() ? 'import-name-error' : null"
+      />
+      @if (nameError(); as error) {
+        <p id="import-name-error" class="text-xs text-danger">{{ error }}</p>
+      }
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label for="import-subject" class="text-sm font-semibold text-text">
+        {{ copy.subjectLabel }}
+      </label>
+      <input
+        id="import-subject"
+        type="text"
+        autocomplete="off"
+        placeholder="general"
+        aria-describedby="import-subject-hint"
+        class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text placeholder:text-text-faint"
+        [formField]="bookForm.subject"
+      />
+      <p id="import-subject-hint" class="text-xs text-text-faint">{{ copy.subjectHint }}</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-end justify-between gap-3">
+      <label for="import-text" class="text-sm font-semibold text-text">{{ copy.textLabel }}</label>
+      <label
+        class="press cursor-pointer rounded-xl border border-glass-border px-3 py-1.5 text-sm font-semibold text-text"
+      >
+        {{ copy.loadFile }}
+        <input
+          type="file"
+          accept=".txt,.md,text/plain"
+          class="sr-only"
+          (change)="loadFile($event)"
+        />
+      </label>
+    </div>
+    <textarea
+      id="import-text"
+      rows="10"
+      class="resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 font-mono text-sm text-text placeholder:text-text-faint"
+      [placeholder]="copy.textPlaceholder"
+      [value]="text()"
+      (input)="typeText($event)"
+    ></textarea>
+  </div>
+
+  <app-import-preview [preview]="preview()" [showChapters]="true" />
+
+  @if (!online()) {
+    <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+  @if (failed()) {
+    <p role="alert" class="text-sm text-danger">{{ copy.bookError }}</p>
+  }
+
+  <div class="flex justify-end">
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-btn disabled:opacity-50"
+      [disabled]="!canImport()"
+    >
+      {{ importText() }}
+    </button>
+  </div>
+</form>

@@ -99,6 +99,22 @@ describe('BooksService · recurso', () => {
   });
 });
 
+describe('BooksService · siguiente posición', () => {
+  it('sin libros, el siguiente va en la posición 0; si no, después del último', async () => {
+    const empty = setup();
+    empty.service.reload();
+    await empty.settle();
+    expect(empty.service.nextOrder()).toBe(0);
+    TestBed.resetTestingModule();
+
+    const { service, repository, settle } = setup();
+    repository.seed(aBook({ id: 'b1', order: 0 }), aBook({ id: 'b2', order: 5 }));
+    service.reload();
+    await settle();
+    expect(service.nextOrder()).toBe(6);
+  });
+});
+
 describe('BooksService · mutaciones', () => {
   async function loaded(books = [aBook({ id: 'b1', order: 0 }), aBook({ id: 'b2', order: 5 })]) {
     const context = setup(activeSession(7));

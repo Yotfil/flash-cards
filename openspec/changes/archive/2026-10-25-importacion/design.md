@@ -28,7 +28,9 @@ Ver `proposal.md` (Why) y el delta `specs/importacion/spec.md`. Estado esperado 
 
 ### 0. Mover los tres esquemas de formulario a `services` (refactor previo; capa servicios)
 
-`bookFormSchema` → `services/books/book-form.schema.ts`, `chapterFormSchema` → `services/chapters/chapter-form.schema.ts`, `cardFormSchema` (y su helper `text()`) → `services/cards/card-form.schema.ts`, con sus specs al lado. Los diálogos de `features/biblioteca` cambian el import; comportamiento y pruebas intactos. *Por qué:* CLAUDE.md pide que "el mismo esquema valide los formularios" y la frontera; el parser es código de servicios y ESLint le prohíbe `features`. Es el mismo movimiento que `tarjetas` hizo con `deleteWithCards`. *Alternativa descartada:* duplicar los límites (1-120, 1-2000) en el parser: dos verdades que divergen. Los designs de `libros`, `capitulos` y `tarjetas` quedan con la ruta vieja; este design es la fuente de la ruta nueva (se anota en `MEMORY.md` al ejecutar).
+`bookFormSchema` → `services/books/book-form.schema.ts`, `chapterFormSchema` → `services/chapters/chapter-form.schema.ts`, `cardFormSchema` (y su helper `text()`) → `services/cards/card-form.schema.ts`, con sus specs al lado. Los diálogos de `features/biblioteca` cambian el import; comportamiento y pruebas intactos.
+
+*Corrección (2026-10-25, fase B, vía `/opsx:update`):* los esquemas tomaban sus mensajes de `BIBLIOTECA_COPY` (`features/`), que `services/` no puede importar. Los mensajes de validación pasan a vivir junto a cada esquema (`BOOK_FORM_MESSAGES`, `CARD_FORM_MESSAGES` en `services/`) y `BIBLIOTECA_COPY` los referencia (features → services está permitido): mismo texto, una sola fuente. *Por qué:* CLAUDE.md pide que "el mismo esquema valide los formularios" y la frontera; el parser es código de servicios y ESLint le prohíbe `features`. Es el mismo movimiento que `tarjetas` hizo con `deleteWithCards`. *Alternativa descartada:* duplicar los límites (1-120, 1-2000) en el parser: dos verdades que divergen. Los designs de `libros`, `capitulos` y `tarjetas` quedan con la ruta vieja; este design es la fuente de la ruta nueva (se anota en `MEMORY.md` al ejecutar).
 
 ### 1. Paquete de libro (`domain/models/book-package.ts`; capa dominio)
 
@@ -70,7 +72,8 @@ Contenido puro: sin ids, fechas ni programación. Es lo que el parser produce, l
 ### 6. Página "Importar un libro" (`features/importacion/importar-libro-page/`; capa UI)
 
 - Ruta `/importar` → `ImportarLibroPageComponent` (sustituye a la provisional en `app.routes.ts`).
-- Signal Forms con `importBookFormSchema = z.object({ name: bookFormSchema.shape.name.or(z.literal('')), subject: bookFormSchema.shape.subject })` en `services/import/import-book-form.schema.ts`: el nombre puede quedar vacío (→ "Libro importado") pero no superar 120; la materia como en "Nuevo libro". `text = signal('')`; `preview = computed(() => importService.previewForBook(text(), name() || 'Libro importado'))`: en vivo, sin debounce (el parser es lineal; 10 000 líneas tardan milisegundos).
+- Signal Forms con `importBookFormSchema = z.object({ name: bookFormSchema.shape.name.or(z.literal('')), subject: bookFormSchema.shape.subject })` en `services/import/import-book-form.schema.ts`: el nombre puede quedar vacío (→ "Libro importado") pero no superar 120; la materia como en "Nuevo libro".
+  - *Decisión del usuario (2026-10-25, fase B, vía `/opsx:update`):* la materia **no tiene máximo**, ni en "Nuevo libro" ni al importar (las mismas reglas: texto libre opcional). Se retira el escenario "Materia demasiado larga" de la spec, que suponía un máximo que el diálogo de libro nunca tuvo. `text = signal('')`; `preview = computed(() => importService.previewForBook(text(), name() || 'Libro importado'))`: en vivo, sin debounce (el parser es lineal; 10 000 líneas tardan milisegundos).
 - "Cargar archivo": `<input type="file" accept=".txt,.md,text/plain">` oculto tras un botón; `file.text()` reemplaza el texto; `input.value = ''` tras leer para poder recargar el mismo archivo; si el nombre no fue tocado (`nameTouched` signal), propone el nombre sin `.txt`/`.md`.
 - Botón "Importar N": deshabilitado si `validCardCount === 0`, formulario inválido, `importing()` o `!online()`; sin red muestra `NEEDS_CONNECTION_MESSAGE` al lado. Al confirmar: `importing = true`, `importService.importBook(...)`, `router.navigate(['/biblioteca', bookId])`; si lanza, `errorMessage = IMPORT_BOOK_ERROR` en `<p role="alert">` encima de los botones y todo se conserva. Reenvíos ignorados mientras `importing`.
 - Textos en `features/importacion/importacion.copy.ts` (`importCopy`): títulos, pista de la convención (menciona `#`, `|` y ` :: `), etiquetas de modo, mensajes de error, `countsLine`, `omittedHeading(n)`, `importLabel(n)`.
@@ -82,10 +85,19 @@ Contenido puro: sin ids, fechas ni programación. Es lo que el parser produce, l
 - Confirmar en `append` → `importing`, `importIntoChapter(..., 'append')`, `close(true)`; fallo → `role="alert"` dentro, texto intacto. En `replace` con capítulo con tarjetas → abre `ConfirmDialogComponent` con `title "¿Reemplazar todas las tarjetas?"`, `message = replaceWarning(n)` (singular/plural de la spec), `confirmLabel "Reemplazar todo"`, `pendingLabel "Reemplazando…"`, `errorMessage = IMPORT_CARDS_ERROR`, `action = () => importIntoChapter(..., 'replace')`; si devuelve `true`, el diálogo de importación se cierra con `true`; si se cancela, sigue abierto con el texto. En `replace` con capítulo vacío → directo, sin confirmación.
 - Mientras importa: `setPending(true)` (bloquea Escape), botones deshabilitados, "Importando…". Sin red: botón principal deshabilitado con `NEEDS_CONNECTION_MESSAGE`.
 - El detalle del capítulo, tras `true`, refresca `cardCountFor` (misma salida `contentsChanged` que ya usa `tarjetas`).
+  - *Corrección (2026-10-25, fase B, vía `/opsx:update`):* el detalle del capítulo no pinta ningún conteo (corregido igual en el design de `tarjetas`, sección 7), así que no hay nada que refrescar. Lo que sí importa es que la lista muestre las nuevas sin recargar: `CardsService.createMany`/`replaceAll` actualizan el recurso del capítulo abierto y la lista lo pinta sola.
 
 ### 8. Documentación
 
 `docs/especificacion-anki-mejorada.md` §5 recibe una nota al inicio: "Sustituido por la spec de OpenSpec `importacion` (pegar texto, cloze, ` :: `, materia). Se conserva como historia." `README.md` menciona la convención con las tres columnas.
+
+### 9. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+1. **`ImportRepository.importBook` devuelve el `Book` creado** (no solo su id): la tarea 2.1 pide `addLocal` "con el libro devuelto", y así las fechas son las que escribió el almacén.
+2. **`BooksService.nextOrder(books?)`** acepta la lista ya cargada: tras `await ensureLoaded()` el recurso puede no haber recibido aún el valor (navegación directa a `/importar`) y la posición salía 0.
+3. **Fallo a mitad en la integración:** se provoca con un documento de más de 1 MiB en el segundo lote (el emulador aplica el límite de tamaño), dentro del propio árbol del usuario.
+4. **Superficie sólida:** no existe la utilidad `surface-solid`; se usa la convención del código, `bg-surface` con borde.
+5. **Máximos exportados por los esquemas** (`MAX_CARD_TEXT`, `MAX_NAME_LENGTH`) para que los motivos del parser no repitan 2000 y 120.
 
 ## Superficies con acrílico (ADR 0003)
 
@@ -128,7 +140,7 @@ Fondo de gestión con el brillo vinotinto tenue. Con `prefers-reduced-transparen
 | Repetida contra una existente; Repetida dentro del mismo texto; Repetidas al importar un libro | `count-repeated-lines.spec`: 1 contra existente, 2 dentro del texto, capitalización distinta cuenta; `import.service.spec`: `previewForBook` no recibe tarjetas existentes | unitaria pura |
 | Nombre propuesto desde el archivo; El nombre editado se respeta | `importar-libro-page.component.spec`: `File` "Phrasal Verbs.txt" → nombre y texto; con nombre tocado, se respeta | componente |
 | Libro armado con sus metadatos; Nombre vacío; Tarjetas importadas nacen nuevas; Materia escrita | `import.service.spec` con fakes: recortes, `general`, `Francés`, `order` siguiente, `newCardsPerDay` del perfil (7), `cardCount 3`, `order` de capítulos 0 y 1, `noteId` distintos, `scheduling === initialCardScheduling`, `addLocal` llamado | unitaria pura |
-| Materia demasiado larga | `import-book-form.schema.spec`: materia > máximo falla con el mensaje de `bookFormSchema`; nombre `''` pasa | unitaria pura |
+| (Esquema de la página) | `import-book-form.schema.spec`: nombre `''` pasa, 121 falla; materia de solo espacios o muy larga pasa (sin máximo, como "Nuevo libro"; decisión del usuario 2026-10-25) | unitaria pura |
 | Importación exitosa (libro); Falla la escritura; Doble clic en importar | `importar-libro-page.component.spec`: navega a `/biblioteca/{id}`; fake que lanza → `role="alert"` con el texto y nombre/materia/texto intactos; dos clics → un `importBook`, "Importando…" | componente |
 | Falla a mitad en un libro grande | `import.repository.integration.spec`: 1000 tarjetas donde el segundo lote apunta a un árbol ajeno → `ImportBookError` con `rolledBack true`, no existe el libro, 0 tarjetas bajo ese `bookId`; caso feliz: libro, 3 capítulos con `order`, 1000 tarjetas, `cardCount 1000` | integración |
 | Agregar emite directo | `card-import-dialog.component.spec`: `append` → `importIntoChapter(..., 'append')` sin `ConfirmDialog` | componente |

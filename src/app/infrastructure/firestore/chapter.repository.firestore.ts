@@ -60,9 +60,14 @@ export class FirestoreChapterRepository extends ChapterRepository {
     await writeInCountedBatches({
       firestore: this.firestore,
       bookRef: doc(this.firestore, 'users', uid, 'books', bookId),
-      operations: cards.map((card) => ({ kind: 'delete' as const, ref: card.ref })),
-      delta: -1,
-      trailing: { kind: 'delete', ref: doc(this.chaptersOf(uid), chapterId) },
+      operations: cards.map((card) => ({
+        apply: (writer) => writer.delete(card.ref),
+        delta: -1,
+      })),
+      trailing: {
+        apply: (writer) => writer.delete(doc(this.chaptersOf(uid), chapterId)),
+        delta: 0,
+      },
     });
     return cards.length;
   }

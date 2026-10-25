@@ -1,5 +1,5 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+import { Timestamp, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { CardState, type NewCard } from '@domain/models/card.model';
@@ -250,5 +250,58 @@ describe('FirestoreCardRepository · tarjetas listas', () => {
     const ready = await repository.listReadyByBook(OWNER_UID, 'b1', END_OF_DAY);
 
     expect(fronts(ready)).toEqual(['justo al límite', 'nueva', 'suspendida', 'vencida'].sort());
+  });
+});
+
+describe('FirestoreCardRepository · reemplazar las tarjetas de un capítulo', () => {
+  const bookCount = () =>
+    asAdmin(
+      async (db) =>
+        (await getDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'))).data()?.['cardCount'],
+    );
+  const chapterFronts = async () =>
+    (await repository.listByChapter(OWNER_UID, 'c1')).map((card) => card.front).sort();
+
+  it('2 por 3: solo quedan las nuevas y el contador sube 1, en un lote', async () => {
+    const old = await repository.createMany(OWNER_UID, [
+      newCard({ front: 'vieja 1' }),
+      newCard({ front: 'vieja 2' }),
+    ]);
+    await asAdmin((db) => updateDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { cardCount: 10 }));
+
+    const created = await repository.replaceInChapter(
+      OWNER_UID,
+      'b1',
+      'c1',
+      old.map((card) => card.id),
+      [newCard({ front: 'nueva 1' }), newCard({ front: 'nueva 2' }), newCard({ front: 'nueva 3' })],
+    );
+
+    expect(created.map((card) => card.front)).toEqual(['nueva 1', 'nueva 2', 'nueva 3']);
+    expect(await chapterFronts()).toEqual(['nueva 1', 'nueva 2', 'nueva 3']);
+    expect(await bookCount()).toBe(11);
+  });
+
+  it('si una parte no se puede escribir, el capítulo y el contador no cambian', async () => {
+    const old = await repository.createMany(OWNER_UID, [
+      newCard({ front: 'vieja 1' }),
+      newCard({ front: 'vieja 2' }),
+    ]);
+    await asAdmin((db) => updateDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { cardCount: 10 }));
+
+    // Un libro inexistente hace fallar el ajuste del contador: el lote entero se rechaza.
+    const failure = await repository
+      .replaceInChapter(
+        OWNER_UID,
+        'no-existe',
+        'c1',
+        old.map((card) => card.id),
+        [newCard()],
+      )
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(await chapterFronts()).toEqual(['vieja 1', 'vieja 2']);
+    expect(await bookCount()).toBe(10);
   });
 });

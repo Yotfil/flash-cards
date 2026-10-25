@@ -1,11 +1,19 @@
 import { z } from 'zod';
 
-import { hasCloze } from '@services/cards/cloze/parse-cloze';
+import { hasCloze } from './cloze/parse-cloze';
 
-import { BIBLIOTECA_COPY } from './biblioteca.copy';
+/** Mensajes de validación de la tarjeta: los pinta el formulario (vía su copy). */
+export const CARD_FORM_MESSAGES = {
+  frontRequired: 'El anverso es obligatorio.',
+  backRequired: 'El reverso es obligatorio.',
+  clozeRequired: 'Escribe un texto con al menos un hueco marcado con {{…}}.',
+  tooLong: 'Usa como máximo 2000 caracteres.',
+} as const;
 
-const copy = BIBLIOTECA_COPY.cardForm;
-const MAX_TEXT = 2000;
+const copy = CARD_FORM_MESSAGES;
+/** Máximo de anverso, reverso y ejemplo (formulario e importación). */
+export const MAX_CARD_TEXT = 2000;
+const MAX_TEXT = MAX_CARD_TEXT;
 
 /** Texto obligatorio, recortado y con tope (el mismo patrón que el nombre del libro). */
 function requiredText(message: string) {

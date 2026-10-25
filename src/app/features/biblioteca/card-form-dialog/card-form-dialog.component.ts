@@ -10,7 +10,7 @@ import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
 import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
-import { cardFormSchema, type CardFormValue } from '../card-form.schema';
+import { cardFormSchema, type CardFormValue } from '@services/cards/card-form.schema';
 
 export type CardFormDialogData =
   | { mode: 'create'; bookId: string; chapterId: string; chapterCards: Signal<Card[]> }

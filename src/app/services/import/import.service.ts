@@ -1,0 +1,133 @@
+import { Injectable, inject } from '@angular/core';
+
+import type { Card, CardContentDraft } from '@domain/models/card.model';
+import { initialCardScheduling } from '@domain/models/card-scheduling';
+import { DEFAULT_MAX_REVIEWS_PER_DAY } from '@domain/models/study-defaults';
+import {
+  ImportBookError,
+  ImportRepository,
+  type ImportedCardInput,
+} from '@domain/ports/import.repository';
+import { Logger } from '@domain/ports/logger.port';
+import { BooksService } from '@services/books/books.service';
+import { CardsService } from '@services/cards/cards.service';
+import { requireSessionUser } from '@services/session/require-session';
+import { SessionService } from '@services/session/session.service';
+
+import { countRepeatedLines } from './count-repeated-lines';
+import { parseImportText, type ImportParseResult } from './parse-import-text';
+
+/** El nombre de un libro importado cuando se deja en blanco. */
+export const DEFAULT_IMPORTED_BOOK_NAME = 'Libro importado';
+const DEFAULT_SUBJECT = 'general';
+
+export interface ImportPreview {
+  readonly parse: ImportParseResult;
+  /** Líneas válidas que entrarán repetidas (no se filtran: solo se avisa). */
+  readonly repeatedCount: number;
+}
+
+export interface ImportBookSummary {
+  readonly bookId: string;
+  readonly chapterCount: number;
+  readonly cardCount: number;
+}
+
+export type ImportMode = 'append' | 'replace';
+
+// Importar texto: previsualizar (puro, en memoria, sin escribir nada) y confirmar, sea como un
+// libro nuevo o dentro de un capítulo. Los mensajes para el usuario los elige la pantalla.
+@Injectable({ providedIn: 'root' })
+export class ImportService {
+  private readonly repository = inject(ImportRepository);
+  private readonly books = inject(BooksService);
+  private readonly cards = inject(CardsService);
+  private readonly session = inject(SessionService);
+  private readonly logger = inject(Logger);
+
+  /** Al importar un libro, las repetidas se cuentan solo dentro del texto. */
+  previewForBook(text: string, bookName: string): ImportPreview {
+    const parse = parseImportText(text, bookName);
+    return { parse, repeatedCount: countRepeatedLines(draftsOf(parse), []) };
+  }
+
+  /** En un capítulo, también contra las tarjetas que ya tiene (ya cargadas: sin lecturas). */
+  previewForChapter(text: string, chapterName: string, existing: readonly Card[]): ImportPreview {
+    const parse = parseImportText(text, chapterName);
+    return { parse, repeatedCount: countRepeatedLines(draftsOf(parse), existing) };
+  }
+
+  /** Crea el libro entero (capítulos y tarjetas nuevas) y lo añade a la Biblioteca. */
+  async importBook(
+    name: string,
+    subject: string,
+    parse: ImportParseResult,
+  ): Promise<ImportBookSummary> {
+    const user = requireSessionUser(this.session.user());
+    const library = await this.books.ensureLoaded();
+    const now = new Date();
+    try {
+      const book = await this.repository.importBook(user.id, {
+        book: {
+          name: name.trim() || DEFAULT_IMPORTED_BOOK_NAME,
+          subject: subject.trim() || DEFAULT_SUBJECT,
+          studyDirection: 'forward',
+          newCardsPerDay: user.settings.defaultNewCardsPerDay,
+          maxReviewsPerDay: DEFAULT_MAX_REVIEWS_PER_DAY,
+          order: this.books.nextOrder(library),
+          cardCount: parse.validCardCount,
+        },
+        chapters: parse.package.chapters.map((chapter, order) => ({
+          name: chapter.name,
+          order,
+          cards: chapter.cards.map((draft) => newImportedCard(draft, now)),
+        })),
+      });
+      this.books.addLocal(book);
+      return { bookId: book.id, chapterCount: parse.chapterCount, cardCount: parse.validCardCount };
+    } catch (error) {
+      const detail =
+        error instanceof ImportBookError
+          ? ` (${error.committedCount} escrituras confirmadas, deshechas: ${error.rolledBack})`
+          : '';
+      this.logger.error(`No se pudo importar el libro${detail}`, error);
+      throw error;
+    }
+  }
+
+  /** Agrega las tarjetas al capítulo o reemplaza las que tiene. Sin tarjetas no escribe nada. */
+  async importIntoChapter(
+    bookId: string,
+    chapterId: string,
+    drafts: readonly CardContentDraft[],
+    mode: ImportMode,
+  ): Promise<void> {
+    if (drafts.length === 0) {
+      return;
+    }
+    if (mode === 'append') {
+      await this.cards.createMany(bookId, chapterId, drafts);
+    } else {
+      await this.cards.replaceAll(bookId, chapterId, drafts);
+    }
+  }
+}
+
+function draftsOf(parse: ImportParseResult): CardContentDraft[] {
+  return parse.package.chapters.flatMap((chapter) => chapter.cards);
+}
+
+/** Una tarjeta importada nace como cualquier otra: nueva, activa e independiente. */
+function newImportedCard(draft: CardContentDraft, now: Date): ImportedCardInput {
+  const isCloze = draft.cardType === 'cloze';
+  return {
+    noteId: crypto.randomUUID(),
+    direction: 'forward',
+    ...(isCloze ? { cardType: 'cloze' as const } : {}),
+    front: draft.front,
+    back: isCloze ? '' : draft.back,
+    ...(draft.example ? { example: draft.example } : {}),
+    scheduling: initialCardScheduling(now),
+    suspended: false,
+  };
+}

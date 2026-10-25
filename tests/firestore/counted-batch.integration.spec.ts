@@ -39,18 +39,26 @@ const bookRef = () => doc(db, 'users', OWNER_UID, 'books', 'b1');
 const cardCount = async () => (await getDoc(bookRef())).data()?.['cardCount'];
 const cardRef = (uid: string, index: number) => doc(db, 'users', uid, 'cards', `k${index}`);
 
-function sets(count: number): CountedOperation[] {
-  return Array.from({ length: count }, (_, index) => ({
-    kind: 'set' as const,
-    ref: cardRef(OWNER_UID, index),
-    data: { bookId: 'b1', front: `f${index}`, back: 'b' },
-  }));
+/** Altas: cada una suma 1 al libro. */
+function sets(count: number, from = 0): CountedOperation[] {
+  return Array.from({ length: count }, (_, offset) => {
+    const index = from + offset;
+    return {
+      apply: (writer) =>
+        writer.set(cardRef(OWNER_UID, index), { bookId: 'b1', front: `f${index}` }),
+      delta: 1 as const,
+    };
+  });
 }
 
-function deletes(count: number, uidFor: (index: number) => string = () => OWNER_UID) {
+/** Bajas: cada una resta 1 al libro. */
+function deletes(
+  count: number,
+  uidFor: (index: number) => string = () => OWNER_UID,
+): CountedOperation[] {
   return Array.from({ length: count }, (_, index) => ({
-    kind: 'delete' as const,
-    ref: cardRef(uidFor(index), index),
+    apply: (writer) => writer.delete(cardRef(uidFor(index), index)),
+    delta: -1 as const,
   }));
 }
 
@@ -60,7 +68,6 @@ describe('writeInCountedBatches', () => {
       firestore: db,
       bookRef: bookRef(),
       operations: sets(3),
-      delta: 1,
     });
 
     expect(result.batches).toBe(1);
@@ -73,7 +80,6 @@ describe('writeInCountedBatches', () => {
       firestore: db,
       bookRef: bookRef(),
       operations: deletes(1000),
-      delta: -1,
     });
 
     expect(result.batches).toBe(3);
@@ -85,7 +91,6 @@ describe('writeInCountedBatches', () => {
       firestore: db,
       bookRef: bookRef(),
       operations: [],
-      delta: -1,
     });
 
     expect(result.batches).toBe(0);
@@ -99,8 +104,10 @@ describe('writeInCountedBatches', () => {
       firestore: db,
       bookRef: bookRef(),
       operations: [],
-      delta: -1,
-      trailing: { kind: 'set', ref: marker, data: { bookId: 'b1', name: 'Final', order: 0 } },
+      trailing: {
+        apply: (writer) => writer.set(marker, { bookId: 'b1', name: 'Final', order: 0 }),
+        delta: 0,
+      },
     });
     expect(onlyTrailing.batches).toBe(1);
     expect((await getDoc(marker)).exists()).toBe(true);
@@ -110,8 +117,7 @@ describe('writeInCountedBatches', () => {
       firestore: db,
       bookRef: bookRef(),
       operations: deletes(500, (index) => (index < 448 ? OWNER_UID : 'u2')),
-      delta: -1,
-      trailing: { kind: 'delete', ref: marker },
+      trailing: { apply: (writer) => writer.delete(marker), delta: 0 },
     }).catch((error: unknown) => error);
     expect(failing).toBeInstanceOf(BatchCommitError);
     expect((await getDoc(marker)).exists()).toBe(true);
@@ -122,10 +128,25 @@ describe('writeInCountedBatches', () => {
       firestore: db,
       bookRef: bookRef(),
       operations: deletes(900, (index) => (index >= 448 && index < 896 ? 'u2' : OWNER_UID)),
-      delta: -1,
     }).catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(BatchCommitError);
     expect(await cardCount()).toBe(1000 - 448);
+  });
+
+  it('cada operación lleva su delta: 2 bajas y 3 altas van en un lote y suman 1', async () => {
+    await setDoc(cardRef(OWNER_UID, 0), { bookId: 'b1' });
+    await setDoc(cardRef(OWNER_UID, 1), { bookId: 'b1' });
+
+    const result = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: [...deletes(2), ...sets(3, 10)],
+    });
+
+    expect(result.batches).toBe(1);
+    expect(await cardCount()).toBe(1001);
+    expect((await getDoc(cardRef(OWNER_UID, 0))).exists()).toBe(false);
+    expect((await getDoc(cardRef(OWNER_UID, 12))).exists()).toBe(true);
   });
 });
