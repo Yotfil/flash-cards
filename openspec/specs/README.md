@@ -11,6 +11,9 @@
 > diseñada directamente como spec base (2026-10-17, vía `opsx:explore`) para implementarse en su turno
 > dentro de la reescritura. Añadió un requisito a `sesion-de-repaso` (la sesión recuerda las difíciles).
 > `exportacion-de-libros` es la segunda (2026-10-24, vía `opsx:explore`): inverso de `importacion`, entra en 1.0.0.
+> `practica-con-ia` se REESCRIBIÓ el 2026-10-24 en su explore (de "lotes de difíciles del repaso" a "paquetes de práctica
+> de contenido propio"); la v1 queda en el historial de git. Su requisito añadido a `sesion-de-repaso` (recordar las
+> difíciles) sigue vigente: la práctica de un paquete reutiliza esa pantalla y ese dato.
 
 ## Mapa de capacidades
 
@@ -29,7 +32,7 @@
 | `importacion` | Formato de texto, parser con errores por línea, previsualización, agregar vs reemplazar, importar libro | 11 (cerebro) |
 | `progreso` | Métricas del día, distribución de calificaciones, colección por estado, eficiencia de lecturas | 12 |
 | `practica-quiz` | Mini-quiz por capítulo (opción múltiple + escribir), sin tocar la programación | 13 |
-| `practica-con-ia` | Lotes cerrados de tarjetas difíciles (grado 1-2), prompt copiable para un chat de IA externo, dominio marcado a mano, historial. **Capacidad nueva** (no existe en v0.1.1; diseñada 2026-10-17) | 14 |
+| `practica-con-ia` | **Paquetes de práctica**: rama aparte de los libros que el usuario llena a mano o pegando texto (≤ 20 ítems, ajustable), se practica a diario en la pantalla de repaso con los cuatro cerebros SIN FSRS ("para hoy" = nuevos + difíciles de días anteriores, conjunto fijado en la primera práctica del día, repetible), prompt copiable con todo lo repasado hoy y énfasis en lo difícil (`[[REPASADAS]]`/`[[DIFICILES]]`), completado solo a mano, historial. Vive en Biblioteca + bloque en Hoy + Ajustes. Cloze a prueba. **Capacidad nueva** (v1 2026-10-17 como lotes de difíciles; **rediseñada 2026-10-24 en su explore**) | 14 (último; release 1.1.0) |
 | `exportacion-de-libros` | Exportar un libro como texto importable (inverso exacto de la importación: `# Capítulo`, `anverso \| reverso :: ejemplo`, cloze), contenido sin progreso; diálogo con resumen, Compartir (hoja del sistema) o Descargar `.txt` según el dispositivo, Copiar texto; necesita conexión. **Capacidad nueva** (propuesta 2026-10-22 en el explore de `libros`; spec base escrita en su explore el 2026-10-24) | 12, justo después de `importacion`; **entra en 1.0.0** (decidido 2026-10-24) |
 
 ## Cómo se usan
