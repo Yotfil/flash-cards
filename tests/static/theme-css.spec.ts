@@ -43,4 +43,8 @@ describe('archivo de tema: claro, oscuro y preferencias del sistema', () => {
     expect(reducedMotion).toMatch(/animation-duration: 0\.01ms !important;/);
     expect(reducedMotion).toMatch(/::view-transition-group\(\*\)/);
   });
+
+  it('la luz orbital del bloque principal de Hoy tarda 7 s por vuelta', () => {
+    expect(theme).toMatch(/--duration-orbit: 7s;/);
+  });
 });

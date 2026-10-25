@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 
 import type { Chapter } from '@domain/models/chapter.model';
 import { BookRepository } from '@domain/ports/book.repository';
+import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
@@ -15,6 +16,7 @@ import {
   typeInto,
 } from '@testing/dialog-test-helpers';
 import { FakeBookRepository } from '@testing/fake-book-repository';
+import { FakeCardRepository } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
@@ -44,6 +46,7 @@ async function render(
     providers: [
       provideRouter([]),
       { provide: ChapterRepository, useValue: repository },
+      { provide: CardRepository, useValue: new FakeCardRepository() },
       { provide: BookRepository, useValue: new FakeBookRepository() },
       {
         provide: SessionService,

@@ -144,6 +144,13 @@ export const BIBLIOTECA_COPY = {
     reactivate: 'Reactivar',
     delete: 'Borrar',
   },
+  study: {
+    book: 'Estudiar este libro',
+    chapter: 'Estudiar este capítulo',
+    bookSettled: 'Estás al día con este libro. No hay tarjetas para repasar ahora.',
+    chapterSettled: 'Estás al día con este capítulo. No hay tarjetas para repasar ahora.',
+    error: 'No se pudo preparar la sesión. Inténtalo de nuevo.',
+  },
   chapterDetail: {
     backTo: (bookName: string) => `Volver a ${bookName}`,
     notFoundTitle: 'Capítulo no encontrado',
@@ -190,6 +197,11 @@ export function chapterDeletionDetail(cards: number | null): string {
 /** Los capítulos de versiones anteriores pueden no tener nombre. */
 export function chapterDisplayName(chapter: Chapter): string {
   return chapter.name.trim() || 'Capítulo sin nombre';
+}
+
+/** Tarjetas listas de un capítulo (sin topes): "22 listas", "1 lista" o "al día". */
+export function chapterReadyLabel(ready: number): string {
+  return ready === 0 ? 'al día' : pluralize(ready, 'lista', 'listas');
 }
 
 /** Cómo se nombra una tarjeta en menús y confirmaciones: su anverso, o la pregunta si es cloze. */

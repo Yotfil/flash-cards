@@ -5,20 +5,24 @@ import { map } from 'rxjs';
 
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
+import { CardsService } from '@services/cards/cards.service';
 import { resolveChapterDetail } from '@services/chapters/chapter-detail-state';
 import { ChaptersService } from '@services/chapters/chapters.service';
+import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
+import type { StudySource } from '@services/queue/study-handoff.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
 
+import { StudyLaunchButtonComponent } from '../../estudio/study-launch-button/study-launch-button.component';
 import { BIBLIOTECA_COPY, chapterDisplayName } from '../biblioteca.copy';
 import { CardListComponent } from '../card-list/card-list.component';
 
 // Detalle de un capítulo. Reutiliza los libros y capítulos ya cargados y, entrando directo por la
 // dirección, los carga. Qué pinta lo decide `resolveChapterDetail` a partir de los dos recursos.
-// La región "Tarjetas" es la lista del capítulo; la zona de acciones (estudiar, practicar) la
-// llenan otros changes.
+// La región "Tarjetas" es la lista del capítulo; la zona de acciones ofrece "Estudiar este capítulo"
+// cuando sus tarjetas cargaron y hay al menos una (practicar llega con su change).
 @Component({
   selector: 'app-capitulo-detail-page',
   imports: [
@@ -28,6 +32,7 @@ import { CardListComponent } from '../card-list/card-list.component';
     ErrorStateComponent,
     IconComponent,
     SkeletonComponent,
+    StudyLaunchButtonComponent,
   ],
   templateUrl: './capitulo-detail-page.component.html',
   styleUrl: './capitulo-detail-page.component.scss',
@@ -35,6 +40,8 @@ import { CardListComponent } from '../card-list/card-list.component';
 export class CapituloDetailPageComponent {
   private readonly booksService = inject(BooksService);
   private readonly chaptersService = inject(ChaptersService);
+  private readonly cardsService = inject(CardsService);
+  private readonly bookReady = inject(BookReadyCardsService);
   private readonly logger = inject(Logger);
 
   protected readonly copy = BIBLIOTECA_COPY;
@@ -67,6 +74,19 @@ export class CapituloDetailPageComponent {
           : null,
     });
   });
+
+  protected readonly canStudy = computed(() => {
+    const cards = this.cardsService.cards;
+    const status = cards.status();
+    const loaded = status === 'resolved' || status === 'local';
+    return loaded && cards.hasValue() && cards.value().length > 0;
+  });
+  protected readonly studySource = computed<StudySource>(() => ({
+    kind: 'chapter',
+    bookId: this.bookId(),
+    chapterId: this.chapterId(),
+  }));
+  protected readonly prepareStudy = () => this.bookReady.prepareChapterSession(this.chapterId());
 
   constructor() {
     this.booksService.ensureLoaded().catch((error: unknown) => {

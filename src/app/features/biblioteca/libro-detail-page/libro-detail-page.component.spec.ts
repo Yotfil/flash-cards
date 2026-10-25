@@ -1,17 +1,22 @@
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import type { Book } from '@domain/models/book.model';
+import type { Card } from '@domain/models/card.model';
 import { BookRepository } from '@domain/ports/book.repository';
+import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
+import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
 import { allowDialogFocusInJsdom, openDialog, typeInto } from '@testing/dialog-test-helpers';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
+import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
@@ -25,7 +30,14 @@ class BlankPageComponent {}
 
 async function open(
   bookId: string,
-  options: { books?: Book[]; online?: boolean; failList?: boolean; failTotals?: boolean } = {},
+  options: {
+    books?: Book[];
+    online?: boolean;
+    failList?: boolean;
+    failTotals?: boolean;
+    cards?: Card[];
+    holdChapters?: boolean;
+  } = {},
 ) {
   const repository = new FakeBookRepository();
   repository.seed(
@@ -40,14 +52,27 @@ async function open(
   if (options.failTotals) {
     repository.failWith.countCardsByState = new Error('offline');
   }
+  const cards = new FakeCardRepository();
+  cards.seed(...(options.cards ?? []));
+  let releaseChapters: () => void = () => undefined;
+  if (options.holdChapters) {
+    const gate = new Promise<void>((resolve) => (releaseChapters = resolve));
+    const list = chapters.listByBook.bind(chapters);
+    chapters.listByBook = async (uid, bookId) => {
+      await gate;
+      return list(uid, bookId);
+    };
+  }
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'biblioteca/:bookId', component: LibroDetailPageComponent },
         { path: 'biblioteca', component: BlankPageComponent },
+        { path: 'repaso', component: BlankPageComponent },
       ]),
       { provide: BookRepository, useValue: repository },
       { provide: ChapterRepository, useValue: chapters },
+      { provide: CardRepository, useValue: cards },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
@@ -58,15 +83,21 @@ async function open(
   });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(`/biblioteca/${bookId}`);
-  const update = async () => {
+  const update = async (waitForStable = true) => {
     await new Promise((resolve) => setTimeout(resolve));
     harness.detectChanges();
-    await TestBed.inject(ApplicationRef).whenStable();
+    if (waitForStable) {
+      await TestBed.inject(ApplicationRef).whenStable();
+    }
     harness.detectChanges();
   };
-  await update();
+  await update(!options.holdChapters);
   const page = () => harness.routeNativeElement as HTMLElement;
-  return { harness, repository, chapters, update, page };
+  const button = (text: string) =>
+    Array.from(page().querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.trim() === text,
+    );
+  return { harness, repository, chapters, cards, update, page, button, releaseChapters };
 }
 
 describe('LibroDetailPageComponent', () => {
@@ -165,5 +196,78 @@ describe('LibroDetailPageComponent', () => {
     await update();
 
     expect(repository.calls.countCardsByState).toBe(2);
+  });
+});
+
+describe('LibroDetailPageComponent · estudiar este libro', () => {
+  const ready = aCard({ id: 'k1', bookId: 'b1', chapterId: 'c1' });
+
+  it('abre las listas del libro y ofrece estudiar solo con los capítulos cargados', async () => {
+    const { page, cards, button, update, releaseChapters } = await open('b1', {
+      holdChapters: true,
+    });
+
+    expect(button('Estudiar este libro')).toBeUndefined();
+    expect(cards.calls.listReadyByBook).toBe(1);
+
+    releaseChapters();
+    await update();
+    expect(page().querySelector('[data-book-actions]')?.textContent).toContain(
+      'Estudiar este libro',
+    );
+  });
+
+  it('con tarjetas listas entrega la sesión del libro y navega al repaso', async () => {
+    const { button, update } = await open('b1', { cards: [ready] });
+
+    button('Estudiar este libro')?.click();
+    await update();
+
+    expect(TestBed.inject(StudyHandoffService).take()).toEqual({
+      cards: [ready],
+      source: { kind: 'book', bookId: 'b1' },
+    });
+    expect(TestBed.inject(Router).url).toBe('/repaso');
+  });
+
+  it('sin tarjetas listas dice que está al día, sin salir', async () => {
+    const { page, button, update } = await open('b1');
+
+    button('Estudiar este libro')?.click();
+    await update();
+
+    expect(page().textContent).toContain(
+      'Estás al día con este libro. No hay tarjetas para repasar ahora.',
+    );
+    expect(TestBed.inject(Router).url).toBe('/biblioteca/b1');
+  });
+
+  it('si la preparación falla: error con Reintentar y nunca "al día"', async () => {
+    const { page, cards, button, update } = await open('b1', { cards: [ready] });
+    cards.failWith.listReadyByBook = new Error('offline');
+
+    button('Estudiar este libro')?.click();
+    await update();
+
+    expect(page().querySelector('[data-book-actions] [role="alert"]')?.textContent).toContain(
+      'No se pudo preparar la sesión. Inténtalo de nuevo.',
+    );
+    expect(button('Reintentar')).toBeDefined();
+    expect(page().textContent).not.toContain('Estás al día con este libro');
+  });
+
+  it('un doble toque prepara una sola sesión', async () => {
+    const { button, update } = await open('b1', { cards: [ready] });
+    const prepare = vi
+      .spyOn(TestBed.inject(BookReadyCardsService), 'prepareBookSession')
+      .mockReturnValue(new Promise(() => undefined));
+
+    button('Estudiar este libro')?.click();
+    button('Estudiar este libro')?.click();
+    await update(false);
+
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).toHaveBeenCalledWith('b1');
+    expect(button('Preparando…')?.disabled).toBe(true);
   });
 });

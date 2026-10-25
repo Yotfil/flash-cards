@@ -19,6 +19,7 @@ export const ICON_NAMES = [
   'quote',
   'pause',
   'play',
+  'flame',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

@@ -41,7 +41,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('@features/shell/shell/shell.component').then((module) => module.ShellComponent),
     children: [
-      { path: 'hoy', loadComponent: pendingPage },
+      {
+        path: 'hoy',
+        loadComponent: () =>
+          import('@features/hoy/hoy-page/hoy-page.component').then(
+            (module) => module.HoyPageComponent,
+          ),
+      },
       {
         path: 'biblioteca',
         loadComponent: () =>

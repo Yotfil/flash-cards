@@ -1,9 +1,10 @@
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import type { Card } from '@domain/models/card.model';
 import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
@@ -11,6 +12,8 @@ import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { ChaptersService } from '@services/chapters/chapters.service';
+import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
+import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
@@ -33,6 +36,7 @@ async function open(
     failBooks?: boolean;
     failChapters?: boolean;
     holdBooks?: boolean;
+    cards?: Card[];
   } = {},
 ) {
   const books = new FakeBookRepository();
@@ -40,13 +44,16 @@ async function open(
   const chapters = new FakeChapterRepository();
   chapters.seed(aChapter({ id: 'c1', bookId: 'b1', name: 'Básicos' }));
   const cards = new FakeCardRepository();
-  cards.seed(aCard({ id: 'k1', bookId: 'b1', chapterId: 'c1', front: 'to give up' }));
+  cards.seed(
+    ...(options.cards ?? [aCard({ id: 'k1', bookId: 'b1', chapterId: 'c1', front: 'to give up' })]),
+  );
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'biblioteca/:bookId/:chapterId', component: CapituloDetailPageComponent },
         { path: 'biblioteca/:bookId', component: BlankPageComponent },
         { path: 'biblioteca', component: BlankPageComponent },
+        { path: 'repaso', component: BlankPageComponent },
       ]),
       { provide: BookRepository, useValue: books },
       { provide: ChapterRepository, useValue: chapters },
@@ -171,5 +178,90 @@ describe('CapituloDetailPageComponent', () => {
     expect(list.componentInstance.bookId()).toBe('b1');
     expect(list.componentInstance.chapterId()).toBe('c1');
     expect(page().querySelector('app-card-row')?.textContent).toContain('to give up');
+  });
+});
+
+describe('CapituloDetailPageComponent · estudiar este capítulo', () => {
+  const button = (page: HTMLElement, text: string) =>
+    Array.from(page.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.trim() === text,
+    );
+  const ready = aCard({ id: 'k1', bookId: 'b1', chapterId: 'c1', front: 'to give up' });
+
+  async function openReady(cards?: Card[]) {
+    const opened = await open('/biblioteca/b1/c1', cards ? { cards } : {});
+    await opened.update();
+    await opened.update();
+    return opened;
+  }
+
+  it('aparece en la zona de acciones solo con las tarjetas cargadas y al menos una', async () => {
+    const withCards = await openReady();
+    expect(withCards.page().querySelector('[data-chapter-actions]')?.textContent).toContain(
+      'Estudiar este capítulo',
+    );
+    TestBed.resetTestingModule();
+
+    const empty = await openReady([]);
+    expect(button(empty.page(), 'Estudiar este capítulo')).toBeUndefined();
+  });
+
+  it('con tarjetas listas entrega la sesión del capítulo y navega al repaso', async () => {
+    const { page, update } = await openReady();
+
+    button(page(), 'Estudiar este capítulo')?.click();
+    await update();
+
+    expect(TestBed.inject(StudyHandoffService).take()).toEqual({
+      cards: [ready],
+      source: { kind: 'chapter', bookId: 'b1', chapterId: 'c1' },
+    });
+    expect(TestBed.inject(Router).url).toBe('/repaso');
+  });
+
+  it('sin tarjetas listas dice que está al día, sin salir', async () => {
+    const future = {
+      ...ready,
+      scheduling: { ...ready.scheduling, due: new Date('2999-01-01T00:00:00Z') },
+    };
+    const { page, update } = await openReady([future]);
+
+    button(page(), 'Estudiar este capítulo')?.click();
+    await update();
+
+    expect(page().textContent).toContain(
+      'Estás al día con este capítulo. No hay tarjetas para repasar ahora.',
+    );
+    expect(TestBed.inject(Router).url).toBe('/biblioteca/b1/c1');
+  });
+
+  it('si la preparación falla: error con Reintentar y nunca "al día"', async () => {
+    const { page, update } = await openReady();
+    vi.spyOn(TestBed.inject(BookReadyCardsService), 'prepareChapterSession').mockRejectedValue(
+      new Error('sin tarjetas'),
+    );
+
+    button(page(), 'Estudiar este capítulo')?.click();
+    await update();
+
+    expect(page().querySelector('[data-chapter-actions] [role="alert"]')?.textContent).toContain(
+      'No se pudo preparar la sesión. Inténtalo de nuevo.',
+    );
+    expect(button(page(), 'Reintentar')).toBeDefined();
+    expect(page().textContent).not.toContain('Estás al día con este capítulo');
+  });
+
+  it('un doble toque prepara una sola sesión', async () => {
+    const { page } = await openReady();
+    const prepare = vi
+      .spyOn(TestBed.inject(BookReadyCardsService), 'prepareChapterSession')
+      .mockReturnValue(new Promise(() => undefined));
+
+    button(page(), 'Estudiar este capítulo')?.click();
+    button(page(), 'Estudiar este capítulo')?.click();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).toHaveBeenCalledWith('c1');
   });
 });

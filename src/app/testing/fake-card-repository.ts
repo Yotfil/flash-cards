@@ -8,6 +8,8 @@ import { CardRepository } from '@domain/ports/card.repository';
 
 type FailableMethod =
   | 'listByChapter'
+  | 'listReady'
+  | 'listReadyByBook'
   | 'create'
   | 'createMany'
   | 'updateContent'
@@ -23,6 +25,8 @@ export class FakeCardRepository extends CardRepository {
   readonly failWith: Partial<Record<FailableMethod, unknown>> = {};
   readonly calls: Record<FailableMethod, number> = {
     listByChapter: 0,
+    listReady: 0,
+    listReadyByBook: 0,
     create: 0,
     createMany: 0,
     updateContent: 0,
@@ -44,6 +48,23 @@ export class FakeCardRepository extends CardRepository {
     this.record('listByChapter');
     this.listedUids.push(uid);
     return [...this.cards.values()].filter((card) => card.chapterId === chapterId);
+  }
+
+  /** Con qué instante se pidieron las listas (la cola lo calcula del fin del día). */
+  readonly readyBefore: Date[] = [];
+
+  async listReady(_uid: string, before: Date): Promise<Card[]> {
+    this.record('listReady');
+    this.readyBefore.push(before);
+    return [...this.cards.values()].filter((card) => card.scheduling.due <= before);
+  }
+
+  async listReadyByBook(_uid: string, bookId: string, before: Date): Promise<Card[]> {
+    this.record('listReadyByBook');
+    this.readyBefore.push(before);
+    return [...this.cards.values()].filter(
+      (card) => card.bookId === bookId && card.scheduling.due <= before,
+    );
   }
 
   async create(_uid: string, card: NewCard): Promise<Card> {

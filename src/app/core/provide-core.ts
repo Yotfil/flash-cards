@@ -12,6 +12,7 @@ import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
@@ -24,6 +25,7 @@ import { FirestoreAllowlistRepository } from '@infrastructure/firestore/allowlis
 import { FirestoreBookRepository } from '@infrastructure/firestore/book.repository.firestore';
 import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';
 import { FirestoreChapterRepository } from '@infrastructure/firestore/chapter.repository.firestore';
+import { FirestoreDailyStatsRepository } from '@infrastructure/firestore/daily-stats.repository.firestore';
 import { FirestoreUserRepository } from '@infrastructure/firestore/user.repository.firestore';
 import { ConsoleLoggerAdapter } from '@infrastructure/logging/console-logger.adapter';
 import { TsFsrsSchedulingAdapter } from '@infrastructure/scheduling/ts-fsrs-scheduling.adapter';
@@ -55,6 +57,10 @@ export function provideCore(): EnvironmentProviders {
     {
       provide: ChapterRepository,
       useFactory: () => new FirestoreChapterRepository(inject(FIRESTORE)),
+    },
+    {
+      provide: DailyStatsRepository,
+      useFactory: () => new FirestoreDailyStatsRepository(inject(FIRESTORE)),
     },
     // El tema recordado se aplica antes del primer render, para no arrancar con el equivocado; al
     // cargar la sesión, el tema del perfil toma el mando.

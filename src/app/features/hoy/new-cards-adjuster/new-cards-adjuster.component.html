@@ -1,0 +1,44 @@
+<details class="group rounded-2xl border border-glass-border bg-surface">
+  <summary
+    class="press flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-text"
+  >
+    {{ copy.adjustTitle }}
+    <app-icon name="back" size="sm" class="-rotate-90 text-text-faint group-open:rotate-90" />
+  </summary>
+  <div class="flex flex-col gap-3 px-4 pb-4">
+    <p class="text-xs text-text-faint">{{ copy.adjustNote }}</p>
+    <ul class="flex flex-col gap-2">
+      @for (book of books(); track book.bookId) {
+        <li class="flex items-center gap-3">
+          <span class="min-w-0 flex-1 truncate text-sm text-text">{{ book.name }}</span>
+          @if (book.available === 0) {
+            <span class="text-xs text-text-faint">{{ copy.noNewCards }}</span>
+          } @else {
+            <button
+              type="button"
+              class="press grid size-8 place-items-center rounded-lg border border-glass-border text-text disabled:opacity-50"
+              [attr.aria-label]="copy.fewerNewOf(book.name)"
+              [disabled]="book.chosen <= 0"
+              (click)="step(book, -1)"
+            >
+              −
+            </button>
+            <span aria-live="polite" class="w-8 text-center text-sm font-bold text-text">
+              {{ book.chosen }}
+            </span>
+            <button
+              type="button"
+              class="press grid size-8 place-items-center rounded-lg border border-glass-border text-text disabled:opacity-50"
+              [attr.aria-label]="copy.moreNewOf(book.name)"
+              [disabled]="book.chosen >= book.available"
+              (click)="step(book, 1)"
+            >
+              +
+            </button>
+            <span class="w-12 text-xs text-text-faint">{{ availableLabel(book.available) }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </div>
+</details>

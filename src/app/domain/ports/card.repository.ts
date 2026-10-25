@@ -5,6 +5,13 @@ import type { Card, CardContentChanges, NewCard } from '../models/card.model';
 export abstract class CardRepository {
   /** Las tarjetas del capítulo (sin orden: lo da el servicio). Lanza si una no es válida. */
   abstract listByChapter(uid: string, chapterId: string): Promise<Card[]>;
+  /**
+   * Las tarjetas de la cuenta que vencen hasta `before` (incluidas las nuevas, que vencen al
+   * crearse). No filtra suspendidas ni ordena: eso es de la cola. Lanza si una no es válida.
+   */
+  abstract listReady(uid: string, before: Date): Promise<Card[]>;
+  /** Lo mismo, solo las de un libro. */
+  abstract listReadyByBook(uid: string, bookId: string, before: Date): Promise<Card[]>;
   /** Crea una tarjeta y suma 1 al libro. */
   abstract create(uid: string, card: NewCard): Promise<Card>;
   /** Crea varias tarjetas de un mismo libro en lotes, cada lote con su suma al libro. */

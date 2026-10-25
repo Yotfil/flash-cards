@@ -2,7 +2,7 @@ import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { Timestamp, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 
 import { initialCardScheduling } from '@domain/models/card-scheduling';
-import type { NewCard } from '@domain/models/card.model';
+import { CardState, type NewCard } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';
 import { InvalidDocumentError } from '@infrastructure/firestore/document-boundary';
@@ -200,5 +200,55 @@ describe('FirestoreCardRepository · contador del libro', () => {
     expect(failure).toBeInstanceOf(PartialDeletionError);
     expect((failure as PartialDeletionError).deletedIds).toEqual(ids.slice(0, 448));
     expect(await bookCount()).toBe(1000 - 448);
+  });
+});
+
+describe('FirestoreCardRepository · tarjetas listas', () => {
+  const END_OF_DAY = new Date('2026-10-25T09:00:00Z');
+  const HOUR_MS = 3_600_000;
+  const dueAt = (offsetMs: number, state = CardState.Review) => ({
+    ...initialCardScheduling(new Date('2026-10-01T10:00:00Z')),
+    state,
+    due: new Date(END_OF_DAY.getTime() + offsetMs),
+  });
+
+  beforeEach(async () => {
+    await asAdmin((db) =>
+      setDoc(doc(db, 'users', OWNER_UID, 'books', 'b2'), { name: 'Otro', cardCount: 0 }),
+    );
+    await repository.create(
+      OWNER_UID,
+      newCard({ front: 'vencida', scheduling: dueAt(-24 * HOUR_MS) }),
+    );
+    await repository.create(OWNER_UID, newCard({ front: 'justo al límite', scheduling: dueAt(0) }));
+    await repository.create(
+      OWNER_UID,
+      newCard({ front: 'nueva', scheduling: dueAt(-10 * 24 * HOUR_MS, CardState.New) }),
+    );
+    await repository.create(OWNER_UID, newCard({ front: 'mañana', scheduling: dueAt(HOUR_MS) }));
+    await repository.create(
+      OWNER_UID,
+      newCard({ front: 'suspendida', suspended: true, scheduling: dueAt(-HOUR_MS) }),
+    );
+    await repository.create(
+      OWNER_UID,
+      newCard({ bookId: 'b2', front: 'de otro libro', scheduling: dueAt(-HOUR_MS) }),
+    );
+  });
+
+  const fronts = (cards: { front: string }[]) => cards.map((card) => card.front).sort();
+
+  it('listReady trae vencidas y nuevas hasta el instante, también suspendidas; nunca las de después', async () => {
+    const ready = await repository.listReady(OWNER_UID, END_OF_DAY);
+
+    expect(fronts(ready)).toEqual(
+      ['de otro libro', 'justo al límite', 'nueva', 'suspendida', 'vencida'].sort(),
+    );
+  });
+
+  it('listReadyByBook trae solo las del libro dentro del mismo rango', async () => {
+    const ready = await repository.listReadyByBook(OWNER_UID, 'b1', END_OF_DAY);
+
+    expect(fronts(ready)).toEqual(['justo al límite', 'nueva', 'suspendida', 'vencida'].sort());
   });
 });

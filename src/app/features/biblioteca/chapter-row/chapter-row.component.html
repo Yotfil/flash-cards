@@ -13,7 +13,12 @@
       @if (cardCount.hasValue() && cardCount.value() !== undefined) {
         <span class="mt-0.5 block text-xs text-text-faint">
           {{ copy.cards(cardCount.value() ?? 0) }}
+          @if (readyLabel(); as ready) {
+            <span>· {{ ready }}</span>
+          }
         </span>
+      } @else if (readyLabel(); as ready) {
+        <span class="mt-0.5 block text-xs text-text-faint">{{ ready }}</span>
       }
     </span>
   </a>

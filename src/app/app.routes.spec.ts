@@ -4,14 +4,18 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import type { SessionState } from '@domain/models/session-state';
 import { BookRepository } from '@domain/ports/book.repository';
+import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { ThemePort } from '@domain/ports/theme.port';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
+import { FakeCardRepository } from '@testing/fake-card-repository';
 import { FakeChapterRepository } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeDailyStatsRepository } from '@testing/fake-daily-stats-repository';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { FakeThemePort } from '@testing/fake-theme-port';
@@ -36,6 +40,8 @@ async function navigate(
       { provide: ThemePort, useValue: new FakeThemePort() },
       { provide: BookRepository, useValue: new FakeBookRepository() },
       { provide: ChapterRepository, useValue: new FakeChapterRepository() },
+      { provide: CardRepository, useValue: new FakeCardRepository() },
+      { provide: DailyStatsRepository, useValue: new FakeDailyStatsRepository() },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -96,6 +102,20 @@ describe('pantallas de acceso', () => {
 });
 
 describe('pantallas de las secciones', () => {
+  it('/hoy pinta Hoy dentro del caparazón', async () => {
+    const { element } = await navigate('/hoy');
+
+    expect(element.querySelector('app-shell main app-hoy-page h1')?.textContent?.trim()).toBe(
+      'Hoy',
+    );
+  });
+
+  it('/repaso sigue siendo la página provisional hasta la sesión de repaso', async () => {
+    const { element } = await navigate('/repaso');
+
+    expect(element.querySelector('app-pending-page')).not.toBeNull();
+  });
+
   it('/biblioteca pinta la Biblioteca y /biblioteca/b1 el detalle, dentro del caparazón', async () => {
     const library = await navigate('/biblioteca');
     expect(library.element.querySelector('app-shell main app-biblioteca-page')).not.toBeNull();

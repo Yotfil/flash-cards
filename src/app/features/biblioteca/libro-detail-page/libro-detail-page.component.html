@@ -74,6 +74,18 @@
               </p>
             </div>
           }
+
+          <div data-book-actions class="flex flex-wrap gap-2 empty:hidden">
+            @if (canStudy()) {
+              <app-study-launch-button
+                [label]="copy.study.book"
+                [prepare]="prepareStudy"
+                [source]="studySource()"
+                [emptyMessage]="copy.study.bookSettled"
+                [errorMessage]="copy.study.error"
+              />
+            }
+          </div>
         </header>
 
         <app-chapter-list [bookId]="current.id" (contentsChanged)="totals.reload()" />

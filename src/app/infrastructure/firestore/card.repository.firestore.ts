@@ -4,6 +4,7 @@ import {
   doc,
   getDocs,
   query,
+  Timestamp,
   updateDoc,
   where,
   type DocumentReference,
@@ -28,6 +29,21 @@ export class FirestoreCardRepository extends CardRepository {
 
   async listByChapter(uid: string, chapterId: string): Promise<Card[]> {
     const snapshot = await getDocs(query(this.cardsOf(uid), where('chapterId', '==', chapterId)));
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
+  }
+
+  // Las dos lecturas de "listas" solo acotan por vencimiento: ni filtran suspendidas (exigiría otro
+  // índice y dejaría fuera documentos viejos sin el campo) ni ordenan; eso lo hace la cola.
+  async listReady(uid: string, before: Date): Promise<Card[]> {
+    const snapshot = await getDocs(query(this.cardsOf(uid), dueUpTo(before)));
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
+  }
+
+  async listReadyByBook(uid: string, bookId: string, before: Date): Promise<Card[]> {
+    // Usa el índice compuesto `bookId + scheduling.due` declarado en firestore.indexes.json.
+    const snapshot = await getDocs(
+      query(this.cardsOf(uid), where('bookId', '==', bookId), dueUpTo(before)),
+    );
     return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
@@ -133,6 +149,10 @@ export class FirestoreCardRepository extends CardRepository {
  * Lo que se escribe de una tarjeta nueva: los opcionales ausentes no se envían (Firestore rechaza
  * `undefined`), `cardType` solo en las cloze y el ejemplo recortado (vacío = sin ejemplo).
  */
+function dueUpTo(before: Date) {
+  return where('scheduling.due', '<=', Timestamp.fromDate(before));
+}
+
 function toStoredCard(card: NewCard): NewCard {
   const { cardType, example, ...rest } = card;
   const trimmedExample = example?.trim();

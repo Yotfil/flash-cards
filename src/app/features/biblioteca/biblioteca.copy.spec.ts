@@ -5,6 +5,7 @@ import {
   bulkDeletionMessage,
   cardDisplayName,
   chapterDeletionDetail,
+  chapterReadyLabel,
   chapterDisplayName,
 } from './biblioteca.copy';
 import { aCard } from '@testing/fake-card-repository';
@@ -69,5 +70,11 @@ describe('textos de la Biblioteca', () => {
     expect(cardDisplayName(aCard({ cardType: 'cloze', front: 'El {{gato}} es negro' }))).toBe(
       'El […] es negro',
     );
+  });
+
+  it('las listas de un capítulo con plural real, o "al día" si no hay', () => {
+    expect(chapterReadyLabel(22)).toBe('22 listas');
+    expect(chapterReadyLabel(1)).toBe('1 lista');
+    expect(chapterReadyLabel(0)).toBe('al día');
   });
 });

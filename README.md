@@ -184,6 +184,20 @@ consuma. `formatInterval(due, now)` (`services/scheduling/`) da el texto de cada
 vencimiento exacto ("1 min", "10 min", "2 h", "6 días", "1 mes"). La app usa los parámetros por
 defecto de ts-fsrs; `tests/static/ts-fsrs-defaults.spec.ts` falla si una actualización los cambia.
 
+**Cola diaria.** El día de estudio no rueda a medianoche sino a la hora de inicio del perfil
+(`services/study-day/`: `studyDayId`, `endOfStudyDay`, `studyDayAt`, `formatLocalDate`), en su
+zona horaria. "Lista" significa lo mismo en todas partes (`services/queue/ready-cards.ts`): no
+suspendida y con vencimiento hasta el fin del día de estudio (una nueva vence al crearse); lo usan
+Hoy, "Estudiar este libro", "Estudiar este capítulo" y el "N listas" de cada capítulo.
+`buildDailyQueue` (puro) aplica los topes de cada libro: la **cola base** (la que ve Progreso) y la
+**cola de la sesión**, que suma el ajuste de nuevas de hoy **por libro** (nunca toma nuevas de otro
+libro). `DailyQueueService` lee una vez por entrada a Hoy (`refresh`: libros, listas e indicadores
+del día) y deriva ambas colas en memoria; el ajuste vive en memoria ligado al día de estudio. La
+racha se calcula al vuelo desde los indicadores de los últimos 60 días (`computeStreak`), en un
+recurso aparte: si falla se omite sin tumbar la cola. Quien prepara una sesión la deja en
+`StudyHandoffService` (`hand`/`take`, una sola entrega) y navega a `/repaso`; el botón compartido
+es `StudyLaunchButtonComponent` (`features/estudio/`).
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.

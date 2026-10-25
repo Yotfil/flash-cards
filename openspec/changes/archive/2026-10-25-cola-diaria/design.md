@@ -114,6 +114,7 @@ streak        = resource({ params: uid && dayId, loader: listRecent(uid, 60) →
 ### 9. Integración en Biblioteca (capa UI, `features/biblioteca/`)
 
 - `LibroDetailPageComponent`: en la rama "libro encontrado", llama a `bookReady.openBook(bookId)` y, una vez cargados los capítulos (`chapters.status() === 'resolved'`), muestra en la zona de acciones `StudyLaunchButtonComponent` "Estudiar este libro" con `prepare = () => bookReady.prepareBookSession(bookId)` y `emptyMessage` "Estás al día con este libro. No hay tarjetas para repasar ahora.".
+  - *Corrección (2026-10-25, fase B, vía `/opsx:update`, tarea 0.1):* `libros` no dejó zona de acciones en el detalle del libro (solo `capitulos` la dejó en el del capítulo, `[data-chapter-actions]`). Se crea aquí `[data-book-actions]` al final de la cabecera del libro, tras los totales, que es donde el prototipo extendido pone "Estudiar este libro" (`book-actions`); mismo patrón `flex flex-wrap gap-2 empty:hidden` que la del capítulo, para que `practica-quiz` añada ahí "Practicar".
 - `ChapterRowComponent`: añade `readyCount = bookReady.countFor(chapterId)` y, si está definido, la línea `chapterReadyLabel(readyCount)` junto a "N tarjetas". Sin valor → sin línea (como el conteo de tarjetas).
 - `CapituloDetailPageComponent`: en la zona de acciones, `StudyLaunchButtonComponent` "Estudiar este capítulo", visible solo con `cards.status() === 'resolved'` y al menos una tarjeta, con `prepare = () => bookReady.prepareChapterSession(chapterId)` y `emptyMessage` "Estás al día con este capítulo. No hay tarjetas para repasar ahora.".
 
@@ -124,6 +125,20 @@ streak        = resource({ params: uid && dayId, loader: listRecent(uid, 60) →
 ### 11. Sin conexión
 
 Ninguna pieza de este change inyecta `ConnectivityPort`: las lecturas (`listReady`, `listReadyByBook`, `getByDay`, `listRecent`) se resuelven desde la caché sin red, y no hay escrituras ni agregaciones. Es coherente con T2 ("estudiar sí funciona") y con el requisito ADDED.
+
+### 12. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+Ajustes al implementar, sin cambiar la arquitectura ni la spec:
+
+1. **Zona de acciones del libro:** no existía; se crea `[data-book-actions]` al final de la cabecera (ver sección 9).
+2. **`studyDayAt(now, timezone, dayStartHour)` y el tipo `StudyDay { id; endOfDay }`** en `study-day.ts`: los dos servicios (cola y listas por libro) necesitan el día de estudio de "ahora"; así no repiten las dos llamadas.
+3. **`buildDailyQueue` recibe también `endOfDay`**: parte de `orderReadyCards`, que lo necesita para filtrar suspendidas y futuras.
+4. **`DailyQueueService.newCardsChoices` y `NewCardsChoice { bookId; name; chosen; available }`:** el control de ajuste lista todos los libros (los que no tienen nuevas, con "sin nuevas"), y solo el servicio conoce sus nombres; `NewCardsAdjusterComponent` emite `{ bookId, count }` (un `output` emite un solo valor).
+5. **`DailyQueueService.prepareSession()`:** "si el día de estudio cambia con Hoy abierta, la siguiente interacción vuelve a armar la cola". "Estudiar ahora" no puede usar la cola ya pintada: el mismo día devuelve `sessionQueue().cards`; con el día cambiado vuelve a leer (lectura privada `read(day)` compartida con el recurso) y arma la cola del día nuevo, y `refresh()` repinta la pantalla.
+6. **Fallo de `StudyLaunchButtonComponent`:** alerta compacta propia (`role="alert"` con el texto y "Reintentar") en vez de `ErrorState`, cuyo diseño es de página entera; el fallo se registra con `Logger`. Texto: "No se pudo preparar la sesión. Inténtalo de nuevo." (misma forma que el de `practica-quiz`).
+7. **El bloque principal no lleva sombra:** `styles.scss` reserva las sombras a la tarjeta de estudio, los diálogos y el botón principal.
+8. **Fechas de ejemplo de la spec:** "miércoles 22 de octubre" y "viernes 24 de octubre" son del calendario de 2025 (en 2026 caen en jueves y sábado); la prueba del subtítulo usa el 22 de octubre de 2025.
+9. **`FakeCardRepository.readyBefore`** registra el instante con que se piden las listas (las pruebas afirman el fin del día).
 
 ## Superficies con acrílico (ADR 0003)
 

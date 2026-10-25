@@ -28,6 +28,7 @@ describe('IconComponent', () => {
         'calendar',
         'chart',
         'check',
+        'flame',
         'offline',
         'sliders',
         'spark',
