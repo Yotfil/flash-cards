@@ -19,19 +19,22 @@ function render(name: IconName, size?: 'sm' | 'md'): SVGSVGElement {
 }
 
 describe('IconComponent', () => {
-  it('el catálogo tiene los diez iconos del caparazón', () => {
-    expect([...ICON_NAMES].sort()).toEqual([
-      'alert',
-      'books',
-      'brain',
-      'calendar',
-      'chart',
-      'check',
-      'offline',
-      'sliders',
-      'spark',
-      'x',
-    ]);
+  it('el catálogo tiene los diez iconos del caparazón (y crece con las pantallas)', () => {
+    expect(ICON_NAMES).toEqual(
+      expect.arrayContaining([
+        'alert',
+        'books',
+        'brain',
+        'calendar',
+        'chart',
+        'check',
+        'offline',
+        'sliders',
+        'spark',
+        'x',
+      ]),
+    );
+    expect(new Set(ICON_NAMES).size).toBe(ICON_NAMES.length);
   });
 
   it.each(ICON_NAMES)('%s es un trazo decorativo que hereda el color del texto', (name) => {

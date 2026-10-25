@@ -1,0 +1,31 @@
+<h2 class="text-lg font-bold tracking-tight text-text">{{ data.title }}</h2>
+<p class="mt-2 text-sm leading-relaxed text-text-dim">{{ data.message }}</p>
+@if (data.detail) {
+  <p class="mt-2 text-sm leading-relaxed text-text-dim">{{ data.detail }}</p>
+}
+
+@if (!online()) {
+  <p role="status" class="mt-4 text-sm text-text-dim">{{ needsConnection }}</p>
+}
+@if (failed()) {
+  <p role="alert" class="mt-4 text-sm text-danger">{{ data.errorMessage }}</p>
+}
+
+<div class="mt-6 flex justify-end gap-2">
+  <button
+    type="button"
+    class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+    [disabled]="pending()"
+    (click)="cancel()"
+  >
+    {{ copy.cancel }}
+  </button>
+  <button
+    type="button"
+    class="press rounded-xl bg-danger px-4 py-2.5 text-sm font-semibold text-danger-contrast disabled:opacity-50"
+    [disabled]="pending() || !online()"
+    (click)="confirm()"
+  >
+    {{ pending() ? data.pendingLabel : data.confirmLabel }}
+  </button>
+</div>

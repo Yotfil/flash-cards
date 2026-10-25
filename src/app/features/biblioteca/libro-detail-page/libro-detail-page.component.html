@@ -1,0 +1,85 @@
+@switch (view()) {
+  @case ('loading') {
+    <app-skeleton [lines]="4" />
+  }
+  @case ('error') {
+    <app-error-state [title]="copy.loadError" [message]="copy.loadErrorMessage" (retry)="retry()" />
+  }
+  @case ('notFound') {
+    <app-empty-state [title]="copy.detail.notFoundTitle" [message]="copy.detail.notFoundMessage">
+      <a
+        routerLink="/biblioteca"
+        class="press inline-block rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+      >
+        {{ copy.detail.backToLibrary }}
+      </a>
+    </app-empty-state>
+  }
+  @case ('book') {
+    @if (book(); as current) {
+      <div class="flex flex-col gap-6">
+        <header class="flex flex-col gap-3">
+          <a
+            routerLink="/biblioteca"
+            class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+          >
+            {{ copy.detail.back }}
+          </a>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h1 class="truncate text-2xl font-extrabold tracking-tight text-text">
+                {{ current.name }}
+              </h1>
+              <span
+                class="mt-1 inline-block rounded-md border border-glass-border-soft px-1.5 py-0.5 text-xs text-text-dim"
+              >
+                {{ current.subject }}
+              </span>
+            </div>
+            <div class="flex shrink-0 gap-1">
+              <button
+                type="button"
+                class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text"
+                [attr.aria-label]="copy.editOf(current.name)"
+                (click)="edit(current)"
+              >
+                <app-icon name="edit" />
+              </button>
+              <button
+                type="button"
+                class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text"
+                [attr.aria-label]="copy.settingsOf(current.name)"
+                (click)="openSettings(current)"
+              >
+                <app-icon name="sliders" />
+              </button>
+            </div>
+          </div>
+
+          @if (totals.isLoading()) {
+            <app-skeleton [lines]="1" />
+          } @else if (totals.hasValue() && totals.value(); as counts) {
+            <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm text-text-dim">
+              <p>
+                <span class="font-bold text-accent-text">{{ counts.review }}</span>
+                {{ copy.detail.mastered }}
+              </p>
+              <p>
+                <span class="font-bold text-text">{{ counts.learning }}</span>
+                {{ copy.detail.learning }}
+              </p>
+              <p>
+                <span class="font-bold text-text">{{ counts.newCards }}</span>
+                {{ copy.detail.newCards }}
+              </p>
+            </div>
+          }
+        </header>
+
+        <section [attr.aria-label]="copy.detail.chapters">
+          <app-pending-page />
+        </section>
+      </div>
+    }
+  }
+}

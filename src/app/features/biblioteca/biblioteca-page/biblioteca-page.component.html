@@ -1,0 +1,70 @@
+<div class="flex flex-col gap-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-extrabold tracking-tight text-text">{{ copy.title }}</h1>
+    @if (view() === 'list') {
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="press rounded-xl border border-glass-border px-3.5 py-2 text-sm font-semibold text-text"
+          (click)="importBook()"
+        >
+          {{ copy.importBook }}
+        </button>
+        <button
+          type="button"
+          class="press rounded-xl bg-accent px-3.5 py-2 text-sm font-semibold text-accent-ink shadow-btn"
+          (click)="newBook()"
+        >
+          {{ copy.newBook }}
+        </button>
+      </div>
+    }
+  </header>
+
+  @switch (view()) {
+    @case ('loading') {
+      <app-skeleton variant="card" [lines]="3" />
+    }
+    @case ('error') {
+      <app-error-state
+        [title]="copy.loadError"
+        [message]="copy.loadErrorMessage"
+        (retry)="retry()"
+      />
+    }
+    @case ('empty') {
+      <app-empty-state [title]="copy.emptyTitle" [message]="copy.emptyMessage">
+        <div class="flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink shadow-btn"
+            (click)="newBook()"
+          >
+            {{ copy.createBook }}
+          </button>
+          <button
+            type="button"
+            class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+            (click)="importBook()"
+          >
+            {{ copy.importBook }}
+          </button>
+        </div>
+      </app-empty-state>
+    }
+    @case ('list') {
+      <ul class="flex flex-col gap-3">
+        @for (book of books(); track book.id) {
+          <li>
+            <app-book-card
+              [book]="book"
+              (opened)="openBook(book)"
+              (settingsRequested)="openSettings(book)"
+              (deleteRequested)="askDelete(book)"
+            />
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

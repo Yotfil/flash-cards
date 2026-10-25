@@ -19,7 +19,7 @@ const noteSchema = z.object({
 const CREATED_AT = new Date('2026-06-15T10:30:00.000Z');
 
 function plainDocument(id: string, data: unknown) {
-  return { id, path: `users/u1/notes/${id}`, data: () => data };
+  return { id, ref: { path: `users/u1/notes/${id}` }, data: () => data };
 }
 
 describe('frontera de lectura de documentos', () => {

@@ -30,12 +30,12 @@ export class InvalidDocumentError extends Error {
 }
 
 /**
- * Forma mínima de un documento leído. Coincide con `QueryDocumentSnapshot` de Firestore y con un
- * objeto plano, para que las pruebas no necesiten el emulador.
+ * Forma mínima de un documento leído. Coincide con `QueryDocumentSnapshot` de Firestore (la ruta
+ * vive en `ref.path`) y con un objeto plano, para que las pruebas no necesiten el emulador.
  */
 export interface FirestoreDocumentLike {
   readonly id: string;
-  readonly path: string;
+  readonly ref: { readonly path: string };
   data(): unknown;
 }
 
@@ -62,7 +62,7 @@ export function parseDocuments<Schema extends z.ZodType<object>>(
 ): (z.output<Schema> & { readonly id: string })[] {
   return documents.map((document) => ({
     id: document.id,
-    ...parseDocument(schema, document.path, document.data()),
+    ...parseDocument(schema, document.ref.path, document.data()),
   }));
 }
 

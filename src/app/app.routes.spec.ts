@@ -3,10 +3,12 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import type { SessionState } from '@domain/models/session-state';
+import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { ThemePort } from '@domain/ports/theme.port';
 import { SessionService } from '@services/session/session.service';
+import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
@@ -30,6 +32,7 @@ async function navigate(
       { provide: SessionService, useValue: new FakeSessionService(session) },
       { provide: Logger, useValue: new FakeLogger() },
       { provide: ThemePort, useValue: new FakeThemePort() },
+      { provide: BookRepository, useValue: new FakeBookRepository() },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -90,6 +93,15 @@ describe('pantallas de acceso', () => {
 });
 
 describe('pantallas de las secciones', () => {
+  it('/biblioteca pinta la Biblioteca y /biblioteca/b1 el detalle, dentro del caparazón', async () => {
+    const library = await navigate('/biblioteca');
+    expect(library.element.querySelector('app-shell main app-biblioteca-page')).not.toBeNull();
+    TestBed.resetTestingModule();
+
+    const detail = await navigate('/biblioteca/b1');
+    expect(detail.element.querySelector('app-shell main app-libro-detail-page')).not.toBeNull();
+  });
+
   it('/ajustes pinta Ajustes dentro del caparazón', async () => {
     const { element } = await navigate('/ajustes');
 

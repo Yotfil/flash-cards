@@ -12,6 +12,8 @@ export const ICON_NAMES = [
   'x',
   'spark',
   'offline',
+  'trash',
+  'edit',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

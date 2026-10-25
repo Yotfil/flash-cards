@@ -42,8 +42,20 @@ export const routes: Routes = [
       import('@features/shell/shell/shell.component').then((module) => module.ShellComponent),
     children: [
       { path: 'hoy', loadComponent: pendingPage },
-      { path: 'biblioteca', loadComponent: pendingPage },
-      { path: 'biblioteca/:bookId', loadComponent: pendingPage },
+      {
+        path: 'biblioteca',
+        loadComponent: () =>
+          import('@features/biblioteca/biblioteca-page/biblioteca-page.component').then(
+            (module) => module.BibliotecaPageComponent,
+          ),
+      },
+      {
+        path: 'biblioteca/:bookId',
+        loadComponent: () =>
+          import('@features/biblioteca/libro-detail-page/libro-detail-page.component').then(
+            (module) => module.LibroDetailPageComponent,
+          ),
+      },
       { path: 'biblioteca/:bookId/:chapterId', loadComponent: pendingPage },
       { path: 'importar', loadComponent: pendingPage },
       { path: 'progreso', loadComponent: pendingPage },

@@ -130,8 +130,31 @@ instante, el control queda deshabilitado mientras guarda y, si falla, vuelve al 
 botón "Guardar", deshabilitado si no hay cambios. Sin red, nada se guarda: la pantalla deshabilita
 esos controles y muestra una sola vez `NEEDS_CONNECTION_MESSAGE` (`shared/text/connection.copy.ts`).
 
+**Confirmar una acción que no se deshace.** `ConfirmDialogComponent` (`shared/confirm-dialog`)
+recibe la acción y la ejecuta él mismo: muestra el texto de progreso ("Borrando…"), queda ocupado,
+y solo se cierra (con `true`) si la acción termina bien; si falla, sigue abierto con el error para
+reintentar. Sin red, confirmar está deshabilitado; cancelar no.
+
+```ts
+inject(DialogService).open<boolean, ConfirmDialogData>(ConfirmDialogComponent, {
+  label: '¿Borrar este libro?',
+  size: 'sm',
+  data: {
+    title,
+    message,
+    detail,
+    confirmLabel: 'Borrar',
+    pendingLabel: 'Borrando…',
+    errorMessage,
+    action: () => books.remove(id),
+  },
+});
+```
+
 **Pintar una pantalla que lee datos.** El servicio expone un `resource()` de Angular y la
-plantilla distingue cuatro estados; un fallo nunca se pinta como vacío:
+plantilla distingue cuatro estados; un fallo nunca se pinta como vacío. Las mutaciones locales
+(`books.update(...)`) dejan el recurso en estado `local`, que se pinta como `resolved`
+(ejemplo real: `BibliotecaPageComponent`):
 
 <!-- prettier-ignore -->
 ```html
