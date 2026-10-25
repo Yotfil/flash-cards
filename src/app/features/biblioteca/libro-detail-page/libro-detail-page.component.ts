@@ -12,7 +12,6 @@ import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
 
-import { PendingPageComponent } from '../../shell/pending-page/pending-page.component';
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
 import {
   BookFormDialogComponent,
@@ -22,11 +21,12 @@ import {
   BookSettingsDialogComponent,
   type BookSettingsDialogData,
 } from '../book-settings-dialog/book-settings-dialog.component';
+import { ChapterListComponent } from '../chapter-list/chapter-list.component';
 
 type DetailView = 'loading' | 'error' | 'notFound' | 'book';
 
 // Detalle de un libro: cabecera (volver, nombre, materia, totales por estado, editar y ajustes) y
-// debajo la región de capítulos. Entrando directo por la dirección, carga la Biblioteca. Los
+// debajo la lista de capítulos (que avisa cuando un borrado cambia los totales). Entrando directo por la dirección, carga la Biblioteca. Los
 // totales se cuentan en el servidor: sin red o si el conteo falla se omiten, sin error.
 @Component({
   selector: 'app-libro-detail-page',
@@ -35,7 +35,7 @@ type DetailView = 'loading' | 'error' | 'notFound' | 'book';
     EmptyStateComponent,
     ErrorStateComponent,
     IconComponent,
-    PendingPageComponent,
+    ChapterListComponent,
     SkeletonComponent,
   ],
   templateUrl: './libro-detail-page.component.html',

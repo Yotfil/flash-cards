@@ -56,7 +56,13 @@ export const routes: Routes = [
             (module) => module.LibroDetailPageComponent,
           ),
       },
-      { path: 'biblioteca/:bookId/:chapterId', loadComponent: pendingPage },
+      {
+        path: 'biblioteca/:bookId/:chapterId',
+        loadComponent: () =>
+          import('@features/biblioteca/capitulo-detail-page/capitulo-detail-page.component').then(
+            (module) => module.CapituloDetailPageComponent,
+          ),
+      },
       { path: 'importar', loadComponent: pendingPage },
       { path: 'progreso', loadComponent: pendingPage },
       {

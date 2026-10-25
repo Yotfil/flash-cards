@@ -14,6 +14,7 @@ export const ICON_NAMES = [
   'offline',
   'trash',
   'edit',
+  'back',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

@@ -76,9 +76,7 @@
           }
         </header>
 
-        <section [attr.aria-label]="copy.detail.chapters">
-          <app-pending-page />
-        </section>
+        <app-chapter-list [bookId]="current.id" (contentsChanged)="totals.reload()" />
       </div>
     }
   }

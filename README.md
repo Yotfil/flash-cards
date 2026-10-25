@@ -151,6 +151,17 @@ inject(DialogService).open<boolean, ConfirmDialogData>(ConfirmDialogComponent, {
 });
 ```
 
+**Borrados en cascada.** Borrar un libro borra sus tarjetas y capítulos con `BatchWriter` y el
+libro en el último lote. Borrar un capítulo trocea sus tarjetas en grupos de `MAX_BATCH_SIZE - 2`:
+cada grupo es un lote que también descuenta esas tarjetas del `cardCount` del libro, y el capítulo
+va en el último; si un lote falla, el contador sigue cuadrando y reintentar termina. El historial de
+repasos nunca se borra.
+
+**Pantallas que dependen de dos lecturas.** El detalle de capítulo decide qué pintar con
+`resolveChapterDetail` (`services/chapters/chapter-detail-state.ts`), una función pura sobre los
+recursos de libros y de capítulos: error de libros, cargando, libro inexistente, error de
+capítulos, capítulo inexistente o listo, en ese orden.
+
 **Pintar una pantalla que lee datos.** El servicio expone un `resource()` de Angular y la
 plantilla distingue cuatro estados; un fallo nunca se pinta como vacío. Las mutaciones locales
 (`books.update(...)`) dejan el recurso en estado `local`, que se pinta como `resolved`

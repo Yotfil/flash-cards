@@ -1,15 +1,18 @@
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import type { Book } from '@domain/models/book.model';
 import { BookRepository } from '@domain/ports/book.repository';
+import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SessionService } from '@services/session/session.service';
 import { allowDialogFocusInJsdom, openDialog, typeInto } from '@testing/dialog-test-helpers';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
+import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
@@ -32,6 +35,8 @@ async function open(
   if (options.failList) {
     repository.failWith.listByUser = new Error('offline');
   }
+  const chapters = new FakeChapterRepository();
+  chapters.seed(aChapter({ id: 'c1', bookId: 'b1', name: 'Básicos' }));
   if (options.failTotals) {
     repository.failWith.countCardsByState = new Error('offline');
   }
@@ -42,6 +47,7 @@ async function open(
         { path: 'biblioteca', component: BlankPageComponent },
       ]),
       { provide: BookRepository, useValue: repository },
+      { provide: ChapterRepository, useValue: chapters },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
@@ -60,7 +66,7 @@ async function open(
   };
   await update();
   const page = () => harness.routeNativeElement as HTMLElement;
-  return { harness, repository, update, page };
+  return { harness, repository, chapters, update, page };
 }
 
 describe('LibroDetailPageComponent', () => {
@@ -133,9 +139,31 @@ describe('LibroDetailPageComponent', () => {
     expect(page().querySelector('h1')?.textContent?.trim()).toBe('Inglés B2');
   });
 
-  it('deja la región de capítulos con la página provisional', async () => {
-    const { page } = await open('b1');
+  it('la región de capítulos pinta la lista del libro', async () => {
+    const { page, chapters } = await open('b1');
 
-    expect(page().querySelector('section[aria-label="Capítulos"] app-pending-page')).not.toBeNull();
+    expect(page().querySelector('app-chapter-list section h2')?.textContent?.trim()).toBe(
+      'Capítulos',
+    );
+    expect(page().textContent).toContain('Básicos');
+    expect(chapters.calls.listByBook).toBe(1);
+    expect(page().querySelector('app-pending-page')).toBeNull();
+  });
+
+  it('con el libro inexistente no hay lista de capítulos', async () => {
+    const { page } = await open('nadie');
+
+    expect(page().querySelector('app-chapter-list')).toBeNull();
+  });
+
+  it('cuando la lista cambia el contenido del libro, vuelve a pedir los totales', async () => {
+    const { harness, repository, update } = await open('b1');
+    expect(repository.calls.countCardsByState).toBe(1);
+
+    const list = harness.fixture.debugElement.query(By.css('app-chapter-list'));
+    (list.componentInstance as { contentsChanged: { emit(): void } }).contentsChanged.emit();
+    await update();
+
+    expect(repository.calls.countCardsByState).toBe(2);
   });
 });

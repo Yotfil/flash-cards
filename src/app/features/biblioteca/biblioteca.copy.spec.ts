@@ -1,4 +1,10 @@
-import { BIBLIOTECA_COPY, bookDeletionDetail } from './biblioteca.copy';
+import {
+  BIBLIOTECA_COPY,
+  bookDeletionDetail,
+  chapterDeletionDetail,
+  chapterDisplayName,
+} from './biblioteca.copy';
+import { aChapter } from '@testing/fake-chapter-repository';
 
 describe('textos de la Biblioteca', () => {
   it('el detalle del borrado nombra cuántos capítulos y tarjetas se van', () => {
@@ -25,5 +31,22 @@ describe('textos de la Biblioteca', () => {
       '1 tarjeta',
       '12 tarjetas',
     ]);
+  });
+
+  it.each([
+    [42, 'Se borrarán 42 tarjetas. Tu historial de repasos se conserva. No se puede deshacer.'],
+    [1, 'Se borrará 1 tarjeta. Tu historial de repasos se conserva. No se puede deshacer.'],
+    [0, 'No se puede deshacer.'],
+    [
+      null,
+      'También se borrarán sus tarjetas. Tu historial de repasos se conserva. No se puede deshacer.',
+    ],
+  ])('el detalle del borrado de un capítulo con %s tarjetas concuerda el verbo', (count, text) => {
+    expect(chapterDeletionDetail(count)).toBe(text);
+  });
+
+  it('un capítulo sin nombre se pinta como "Capítulo sin nombre"', () => {
+    expect(chapterDisplayName(aChapter({ name: '' }))).toBe('Capítulo sin nombre');
+    expect(chapterDisplayName(aChapter({ name: 'Básicos' }))).toBe('Básicos');
   });
 });

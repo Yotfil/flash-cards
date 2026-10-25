@@ -1,0 +1,59 @@
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <app-skeleton [lines]="4" />
+  }
+  @case ('error') {
+    <app-error-state
+      [title]="current.failed === 'books' ? copy.loadError : copy.chapters.loadError"
+      [message]="copy.loadErrorMessage"
+      (retry)="retry(current.failed)"
+    />
+  }
+  @case ('bookMissing') {
+    <app-empty-state [title]="copy.detail.notFoundTitle" [message]="copy.detail.notFoundMessage">
+      <a
+        routerLink="/biblioteca"
+        class="press inline-block rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+      >
+        {{ copy.detail.backToLibrary }}
+      </a>
+    </app-empty-state>
+  }
+  @case ('chapterMissing') {
+    <app-empty-state
+      [title]="copy.chapterDetail.notFoundTitle"
+      [message]="copy.chapterDetail.notFoundMessage"
+    >
+      <a
+        class="press inline-block rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+        [routerLink]="['/biblioteca', current.book.id]"
+      >
+        {{ copy.chapterDetail.backTo(current.book.name) }}
+      </a>
+    </app-empty-state>
+  }
+  @case ('ready') {
+    <div class="flex flex-col gap-6">
+      <header class="flex flex-col gap-2">
+        <a
+          class="flex min-w-0 items-center gap-1 self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+          [routerLink]="['/biblioteca', current.book.id]"
+          [attr.aria-label]="copy.chapterDetail.backTo(current.book.name)"
+        >
+          <app-icon name="back" size="sm" />
+          <span class="truncate">{{ current.book.name }}</span>
+        </a>
+        <h1 class="truncate text-2xl font-extrabold tracking-tight text-text">
+          {{ displayName(current.chapter) }}
+        </h1>
+      </header>
+
+      <div data-chapter-actions class="flex flex-wrap gap-2 empty:hidden"></div>
+
+      <section [attr.aria-label]="copy.chapterDetail.cards">
+        <app-pending-page />
+      </section>
+    </div>
+  }
+}

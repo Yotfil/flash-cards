@@ -9,6 +9,7 @@ import {
 import { AllowlistRepository } from '@domain/ports/allowlist.repository';
 import { AuthPort } from '@domain/ports/auth.port';
 import { BookRepository } from '@domain/ports/book.repository';
+import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { ThemePort } from '@domain/ports/theme.port';
@@ -19,6 +20,7 @@ import { NavigatorConnectivityAdapter } from '@infrastructure/browser/navigator-
 import { FIREBASE_AUTH, FIRESTORE } from '@infrastructure/firebase/firebase.tokens';
 import { FirestoreAllowlistRepository } from '@infrastructure/firestore/allowlist.repository.firestore';
 import { FirestoreBookRepository } from '@infrastructure/firestore/book.repository.firestore';
+import { FirestoreChapterRepository } from '@infrastructure/firestore/chapter.repository.firestore';
 import { FirestoreUserRepository } from '@infrastructure/firestore/user.repository.firestore';
 import { ConsoleLoggerAdapter } from '@infrastructure/logging/console-logger.adapter';
 import { ProfileThemeSync } from '@services/settings/profile-theme-sync';
@@ -43,6 +45,10 @@ export function provideCore(): EnvironmentProviders {
       useFactory: () => new FirestoreAllowlistRepository(inject(FIRESTORE)),
     },
     { provide: BookRepository, useFactory: () => new FirestoreBookRepository(inject(FIRESTORE)) },
+    {
+      provide: ChapterRepository,
+      useFactory: () => new FirestoreChapterRepository(inject(FIRESTORE)),
+    },
     // El tema recordado se aplica antes del primer render, para no arrancar con el equivocado; al
     // cargar la sesión, el tema del perfil toma el mando.
     provideAppInitializer(() => {
