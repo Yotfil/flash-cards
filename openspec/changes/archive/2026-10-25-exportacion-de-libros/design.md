@@ -63,6 +63,14 @@ Adaptador: `canShareFiles` = `typeof navigator.canShare === 'function' && naviga
 - Botón en la cabecera: `IconComponent name="share"` (icono nuevo en el set) con `aria-label = exportButtonLabel(book.name)`; `[disabled]="!online()"` y, deshabilitado, muestra `EXPORT_NEEDS_CONNECTION` como texto asociado (`aria-describedby`). Abre el diálogo. El resultado `true` no requiere nada más.
 - Textos en `biblioteca.copy.ts`: `exportButtonLabel`, `exportDialogTitle`, `exportSummary`, `EXPORT_ERROR`, `EXPORT_READ_ERROR`, `EXPORT_COPY_ERROR`, `EXPORT_NEEDS_CONNECTION = 'Necesitas conexión para exportar.'`, `COPIED`.
 
+### 6. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+1. **El libro sale de `await books.ensureLoaded()`**, no de `books.findById`: `findById` devuelve `undefined` mientras la Biblioteca no cargó (entrada directa por la dirección). Los capítulos se leen con `ChapterRepository.listByBook` (ya ordenados por `order`), en paralelo con las tarjetas: `ChaptersService` es un recurso sin promesa que esperar.
+2. **`ErrorState` gana la entrada `compact`** (relleno vertical corto) para el error de lectura dentro del diálogo; el de página sigue igual.
+3. **Chrome de escritorio en macOS SÍ comparte archivos:** `canShare({ files })` es `true`, así que ofrece "Compartir" (hoja del sistema de macOS) y no "Descargar .txt", tal como pide la spec. La descarga de la verificación 5.1 se comprobó simulando un navegador sin compartir archivos (como Firefox de escritorio).
+4. **Compartir en un móvil real** (hoja del sistema y cancelarla sin error) queda para el usuario en el branch deploy; en la verificación por CDP se simuló `navigator.share` (cancelar, fallo y éxito).
+5. **Trampa de pruebas:** con la lectura retenida, `ApplicationRef.whenStable()` no resuelve (el recurso cuenta como tarea pendiente): esas pruebas solo pintan hasta liberar la lectura.
+
 ## Superficies con acrílico (ADR 0003)
 
 | Superficie | Tratamiento | Capa visible |

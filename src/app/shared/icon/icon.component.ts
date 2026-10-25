@@ -20,6 +20,7 @@ export const ICON_NAMES = [
   'pause',
   'play',
   'flame',
+  'share',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

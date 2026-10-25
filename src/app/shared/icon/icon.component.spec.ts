@@ -30,6 +30,7 @@ describe('IconComponent', () => {
         'check',
         'flame',
         'offline',
+        'share',
         'sliders',
         'spark',
         'x',

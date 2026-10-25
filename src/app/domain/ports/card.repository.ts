@@ -12,6 +12,11 @@ export abstract class CardRepository {
   abstract listReady(uid: string, before: Date): Promise<Card[]>;
   /** Lo mismo, solo las de un libro. */
   abstract listReadyByBook(uid: string, bookId: string, before: Date): Promise<Card[]>;
+  /**
+   * TODAS las tarjetas del libro tal como están en el servidor (para exportar). Nunca responde con
+   * la caché local, que puede tener solo parte del libro: sin red, falla.
+   */
+  abstract listByBookFromServer(uid: string, bookId: string): Promise<Card[]>;
   /** Crea una tarjeta y suma 1 al libro. */
   abstract create(uid: string, card: NewCard): Promise<Card>;
   /** Crea varias tarjetas de un mismo libro en lotes, cada lote con su suma al libro. */

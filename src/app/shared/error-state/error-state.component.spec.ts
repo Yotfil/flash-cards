@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorStateComponent } from './error-state.component';
 import { ERROR_STATE_COPY } from './error-state.copy';
 
-function render(inputs: { title?: string; message?: string } = {}) {
+function render(inputs: { title?: string; message?: string; compact?: boolean } = {}) {
   const fixture = TestBed.createComponent(ErrorStateComponent);
   for (const [name, value] of Object.entries(inputs)) {
     fixture.componentRef.setInput(name, value);
@@ -44,5 +44,14 @@ describe('ErrorStateComponent', () => {
     button?.click();
 
     expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('compacto (dentro de un diálogo) no lleva el relleno de pantalla completa', () => {
+    const full = render().element.querySelector('[role="alert"]');
+    const compact = render({ compact: true }).element.querySelector('[role="alert"]');
+
+    expect(full?.classList.contains('py-12')).toBe(true);
+    expect(compact?.classList.contains('py-12')).toBe(false);
+    expect(compact?.classList.contains('py-4')).toBe(true);
   });
 });

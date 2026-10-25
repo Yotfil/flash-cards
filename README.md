@@ -220,6 +220,13 @@ muestra antes de escribir nada. El libro se escribe en lotes con su documento en
 aparece a medias) y, si un lote falla, se borra lo escrito; reemplazar un capítulo es atómico si
 cabe en un lote (`writeInCountedBatches` con delta por operación).
 
+**Exportar.** El inverso de importar: el botón de compartir del detalle del libro arma, con
+`services/export/`, el mismo texto que la importación acepta (capítulos en orden, tarjetas en el
+orden del listado, suspendidas incluidas, sin progreso; importarlo da los mismos capítulos y
+tarjetas) y lo entrega con `FileDeliveryPort`: "Compartir" con la hoja del sistema donde el
+navegador comparte archivos, o "Descargar .txt" donde no, y siempre "Copiar texto". Lee el libro
+del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita.
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.

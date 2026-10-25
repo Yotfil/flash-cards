@@ -10,6 +10,7 @@ type FailableMethod =
   | 'listByChapter'
   | 'listReady'
   | 'listReadyByBook'
+  | 'listByBookFromServer'
   | 'create'
   | 'createMany'
   | 'updateContent'
@@ -28,6 +29,7 @@ export class FakeCardRepository extends CardRepository {
     listByChapter: 0,
     listReady: 0,
     listReadyByBook: 0,
+    listByBookFromServer: 0,
     create: 0,
     createMany: 0,
     updateContent: 0,
@@ -67,6 +69,12 @@ export class FakeCardRepository extends CardRepository {
     return [...this.cards.values()].filter(
       (card) => card.bookId === bookId && card.scheduling.due <= before,
     );
+  }
+
+  async listByBookFromServer(uid: string, bookId: string): Promise<Card[]> {
+    this.record('listByBookFromServer');
+    this.listedUids.push(uid);
+    return [...this.cards.values()].filter((card) => card.bookId === bookId);
   }
 
   async create(_uid: string, card: NewCard): Promise<Card> {

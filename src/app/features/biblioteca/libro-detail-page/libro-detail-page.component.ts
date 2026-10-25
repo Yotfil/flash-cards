@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 
 import type { Book } from '@domain/models/book.model';
+import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { ChaptersService } from '@services/chapters/chapters.service';
@@ -15,7 +16,7 @@ import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
 
-import { BIBLIOTECA_COPY } from '../biblioteca.copy';
+import { BIBLIOTECA_COPY, EXPORT_NEEDS_CONNECTION, exportButtonLabel } from '../biblioteca.copy';
 import {
   BookFormDialogComponent,
   type BookFormDialogData,
@@ -26,13 +27,18 @@ import {
 } from '../book-settings-dialog/book-settings-dialog.component';
 import { StudyLaunchButtonComponent } from '../../estudio/study-launch-button/study-launch-button.component';
 import { ChapterListComponent } from '../chapter-list/chapter-list.component';
+import {
+  ExportBookDialogComponent,
+  type ExportBookDialogData,
+} from '../export-book-dialog/export-book-dialog.component';
 
 type DetailView = 'loading' | 'error' | 'notFound' | 'book';
 
-// Detalle de un libro: cabecera (volver, nombre, materia, totales por estado, editar y ajustes, y
-// la zona de acciones con "Estudiar este libro") y debajo la lista de capítulos (que avisa cuando
-// un borrado cambia los totales). Entrando directo por la dirección, carga la Biblioteca. Los
-// totales se cuentan en el servidor: sin red o si el conteo falla se omiten, sin error.
+// Detalle de un libro: cabecera (volver, nombre, materia, totales por estado, editar, exportar y
+// ajustes, y la zona de acciones con "Estudiar este libro") y debajo la lista de capítulos (que
+// avisa cuando un borrado cambia los totales). Entrando directo por la dirección, carga la
+// Biblioteca. Los totales se cuentan en el servidor: sin red o si el conteo falla se omiten, sin
+// error. Exportar lee el libro del servidor, así que sin red se deshabilita con el motivo.
 @Component({
   selector: 'app-libro-detail-page',
   imports: [
@@ -55,6 +61,9 @@ export class LibroDetailPageComponent {
   private readonly logger = inject(Logger);
 
   protected readonly copy = BIBLIOTECA_COPY;
+  protected readonly online = inject(ConnectivityPort).online;
+  protected readonly exportLabel = exportButtonLabel;
+  protected readonly exportNeedsConnection = EXPORT_NEEDS_CONNECTION;
   private readonly bookId = toSignal(
     inject(ActivatedRoute).paramMap.pipe(map((params) => params.get('bookId') ?? '')),
     { initialValue: '' },
@@ -106,6 +115,14 @@ export class LibroDetailPageComponent {
     this.dialogs.open<Book, BookFormDialogData>(BookFormDialogComponent, {
       label: this.copy.bookForm.editTitle,
       data: { mode: 'edit', book },
+    });
+  }
+
+  protected openExport(book: Book): void {
+    this.dialogs.open<boolean, ExportBookDialogData>(ExportBookDialogComponent, {
+      label: exportButtonLabel(book.name),
+      size: 'sm',
+      data: { bookId: book.id, bookName: book.name },
     });
   }
 

@@ -10,6 +10,7 @@ import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
@@ -19,6 +20,7 @@ import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeFileDelivery } from '@testing/fake-file-delivery';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
@@ -63,6 +65,7 @@ async function open(
       return list(uid, bookId);
     };
   }
+  const connectivity = new FakeConnectivity(options.online ?? true);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -77,7 +80,8 @@ async function open(
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
       },
-      { provide: ConnectivityPort, useValue: new FakeConnectivity(options.online ?? true) },
+      { provide: ConnectivityPort, useValue: connectivity },
+      { provide: FileDeliveryPort, useValue: new FakeFileDelivery() },
       { provide: Logger, useValue: new FakeLogger() },
     ],
   });
@@ -97,7 +101,17 @@ async function open(
     Array.from(page().querySelectorAll('button')).find(
       (candidate) => candidate.textContent?.trim() === text,
     );
-  return { harness, repository, chapters, cards, update, page, button, releaseChapters };
+  return {
+    harness,
+    repository,
+    chapters,
+    cards,
+    connectivity,
+    update,
+    page,
+    button,
+    releaseChapters,
+  };
 }
 
 describe('LibroDetailPageComponent', () => {
@@ -168,6 +182,41 @@ describe('LibroDetailPageComponent', () => {
     await update();
 
     expect(page().querySelector('h1')?.textContent?.trim()).toBe('Inglés B2');
+  });
+
+  it('"Exportar «Inglés»" está junto a los ajustes y abre la exportación de ese libro', async () => {
+    const { page, update } = await open('b1');
+    const exportButton = page().querySelector<HTMLButtonElement>(
+      '[aria-label="Exportar «Inglés»"]',
+    );
+    const settings = page().querySelector('[aria-label="Ajustes de Inglés"]');
+
+    expect(exportButton?.parentElement).toBe(settings?.parentElement);
+    expect(exportButton?.querySelector('[data-icon="share"]')).not.toBeNull();
+    exportButton?.click();
+    await update();
+
+    expect(openDialog().querySelector('h2')?.textContent?.trim()).toBe('Exportar «Inglés»');
+    expect(openDialog().textContent).toContain('1 capítulo · 0 tarjetas');
+  });
+
+  it('sin conexión, "Exportar" está deshabilitado con el motivo y se habilita al volver la red', async () => {
+    const { page, connectivity, update } = await open('b1', { online: false });
+    const exportButton = () =>
+      page().querySelector<HTMLButtonElement>('[aria-label="Exportar «Inglés»"]');
+
+    expect(exportButton()?.disabled).toBe(true);
+    const describedBy = exportButton()?.getAttribute('aria-describedby') ?? '';
+    expect(page().querySelector(`#${describedBy}`)?.textContent?.trim()).toBe(
+      'Necesitas conexión para exportar.',
+    );
+
+    connectivity.setOnline(true);
+    await update();
+
+    expect(exportButton()?.disabled).toBe(false);
+    expect(exportButton()?.hasAttribute('aria-describedby')).toBe(false);
+    expect(page().textContent).not.toContain('Necesitas conexión para exportar.');
   });
 
   it('la región de capítulos pinta la lista del libro', async () => {

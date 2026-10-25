@@ -305,3 +305,31 @@ describe('FirestoreCardRepository · reemplazar las tarjetas de un capítulo', (
     expect(await bookCount()).toBe(10);
   });
 });
+
+describe('FirestoreCardRepository · lectura completa de un libro', () => {
+  it('trae todas las tarjetas del libro desde el servidor, y solo las de ese libro', async () => {
+    await repository.createMany(
+      OWNER_UID,
+      Array.from({ length: 40 }, (_, index) => newCard({ front: `a${index}` })),
+    );
+    await asAdmin((db) =>
+      setDoc(doc(db, 'users', OWNER_UID, 'books', 'b2'), { name: 'Otro', cardCount: 0 }),
+    );
+    await repository.createMany(
+      OWNER_UID,
+      Array.from({ length: 5 }, (_, index) => newCard({ bookId: 'b2', front: `b${index}` })),
+    );
+
+    expect(await repository.listByBookFromServer(OWNER_UID, 'b1')).toHaveLength(40);
+  });
+
+  it('un documento corrupto falla con un error que nombra su ruta', async () => {
+    await asAdmin((db) => setDoc(doc(db, 'users', OWNER_UID, 'cards', 'roto'), { bookId: 'b1' }));
+
+    const failure = await repository
+      .listByBookFromServer(OWNER_UID, 'b1')
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(InvalidDocumentError);
+  });
+});

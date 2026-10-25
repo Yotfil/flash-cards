@@ -3,6 +3,7 @@ import {
   deleteField,
   doc,
   getDocs,
+  getDocsFromServer,
   query,
   Timestamp,
   updateDoc,
@@ -43,6 +44,15 @@ export class FirestoreCardRepository extends CardRepository {
     // Usa el índice compuesto `bookId + scheduling.due` declarado en firestore.indexes.json.
     const snapshot = await getDocs(
       query(this.cardsOf(uid), where('bookId', '==', bookId), dueUpTo(before)),
+    );
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
+  }
+
+  // Del servidor, nunca de la caché: la caché puede tener solo parte del libro y un archivo
+  // exportado incompleto que parece completo es peor que ninguno. Sin red, falla.
+  async listByBookFromServer(uid: string, bookId: string): Promise<Card[]> {
+    const snapshot = await getDocsFromServer(
+      query(this.cardsOf(uid), where('bookId', '==', bookId)),
     );
     return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }

@@ -12,6 +12,8 @@ import { ERROR_STATE_COPY } from './error-state.copy';
 export class ErrorStateComponent {
   readonly title = input<string>(ERROR_STATE_COPY.defaultTitle);
   readonly message = input<string>();
+  /** Dentro de un diálogo: sin el relleno vertical de una pantalla entera. */
+  readonly compact = input(false);
   readonly retry = output<void>();
 
   protected readonly copy = ERROR_STATE_COPY;

@@ -47,6 +47,16 @@
               </button>
               <button
                 type="button"
+                class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text disabled:opacity-50"
+                [attr.aria-label]="exportLabel(current.name)"
+                [attr.aria-describedby]="online() ? null : 'export-needs-connection'"
+                [disabled]="!online()"
+                (click)="openExport(current)"
+              >
+                <app-icon name="share" />
+              </button>
+              <button
+                type="button"
                 class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text"
                 [attr.aria-label]="copy.settingsOf(current.name)"
                 (click)="openSettings(current)"
@@ -55,6 +65,12 @@
               </button>
             </div>
           </div>
+
+          @if (!online()) {
+            <p id="export-needs-connection" class="-mt-1 text-xs text-text-dim">
+              {{ exportNeedsConnection }}
+            </p>
+          }
 
           @if (totals.isLoading()) {
             <app-skeleton [lines]="1" />

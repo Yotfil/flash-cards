@@ -1,4 +1,5 @@
 import {
+  DOCUMENT,
   EnvironmentProviders,
   ErrorHandler,
   inject,
@@ -13,6 +14,7 @@ import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
+import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
 import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
@@ -20,6 +22,7 @@ import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
 import { UserRepository } from '@domain/ports/user.repository';
 import { FirebaseAuthAdapter } from '@infrastructure/auth/firebase-auth.adapter';
+import { BrowserFileDeliveryAdapter } from '@infrastructure/browser/browser-file-delivery.adapter';
 import { DocumentThemeAdapter } from '@infrastructure/browser/document-theme.adapter';
 import { NavigatorConnectivityAdapter } from '@infrastructure/browser/navigator-connectivity.adapter';
 import { FIREBASE_AUTH, FIRESTORE } from '@infrastructure/firebase/firebase.tokens';
@@ -46,6 +49,7 @@ export function provideCore(): EnvironmentProviders {
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: ThemePort, useClass: DocumentThemeAdapter },
     { provide: ConnectivityPort, useClass: NavigatorConnectivityAdapter },
+    { provide: FileDeliveryPort, useFactory: () => browserFileDelivery(inject(DOCUMENT)) },
     // El algoritmo de programación no inyecta nada: se construye como una clase cualquiera.
     { provide: SchedulingPort, useFactory: () => new TsFsrsSchedulingAdapter() },
     // Adaptadores de Firebase: reciben su instancia por constructor (así se prueban contra el
@@ -81,4 +85,12 @@ export function provideCore(): EnvironmentProviders {
       inject(ProfileThemeSync);
     }),
   ]);
+}
+
+function browserFileDelivery(document: Document): BrowserFileDeliveryAdapter {
+  const view = document.defaultView;
+  if (!view) {
+    throw new Error('La entrega de archivos necesita una ventana de navegador.');
+  }
+  return new BrowserFileDeliveryAdapter({ navigator: view.navigator, document, url: view.URL });
 }

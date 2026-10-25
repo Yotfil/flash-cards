@@ -1,4 +1,9 @@
-<div role="alert" class="flex flex-col items-center gap-2 px-6 py-12 text-center">
+<div
+  role="alert"
+  class="flex flex-col items-center gap-2 px-6 text-center"
+  [class.py-12]="!compact()"
+  [class.py-4]="compact()"
+>
   <h2 class="text-lg font-bold tracking-tight text-text">{{ title() }}</h2>
   @if (message()) {
     <p class="max-w-sm text-sm leading-relaxed text-text-dim">{{ message() }}</p>

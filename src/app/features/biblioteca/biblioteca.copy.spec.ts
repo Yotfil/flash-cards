@@ -7,6 +7,15 @@ import {
   chapterDeletionDetail,
   chapterReadyLabel,
   chapterDisplayName,
+  COPIED,
+  EXPORT_ACTIONS,
+  EXPORT_COPY_ERROR,
+  EXPORT_ERROR,
+  EXPORT_NEEDS_CONNECTION,
+  EXPORT_READ_ERROR,
+  exportButtonLabel,
+  exportDialogTitle,
+  exportSummary,
 } from './biblioteca.copy';
 import { aCard } from '@testing/fake-card-repository';
 import { aChapter } from '@testing/fake-chapter-repository';
@@ -76,5 +85,27 @@ describe('textos de la Biblioteca', () => {
     expect(chapterReadyLabel(22)).toBe('22 listas');
     expect(chapterReadyLabel(1)).toBe('1 lista');
     expect(chapterReadyLabel(0)).toBe('al día');
+  });
+
+  it('la exportación resume con plural real y nombra el libro en el botón y el título', () => {
+    expect(exportSummary(2, 40)).toBe('2 capítulos · 40 tarjetas');
+    expect(exportSummary(1, 1)).toBe('1 capítulo · 1 tarjeta');
+    expect(exportButtonLabel('Phrasal Verbs')).toBe('Exportar «Phrasal Verbs»');
+    expect(exportDialogTitle('Phrasal Verbs')).toBe('Exportar «Phrasal Verbs»');
+  });
+
+  it('los textos de la exportación son los de la spec', () => {
+    expect(EXPORT_READ_ERROR).toBe('No pudimos cargar las tarjetas del libro.');
+    expect(EXPORT_ERROR).toBe('No se pudo exportar el libro. Inténtalo de nuevo.');
+    expect(EXPORT_COPY_ERROR).toBe('No se pudo copiar. Usa Compartir o Descargar.');
+    expect(EXPORT_NEEDS_CONNECTION).toBe('Necesitas conexión para exportar.');
+    expect(COPIED).toBe('Copiado');
+    expect(EXPORT_ACTIONS).toEqual({
+      share: 'Compartir',
+      download: 'Descargar .txt',
+      copy: 'Copiar texto',
+      retry: 'Reintentar',
+      cancel: 'Cancelar',
+    });
   });
 });

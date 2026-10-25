@@ -223,3 +223,31 @@ export function bulkDeletionMessage(count: number): string {
 export function bulkDeleteLabel(count: number): string {
   return `Borrar ${count}`;
 }
+
+/** Exportar un libro: el botón de la cabecera y el título del diálogo lo nombran. */
+export function exportButtonLabel(bookName: string): string {
+  return `Exportar «${bookName}»`;
+}
+
+export function exportDialogTitle(bookName: string): string {
+  return exportButtonLabel(bookName);
+}
+
+/** "2 capítulos · 40 tarjetas": lo que se va a exportar, antes de entregarlo. */
+export function exportSummary(chapters: number, cards: number): string {
+  return `${pluralize(chapters, 'capítulo', 'capítulos')} · ${pluralize(cards, 'tarjeta', 'tarjetas')}`;
+}
+
+export const EXPORT_ACTIONS = {
+  share: 'Compartir',
+  download: 'Descargar .txt',
+  copy: 'Copiar texto',
+  retry: 'Reintentar',
+  cancel: 'Cancelar',
+} as const;
+
+export const EXPORT_READ_ERROR = 'No pudimos cargar las tarjetas del libro.';
+export const EXPORT_ERROR = 'No se pudo exportar el libro. Inténtalo de nuevo.';
+export const EXPORT_COPY_ERROR = 'No se pudo copiar. Usa Compartir o Descargar.';
+export const EXPORT_NEEDS_CONNECTION = 'Necesitas conexión para exportar.';
+export const COPIED = 'Copiado';
