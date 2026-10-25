@@ -12,10 +12,10 @@ siempre un anverso y un reverso genéricos. El repositorio se llama `flash-cards
 ## Requisitos
 
 - **Node 24.17** (`nvm use` lee `.nvmrc`).
-- **Java 21 o superior** para el emulador de Firestore (`brew install openjdk`), solo para
-  `npm run test:integration`. El JDK de Homebrew no entra al PATH solo: añade
-  `export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"` a `~/.zprofile`. Sin Java, esas pruebas
-  corren igual en CI.
+- **Java 21 o superior** para los emuladores de Firebase (`brew install openjdk`), necesarios
+  para `npm run emulators` y `npm run test:integration`. El JDK de Homebrew no entra al PATH
+  solo: añade `export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"` a `~/.zprofile`. Sin Java, las
+  pruebas de integración corren igual en CI.
 - Caché local de npm: el proyecto usa `.npm-cache/` para esquivar permisos rotos en la caché
   global. Si `npm` falla con `EACCES`, prefija el comando con
   `npm_config_cache="$(pwd)/.npm-cache"`.
@@ -24,15 +24,42 @@ siempre un anverso y un reverso genéricos. El repositorio se llama `flash-cards
 
 | Comando                    | Qué hace                                                                               |
 | -------------------------- | -------------------------------------------------------------------------------------- |
-| `npm start`                | Servidor de desarrollo en `http://localhost:4200/`.                                    |
+| `npm start`                | Servidor de desarrollo en `http://localhost:4200/`, contra los emuladores.             |
+| `npm run emulators`        | Emuladores locales de Firestore (`:8080`) y Auth (`:9099`), proyecto `demo-cadence`.   |
 | `npm run build`            | Build de producción en `dist/flash-cards/browser` (con service worker).                |
 | `npm run lint`             | ESLint, incluidas las fronteras de capas.                                              |
 | `npm run format:check`     | Prettier en modo comprobación (`npm run format` corrige).                              |
 | `npm run typecheck`        | TypeScript estricto sobre app, pruebas unitarias e integración.                        |
 | `npm test`                 | Pruebas unitarias (Vitest, una pasada). `npm run test:watch` para el ciclo rojo-verde. |
-| `npm run test:integration` | Pruebas contra el emulador de Firestore (reglas y repositorios).                       |
+| `npm run test:integration` | Pruebas contra el emulador de Firestore (reglas, repositorios y configuración).        |
 
 CI (`.github/workflows/ci.yml`) corre exactamente esos comandos en cada PR hacia `dev` y `main`.
+
+## Desarrollo local
+
+En desarrollo la app **nunca toca la nube**: habla con los emuladores de Firestore y Auth bajo el
+proyecto `demo-cadence`, que Firebase trata como solo-emulador (no existe en la nube). Hacen falta
+dos terminales:
+
+```sh
+# Terminal 1: emuladores de Firestore y Auth (Ctrl+C para detenerlos)
+npm run emulators
+
+# Terminal 2: la app en http://localhost:4200/
+npm start
+```
+
+Los datos del emulador se pierden al detenerlo. Hasta que llegue la semilla de la lista de acceso
+(capacidad `autenticacion-y-acceso`), un usuario creado en el emulador verá "sin acceso": es el
+comportamiento correcto de las reglas, no un fallo.
+
+**Probar contra los datos reales** (proyecto `flash-cards-aca86`): se sirve el build de
+producción, que usa `environment.production.ts` y ningún emulador. Nunca con `npm start`.
+
+```sh
+npm run build
+npx --yes serve@14 -s dist/flash-cards/browser -l 4200
+```
 
 ## Arquitectura
 
