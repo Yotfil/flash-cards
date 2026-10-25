@@ -173,6 +173,17 @@ libro en el último lote. Borrar un capítulo borra sus tarjetas con `writeInCou
 capítulo como operación final; reintentar vuelve a consultar lo que queda. El historial de repasos
 nunca se borra.
 
+**Programación espaciada.** ts-fsrs entra solo por `SchedulingPort` (`domain/ports/scheduling.port.ts`),
+de una sola operación pura: `preview(scheduling, now)` devuelve, para cada grado 1-4, el nuevo
+bloque de programación, los días enteros (0 mientras vence en minutos), el vencimiento exacto y
+los valores para el historial. `now` es obligatorio: la sesión previsualiza al mostrar la tarjeta
+(informativo) y vuelve a calcular con el instante de la calificación, que es lo que se guarda (su
+último repaso es ese instante). El adaptador (`infrastructure/scheduling/ts-fsrs-scheduling.adapter.ts`)
+no usa Angular y se prueba con fechas fijas; `FakeSchedulingPort` (`testing/`) sirve a quien lo
+consuma. `formatInterval(due, now)` (`services/scheduling/`) da el texto de cada cerebro desde el
+vencimiento exacto ("1 min", "10 min", "2 h", "6 días", "1 mes"). La app usa los parámetros por
+defecto de ts-fsrs; `tests/static/ts-fsrs-defaults.spec.ts` falla si una actualización los cambia.
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.

@@ -91,6 +91,8 @@ Todas con fechas fijas (`T0 = new Date('2026-10-23T10:00:00Z')`). Valores exacto
 | Historial de una tarjeta en repaso | repaso programado a 2 días, `lastReview = T0 − 7 d`, calificada en `T0` → `log.state Review`, `log.scheduledDays 2`, `log.elapsedDays 7` | unitaria pura |
 | Minutos; Horas; Menos de un día; Días; Meses; Años | `format-interval.spec`: `+1 min` → "1 min"; `+5,5 min` → "6 min"; `+10 min` → "10 min"; `+90 min` → "2 h"; `+5 h` → "5 h"; `0` y `−1 min` → "ahora"; `+1 d` y `+6 d`; `+30 d` → "1 mes"; `+45 d` → "2 meses"; `+365 d` → "1 año"; `+1 d 23 h` → "1 día" | unitaria pura |
 | (Registro en el inyector) | `provide-core.spec` ampliado: `inject(SchedulingPort)` devuelve un `TsFsrsSchedulingAdapter` | unitaria (TestBed) |
+
+*Corrección (2026-10-25, fase B, vía `/opsx:update`):* `src/app/core/provide-core.spec.ts` no existía (ningún change anterior probó `provideCore`), así que se crea en vez de ampliarse. El inicializador de la app arrastra el tema y la sesión: la prueba los sustituye por `FakeThemePort` y `FakeSessionService` para no arrancar Firebase ni tocar el navegador. Además, los bloques "transiciones" e "historial e instantes" del adaptador pasaron en verde a la primera (la traducción de 3.3 ya los cubría); se comprobó con una mutación (pasos de aprendizaje a 0 y `Relearning` → `Review`) que las pruebas sí fallan si la traducción se rompe.
 | (Fake) | `fake-scheduling-port.spec`: generador por defecto, `setPreview` y `calls` | unitaria pura |
 
 ## Risks / Trade-offs
