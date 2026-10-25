@@ -1,5 +1,11 @@
 # Specs base — fuente de verdad de la reescritura
 
+> **Estado (2026-10-25): las 15 capacidades están implementadas** (fase B, rama única
+> `feature/reescritura-cadence`, un commit por change) y sus changes archivados en
+> `openspec/changes/archive/`. Las specs base ya describen la app reescrita: los deltas se
+> sincronizaron al archivar (`exportacion-de-libros` y `practica-con-ia` no llevaban delta: su spec
+> base ya era la definitiva). Lo que sigue se hace con changes nuevos sobre estas specs.
+
 > Cada carpeta describe UNA capacidad de la app actual (v0.1.1) como comportamiento observable:
 > `Purpose` + `Requirements` (SHALL) + `Scenarios` (WHEN/THEN), en español, sin nombres de clases,
 > archivos ni librerías. Se escribieron leyendo el código real y sus tests (2026-10-01 / 2026-10-11)

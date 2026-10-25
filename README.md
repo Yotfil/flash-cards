@@ -5,9 +5,10 @@ offline. Materia-agnóstica: el primer caso de uso es vocabulario de inglés, pe
 siempre un anverso y un reverso genéricos. El repositorio se llama `flash-cards`; el producto,
 **Cadence**.
 
-> Estado: **reescritura en curso** sobre `dev`, capacidad por capacidad, guiada por specs
-> (OpenSpec) y TDD. `main` sigue desplegando la versión anterior (0.1.1) hasta alcanzar la
-> paridad; el código viejo vive en la rama `backup/old-version`.
+> Estado: **reescritura Cadence completa**, guiada por specs (OpenSpec) y TDD: las 15 capacidades
+> de `openspec/specs/` están implementadas. La 1.0.0 trae la paridad con la versión anterior más
+> la exportación de libros; la 1.1.0, la práctica con IA. El código viejo (0.1.1) vive en la rama
+> `backup/old-version`.
 
 ## Requisitos
 
@@ -65,6 +66,20 @@ Después crea la cuenta con ese correo en `http://localhost:4200/login`, o entra
 "Continuar con Google": el emulador abre una ventana falsa donde se elige o inventa la cuenta.
 Un correo fuera de la lista no crea cuenta; uno de Google fuera de la lista se borra al instante
 y la app muestra "sin acceso".
+
+### Si algo no arranca
+
+- **Hace falta Java** para los emuladores: ver [Requisitos](#requisitos) (el JDK de Homebrew no
+  entra al PATH solo).
+- **"Could not start Firestore Emulator, port taken"**: otro proceso usa el 8080 (por ejemplo, un
+  contenedor de Docker publicado en ese puerto). Detenlo o publícalo en otro puerto: la app y las
+  pruebas esperan el emulador de Firestore en el 8080 y el de Auth en el 9099 (`firebase.json`).
+- **El login falla con "connection refused"**: los emuladores no están corriendo (`npm run emulators`).
+- **"Auth Emulator Internal Error: No matching frame"** al entrar con Google: la ventanita del
+  emulador no encuentra su iframe en la pestaña de la app. Pasa si la pestaña se recargó con la
+  ventanita abierta (cierra, recarga y vuelve a intentar) o si algo bloquea `apis.google.com`
+  (bloqueadores, Brave, sin internet), de donde Firebase carga el script que crea ese iframe. Prueba
+  en una ventana de incógnito sin extensiones, o entra con correo y contraseña.
 
 **Probar contra los datos reales** (proyecto `flash-cards-aca86`): se sirve el build de
 producción, que usa `environment.production.ts` y ningún emulador. Nunca con `npm start`.
@@ -265,14 +280,17 @@ plantilla distingue cuatro estados; un fallo nunca se pinta como vacío. Las mut
 
 ## Especificaciones y diseño
 
-- `openspec/specs/`: las 14 capacidades como specs base (comportamiento observable). Índice y
+- `openspec/specs/`: las 15 capacidades como specs base (comportamiento observable). Índice y
   orden de implementación en `openspec/specs/README.md`.
 - `openspec/changes/`: el change en curso, con proposal, design (incluido su plan de pruebas) y
-  tasks.
+  tasks. Los cerrados quedan en `openspec/changes/archive/`, con las correcciones de cada design
+  hechas durante la implementación.
 - `docs/design/`: la guía de rediseño UI/UX Cadence y los prototipos interactivos aprobados.
 
 ## Flujo de trabajo
 
-Cada capacidad es un change de OpenSpec y una rama `feature/<spec-id>` sacada de `dev`:
+Cada capacidad es un change de OpenSpec y una rama `feature/<spec-id>` sacada de `dev` (la
+reescritura fue la excepción: los 15 changes en la rama única `feature/reescritura-cadence`, un
+commit por change):
 `opsx:explore` (decisiones de esa capacidad) → `opsx:propose` → `opsx:apply` con TDD →
 PR hacia `dev` con CI en verde → `opsx:archive` → se borra la rama. Commits atómicos.
