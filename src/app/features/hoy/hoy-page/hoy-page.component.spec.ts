@@ -9,6 +9,7 @@ import { CardRepository } from '@domain/ports/card.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { Logger } from '@domain/ports/logger.port';
+import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
 import { SessionService } from '@services/session/session.service';
 import { previousStudyDayId } from '@services/study-day/study-day';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
@@ -16,6 +17,11 @@ import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeDailyStatsRepository, aDailyStats } from '@testing/fake-daily-stats-repository';
 import { FakeLogger } from '@testing/fake-logger';
+import {
+  FakePracticePackageRepository,
+  aPackage,
+  anItem,
+} from '@testing/fake-practice-package-repository';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -58,6 +64,7 @@ async function open(
     studiedDays?: number;
     holdList?: boolean;
     failList?: boolean;
+    packages?: FakePracticePackageRepository;
   } = {},
 ) {
   const books = new FakeBookRepository();
@@ -93,6 +100,10 @@ async function open(
       { provide: DailyStatsRepository, useValue: stats },
       { provide: Logger, useValue: new FakeLogger() },
       { provide: ConnectivityPort, useValue: new FakeConnectivity() },
+      {
+        provide: PracticePackageRepository,
+        useValue: options.packages ?? new FakePracticePackageRepository(),
+      },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
@@ -243,5 +254,27 @@ describe('HoyPageComponent', () => {
     expect(element.textContent).toContain('0 tarjetas');
     expect(button('Estudiar ahora')?.disabled).toBe(true);
     expect(element.textContent).not.toContain('Estás al día');
+  });
+
+  it('el bloque de práctica con IA va debajo de las filas por libro', async () => {
+    const packages = new FakePracticePackageRepository();
+    packages.seed(aPackage({ id: 'p1', name: 'Película del viernes' }, [anItem({ id: 'i1' })]));
+    const { element } = await open({ cards: dues(2, 'ingles'), packages });
+
+    const perBook = element.querySelector('app-book-pending-row');
+    const block = element.querySelector('app-practice-ai-today-block');
+    expect(block?.textContent).toContain('Película del viernes · 1 para hoy');
+    expect(perBook?.compareDocumentPosition(block as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('si los paquetes no cargan, el bloque lo dice y el resto de Hoy sigue igual', async () => {
+    const packages = new FakePracticePackageRepository();
+    packages.failWith.listByUser = new Error('sin red');
+    const { element, button } = await open({ cards: dues(2, 'ingles'), packages });
+
+    expect(
+      element.querySelector('app-practice-ai-today-block [role="alert"]')?.textContent,
+    ).toContain('No pudimos cargar tus paquetes.');
+    expect(button('Estudiar ahora')).toBeDefined();
   });
 });

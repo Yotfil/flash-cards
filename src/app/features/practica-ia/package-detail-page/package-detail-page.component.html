@@ -1,0 +1,131 @@
+@switch (view()) {
+  @case ('loading') {
+    <app-skeleton [lines]="4" />
+  }
+  @case ('error') {
+    <app-error-state [title]="copy.loadError" (retry)="retry()" />
+  }
+  @case ('notFound') {
+    <app-empty-state [title]="copy.notFoundTitle" [message]="copy.notFoundMessage">
+      <a
+        routerLink="/biblioteca"
+        class="press inline-block rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+      >
+        {{ copy.backToLibrary }}
+      </a>
+    </app-empty-state>
+  }
+  @case ('package') {
+    @if (pkg(); as current) {
+      <div class="flex flex-col gap-6">
+        <header class="flex flex-col gap-3">
+          <a
+            routerLink="/biblioteca"
+            class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+          >
+            {{ copy.backToLibrary }}
+          </a>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h1 class="truncate text-2xl font-extrabold tracking-tight text-text">
+                {{ current.name }}
+              </h1>
+              <p class="mt-1 text-sm text-text-dim">
+                <span data-items-count>{{ countText() }}</span>
+                @if (completedText()) {
+                  · {{ completedText() }}
+                }
+              </p>
+            </div>
+            <app-action-menu
+              [label]="copy.actionsOf(current.name)"
+              [items]="packageMenu"
+              [disabled]="!online()"
+              (selected)="runPackageAction($event, current)"
+            />
+          </div>
+
+          <div data-package-actions class="flex flex-wrap items-start gap-2">
+            @if (isOpen()) {
+              <app-study-launch-button
+                [label]="copy.practiceToday"
+                [prepare]="preparePractice"
+                [destination]="practiceDestination"
+                [emptyMessage]="copy.nothingToday"
+                [errorMessage]="copy.practiceError"
+              />
+              <button
+                type="button"
+                class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+                [disabled]="isFull() || !online()"
+                (click)="addItem(current)"
+              >
+                {{ copy.add }}
+              </button>
+              <button
+                type="button"
+                class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+                [disabled]="isFull() || !online()"
+                (click)="importItems(current)"
+              >
+                {{ copy.import }}
+              </button>
+              <app-copy-prompt-button
+                [label]="copy.copyTodayPrompt"
+                [prompt]="prompt()"
+                [disabledHint]="copy.practiceFirst"
+              />
+              <button
+                type="button"
+                class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+                [disabled]="!online()"
+                (click)="complete(current)"
+              >
+                {{ copy.complete }}
+              </button>
+            } @else {
+              <app-copy-prompt-button [label]="copy.copyPrompt" [prompt]="prompt()" />
+            }
+          </div>
+
+          @if (isOpen() && isFull()) {
+            <p class="text-sm text-text-dim">{{ copy.full }}</p>
+          }
+          @if (!online()) {
+            <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+          }
+        </header>
+
+        @if (items().length === 0) {
+          <p class="text-sm text-text-dim">{{ copy.emptyItems }}</p>
+        } @else {
+          <ul class="flex flex-col gap-2">
+            @for (row of items(); track row.item.id) {
+              <li
+                data-item-row
+                class="glass-soft flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+              >
+                <div class="min-w-0">
+                  <p data-item-text class="truncate text-sm font-semibold text-text">
+                    {{ row.text }}
+                  </p>
+                  @if (row.status) {
+                    <p data-item-status class="text-xs text-text-dim">{{ row.status }}</p>
+                  }
+                </div>
+                @if (isOpen()) {
+                  <app-action-menu
+                    [label]="copy.itemActionsOf(row.item.front)"
+                    [items]="itemMenu"
+                    [disabled]="!online()"
+                    (selected)="runItemAction($event, current, row.item)"
+                  />
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  }
+}

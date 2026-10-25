@@ -3,19 +3,22 @@ import { z } from 'zod';
 import {
   DEFAULT_AUTO_GRADE_BY_TIME,
   DEFAULT_NEW_CARDS_PER_DAY,
+  DEFAULT_PRACTICE_PACKAGE_CAPACITY,
 } from '@domain/models/study-defaults';
 import { THEME_PREFERENCES } from '@domain/models/theme-preference';
 
 import { firestoreTimestamp } from '../document-boundary';
 
-// Forma del documento `users/{uid}` tal como vive en Firestore (sin `id`: es la clave). Los dos
-// ajustes añadidos después del lanzamiento se completan al leer perfiles antiguos.
+// Forma del documento `users/{uid}` tal como vive en Firestore (sin `id`: es la clave). Los ajustes
+// añadidos después del lanzamiento se completan al leer perfiles antiguos.
 const userSettingsSchema = z.object({
   timezone: z.string(),
   dayStartHour: z.number(),
   theme: z.enum(THEME_PREFERENCES),
   defaultNewCardsPerDay: z.number().default(DEFAULT_NEW_CARDS_PER_DAY),
   autoGradeByTime: z.boolean().default(DEFAULT_AUTO_GRADE_BY_TIME),
+  practicePackageCapacity: z.number().default(DEFAULT_PRACTICE_PACKAGE_CAPACITY),
+  promptTemplate: z.string().optional(),
 });
 
 export const userDocumentSchema = z.object({

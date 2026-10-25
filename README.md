@@ -227,6 +227,15 @@ tarjetas) y lo entrega con `FileDeliveryPort`: "Compartir" con la hoja del siste
 navegador comparte archivos, o "Descargar .txt" donde no, y siempre "Copiar texto". Lee el libro
 del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita.
 
+**Práctica con IA.** Una rama aparte de los libros: **paquetes de práctica** (`/users/{uid}/practicePackages`,
+un documento por paquete con sus ítems dentro) que el usuario llena con lo que se cruza en el día,
+con el formulario de tarjeta o pegando texto (hasta "Ítems por paquete", 20 por defecto). Cada día
+practica los nuevos y los difíciles de días anteriores en la pantalla de repaso, con los cuatro
+cerebros pero **sin FSRS**: la nota solo decide si el ítem vuelve mañana (el conjunto se fija en
+la primera práctica del día). Al terminar, copia un **prompt** (plantilla editable en Ajustes, con
+`[[REPASADAS]]` y `[[DIFICILES]]`) para llevarlo a su chat de IA: la app no llama a ningún modelo.
+Nunca toca tarjetas, historial ni el día de los libros. Los ítems cloze se admiten a prueba.
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.

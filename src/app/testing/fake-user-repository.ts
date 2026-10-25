@@ -43,6 +43,7 @@ export function aUser(overrides: Partial<User> = {}): User {
       theme: 'system',
       defaultNewCardsPerDay: 20,
       autoGradeByTime: true,
+      practicePackageCapacity: 20,
     },
     ...overrides,
   };

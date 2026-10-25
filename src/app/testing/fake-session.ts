@@ -1,7 +1,8 @@
 import { computed, signal } from '@angular/core';
 
 import type { SessionState } from '@domain/models/session-state';
-import type { User, UserSettings } from '@domain/models/user.model';
+import type { User } from '@domain/models/user.model';
+import { applySettingsChanges, type SettingsChanges } from '@services/session/session.service';
 
 // Fake del servicio de sesión para guards, rutas y pantallas que solo leen el estado: la prueba
 // fija el estado con `setState`. `whenResolved` se cumple al primer estado distinto de
@@ -18,7 +19,7 @@ export class FakeSessionService {
 
   signOuts = 0;
   profileRetries = 0;
-  readonly settingsUpdates: Partial<UserSettings>[] = [];
+  readonly settingsUpdates: SettingsChanges[] = [];
   /** Si no es `null`, `updateSettings` falla con esto y el perfil no cambia. */
   failOnUpdate: unknown = null;
   private updateGate: Promise<void> | null = null;
@@ -77,7 +78,7 @@ export class FakeSessionService {
   }
 
   /** Como el real: solo si el guardado sale bien, el perfil en sesión refleja el cambio. */
-  async updateSettings(changes: Partial<UserSettings>): Promise<void> {
+  async updateSettings(changes: SettingsChanges): Promise<void> {
     this.settingsUpdates.push(changes);
     await this.updateGate;
     if (this.failOnUpdate !== null) {
@@ -89,7 +90,7 @@ export class FakeSessionService {
     }
     this.setState({
       kind: 'active',
-      user: { ...state.user, settings: { ...state.user.settings, ...changes } },
+      user: { ...state.user, settings: applySettingsChanges(state.user.settings, changes) },
     });
   }
 }

@@ -133,6 +133,7 @@ describe('SessionService · perfil del primer acceso', () => {
         theme: 'system',
         defaultNewCardsPerDay: 20,
         autoGradeByTime: true,
+        practicePackageCapacity: 20,
       },
     };
     expect(users.saved).toEqual([expected]);
@@ -388,6 +389,7 @@ describe('SessionService · ajustes', () => {
           theme: 'dark',
           defaultNewCardsPerDay: 15,
           autoGradeByTime: true,
+          practicePackageCapacity: 20,
         },
       }),
     );
@@ -395,6 +397,17 @@ describe('SessionService · ajustes', () => {
     await settle();
     return context;
   }
+
+  it('una plantilla propia se guarda y `null` la quita (vuelve la plantilla por defecto)', async () => {
+    const { session, users } = await activeSession();
+
+    await session.updateSettings({ promptTemplate: 'Mi [[REPASADAS]]' });
+    expect(session.user()?.settings.promptTemplate).toBe('Mi [[REPASADAS]]');
+
+    await session.updateSettings({ promptTemplate: null });
+    expect(session.user()?.settings).not.toHaveProperty('promptTemplate');
+    expect(users.saved.at(-1)?.settings).not.toHaveProperty('promptTemplate');
+  });
 
   it('guarda el perfil completo con el ajuste cambiado y los demás intactos', async () => {
     const { session, users } = await activeSession();
@@ -407,6 +420,7 @@ describe('SessionService · ajustes', () => {
       theme: 'dark',
       defaultNewCardsPerDay: 5,
       autoGradeByTime: true,
+      practicePackageCapacity: 20,
     };
     expect(users.saved).toHaveLength(1);
     expect(users.saved[0]).toEqual({ ...aUser({ id: 'u1' }), settings: expectedSettings });

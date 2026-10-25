@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 
-import type { Card, CardContentDraft } from '@domain/models/card.model';
+import type { CardContentDraft, CardFace } from '@domain/models/card.model';
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { DEFAULT_MAX_REVIEWS_PER_DAY } from '@domain/models/study-defaults';
 import {
@@ -51,8 +51,14 @@ export class ImportService {
     return { parse, repeatedCount: countRepeatedLines(draftsOf(parse), []) };
   }
 
-  /** En un capítulo, también contra las tarjetas que ya tiene (ya cargadas: sin lecturas). */
-  previewForChapter(text: string, chapterName: string, existing: readonly Card[]): ImportPreview {
+  /**
+   * En un capítulo (o un paquete), también contra lo que ya tiene (ya cargado: sin lecturas).
+   */
+  previewForChapter(
+    text: string,
+    chapterName: string,
+    existing: readonly CardFace[],
+  ): ImportPreview {
     const parse = parseImportText(text, chapterName);
     return { parse, repeatedCount: countRepeatedLines(draftsOf(parse), existing) };
   }

@@ -16,6 +16,10 @@ export interface UserSettings {
   defaultNewCardsPerDay: number;
   /** Sugerir un grado por la velocidad de recuerdo al revelar (asiste, nunca califica solo). */
   autoGradeByTime: boolean;
+  /** Capacidad con la que nace un paquete de práctica; los ya creados conservan la suya. */
+  practicePackageCapacity: number;
+  /** Plantilla propia del prompt de práctica; ausente = la plantilla por defecto. */
+  promptTemplate?: string;
 }
 
 export interface User {

@@ -8,12 +8,15 @@ import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
+import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
 import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
+import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
 import { PracticeHandoffService } from '@services/practice/practice-handoff.service';
+import { PracticeAiHandoffService } from '@services/practice-ai/practice-ai-handoff.service';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
@@ -23,8 +26,10 @@ import { FakeChapterRepository } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeDailyStatsRepository } from '@testing/fake-daily-stats-repository';
 import { FakeGradePersistence } from '@testing/fake-grade-persistence';
+import { FakeFileDelivery } from '@testing/fake-file-delivery';
 import { FakeImportRepository } from '@testing/fake-import-repository';
 import { FakeLogger } from '@testing/fake-logger';
+import { FakePracticePackageRepository, anItem } from '@testing/fake-practice-package-repository';
 import { FakeSchedulingPort } from '@testing/fake-scheduling-port';
 import { FakeSessionService } from '@testing/fake-session';
 import { FakeThemePort } from '@testing/fake-theme-port';
@@ -55,10 +60,18 @@ async function navigate(
       { provide: SchedulingPort, useValue: new FakeSchedulingPort() },
       { provide: GradePersistencePort, useValue: new FakeGradePersistence() },
       { provide: ImportRepository, useValue: new FakeImportRepository() },
+      { provide: PracticePackageRepository, useValue: new FakePracticePackageRepository() },
+      { provide: FileDeliveryPort, useValue: new FakeFileDelivery() },
     ],
   });
   if (options.handOff) {
-    if (url === '/practicar') {
+    if (url === '/practica-ia') {
+      TestBed.inject(PracticeAiHandoffService).hand({
+        packageId: 'p1',
+        dayId: '2026-10-25',
+        items: [anItem({ id: 'i1', front: 'to call it a day' })],
+      });
+    } else if (url === '/practicar') {
       TestBed.inject(PracticeHandoffService).hand({
         questions: [
           { id: 'q1', cardId: 'k1', type: 'written', prompt: 'to give up', answer: 'rendirse' },
@@ -84,6 +97,8 @@ const SHELL_ROUTES = [
   '/importar',
   '/biblioteca/b1',
   '/biblioteca/b1/c1',
+  '/paquetes/completados',
+  '/paquetes/p1',
   '/progreso',
   '/ajustes',
 ];
@@ -110,9 +125,10 @@ describe('mapa de rutas', () => {
     ['/sin-acceso', NO_ACCESS],
     ['/repaso', ACTIVE],
     ['/practicar', ACTIVE],
+    ['/practica-ia', ACTIVE],
   ] as const)('%s se pinta a pantalla completa, sin navegación', async (url, session) => {
     const { element, finalUrl } = await navigate(url, session, {
-      handOff: url === '/repaso' || url === '/practicar',
+      handOff: url === '/repaso' || url === '/practicar' || url === '/practica-ia',
     });
 
     expect(finalUrl).toBe(url);
@@ -148,6 +164,21 @@ describe('pantallas de las secciones', () => {
 
   it('/practicar sin una práctica entregada (recarga, URL directa, "atrás") vuelve a la Biblioteca', async () => {
     expect((await navigate('/practicar')).finalUrl).toBe('/biblioteca');
+  });
+
+  it('/paquetes/completados pinta el historial y /paquetes/:id el detalle del paquete', async () => {
+    const history = await navigate('/paquetes/completados');
+    expect(
+      history.element.querySelector('app-shell main app-completed-packages-page h1')?.textContent,
+    ).toContain('Paquetes completados');
+    TestBed.resetTestingModule();
+
+    const detail = await navigate('/paquetes/p1');
+    expect(detail.element.querySelector('app-shell main app-package-detail-page')).not.toBeNull();
+  });
+
+  it('/practica-ia sin una práctica entregada vuelve a la Biblioteca', async () => {
+    expect((await navigate('/practica-ia')).finalUrl).toBe('/biblioteca');
   });
 
   it('/progreso pinta Progreso dentro del caparazón', async () => {

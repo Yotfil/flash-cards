@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 
-import type { User } from '@domain/models/user.model';
+import type { User, UserSettings } from '@domain/models/user.model';
 import { UserRepository } from '@domain/ports/user.repository';
 
 import { parseDocument } from './document-boundary';
@@ -37,11 +37,16 @@ function toUser(id: string, document: UserDocument): User {
     displayName: document.displayName,
     email: document.email,
     createdAt: document.createdAt,
-    settings: document.settings,
+    settings: toSettings(document.settings),
     isSearchable: document.isSearchable,
     ...(document.handle !== undefined ? { handle: document.handle } : {}),
     ...(document.photoURL !== undefined ? { photoURL: document.photoURL } : {}),
   };
+}
+
+function toSettings(settings: UserDocument['settings']): UserSettings {
+  const { promptTemplate, ...rest } = settings;
+  return { ...rest, ...(promptTemplate !== undefined ? { promptTemplate } : {}) };
 }
 
 function toUserDocument(user: User): Record<string, unknown> {

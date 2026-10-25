@@ -25,8 +25,8 @@
       <li class="relative">
         <a
           [routerLink]="'/' + destination.section"
-          routerLinkActive="text-accent-text"
-          ariaCurrentWhenActive="page"
+          [class.text-accent-text]="activeIndex() === $index"
+          [attr.aria-current]="activeIndex() === $index ? 'page' : null"
           class="press flex flex-col items-center gap-1 rounded-[15px] pt-1.5 pb-1 text-[10.5px] font-semibold not-aria-[current=page]:hover:text-text-dim md:h-11 md:flex-row md:justify-start md:gap-3 md:px-3.5 md:py-0 md:text-sm"
         >
           <app-icon [name]="destination.icon" />

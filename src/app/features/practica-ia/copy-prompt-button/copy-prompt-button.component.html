@@ -1,0 +1,36 @@
+<div class="flex flex-col gap-2">
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <button
+      type="button"
+      class="press rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+      [class]="
+        variant() === 'primary'
+          ? 'bg-accent text-accent-ink shadow-btn'
+          : 'border border-glass-border text-text'
+      "
+      [disabled]="prompt() === null"
+      [attr.aria-describedby]="prompt() === null ? hintId : null"
+      (click)="copyPrompt()"
+    >
+      {{ label() }}
+    </button>
+    <span role="status" class="text-sm text-text-dim">
+      @if (copied()) {
+        {{ copy.copied }}
+      }
+    </span>
+  </div>
+  @if (prompt() === null && disabledHint()) {
+    <p [id]="hintId" class="text-sm text-text-dim">{{ disabledHint() }}</p>
+  }
+  @if (fallback(); as text) {
+    <p role="alert" class="text-sm text-text">{{ copy.copyFailed }}</p>
+    <textarea
+      readonly
+      rows="8"
+      class="w-full resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 font-mono text-xs text-text"
+      [attr.aria-label]="copy.promptLabel"
+      [value]="text"
+    ></textarea>
+  }
+</div>

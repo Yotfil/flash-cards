@@ -29,7 +29,9 @@
           }
         </span>
         <span data-label class="text-xs font-bold text-text">{{ option.label }}</span>
-        <span data-interval class="text-xs text-text-faint">{{ option.interval }}</span>
+        @if (option.interval) {
+          <span data-interval class="text-xs text-text-faint">{{ option.interval }}</span>
+        }
         @if (showKeyHints()) {
           <kbd class="text-[0.625rem] text-text-faint">{{ option.rating }}</kbd>
         }

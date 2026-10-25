@@ -9,7 +9,12 @@ import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.
 import { OfflineIndicatorComponent } from '../../shell/offline-indicator/offline-indicator.component';
 import { FlipCardComponent } from '../flip-card/flip-card.component';
 import { RatingBarComponent } from '../rating-bar/rating-bar.component';
-import { REPASO_COPY, rejectedGradeMessage, remainingLabel } from '../repaso.copy';
+import {
+  REPASO_COPY,
+  rejectedGradeMessage,
+  remainingLabel,
+  reviewedCardsLabel,
+} from '../repaso.copy';
 import { SessionSummaryComponent } from '../session-summary/session-summary.component';
 
 const RATING_KEYS: Readonly<Record<string, Rating>> = { '1': 1, '2': 2, '3': 3, '4': 4 };
@@ -36,6 +41,7 @@ export class RepasoPageComponent implements OnInit {
   private readonly router = inject(Router);
 
   protected readonly copy = REPASO_COPY;
+  protected readonly reviewedLabel = reviewedCardsLabel;
   protected readonly remainingText = computed(() => remainingLabel(this.session.remaining()));
   protected readonly alertMessages = computed(() =>
     this.session.alerts().map((alert) => rejectedGradeMessage(alert.front)),

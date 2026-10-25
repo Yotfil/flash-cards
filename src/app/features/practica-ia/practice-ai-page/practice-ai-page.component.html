@@ -1,0 +1,44 @@
+<main class="safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4 pt-4">
+  @switch (session.status()) {
+    @case ('active') {
+      <app-session-top-bar
+        [progress]="session.progress()"
+        [label]="positionText()"
+        (exit)="backToPackage()"
+      />
+      <app-offline-indicator />
+      @for (message of alertMessages(); track $index) {
+        <p role="alert" class="text-center text-sm text-danger">{{ message }}</p>
+      }
+
+      @for (current of appearance(); track current.key) {
+        <app-flip-card
+          [card]="current.face"
+          [revealed]="session.revealed()"
+          (revealRequested)="session.reveal()"
+        />
+        @if (session.revealed()) {
+          <app-rating-bar (graded)="session.grade($event)" />
+        }
+      }
+    }
+    @case ('finished') {
+      <div class="flex flex-1 items-center">
+        <app-session-summary
+          [title]="copy.practiceFinished"
+          [countLabel]="practicedLabel"
+          [backLabel]="copy.backToPackage"
+          [distinctCount]="session.reviewedFaces().length"
+          [ratingCounts]="session.ratingCounts()"
+          [rejectedAfterFinish]="session.rejectedAfterFinish()"
+          (back)="backToPackage()"
+        >
+          <div practice class="flex flex-col items-center gap-3">
+            <p class="text-sm font-semibold text-text">{{ hardText() }}</p>
+            <app-copy-prompt-button [label]="copy.copyPrompt" [prompt]="prompt()" />
+          </div>
+        </app-session-summary>
+      </div>
+    }
+  }
+</main>

@@ -15,7 +15,7 @@ import { ratingCountKey } from '@domain/models/daily-stats.model';
 import { RATINGS } from '@domain/models/rating';
 import { IconComponent } from '@shared/icon/icon.component';
 
-import { REPASO_COPY, rejectedAfterFinishLabel, reviewedCardsLabel } from '../repaso.copy';
+import { REPASO_COPY, rejectedAfterFinishLabel } from '../repaso.copy';
 
 const RATING_DOT_CLASS = {
   1: 'bg-rating-again',
@@ -24,10 +24,10 @@ const RATING_DOT_CLASS = {
   4: 'bg-rating-easy',
 } as const;
 
-// El cierre de la sesión: un anillo que se completa, la marca, "Sesión terminada", cuántas
-// tarjetas distintas se repasaron (el número sube mientras el anillo se cierra) y el conteo por
-// calificación. Con reducir movimiento todo aparece completo de inmediato. El hueco `[practice]`
-// es para el bloque de práctica con IA.
+// El cierre de una sesión: un anillo que se completa, la marca, el título, cuántas se estudiaron
+// (el número sube mientras el anillo se cierra) y el conteo por calificación. Los textos los pone
+// quien la usa (el repaso, la práctica con IA). Con reducir movimiento todo aparece completo de
+// inmediato. El hueco `[practice]` es para el bloque de práctica con IA.
 @Component({
   selector: 'app-session-summary',
   imports: [IconComponent],
@@ -35,16 +35,21 @@ const RATING_DOT_CLASS = {
   styleUrl: './session-summary.component.scss',
 })
 export class SessionSummaryComponent {
+  readonly title = input.required<string>();
+  /** El texto del conteo para un número dado ("Repasaste 20 tarjetas."). */
+  readonly countLabel = input.required<(count: number) => string>();
+  readonly note = input<string | null>(null);
+  readonly backLabel = input.required<string>();
   readonly distinctCount = input.required<number>();
   readonly ratingCounts = input.required<RatingCounts>();
   readonly rejectedAfterFinish = input(0);
-  readonly homeRequested = output<void>();
+  readonly back = output<void>();
 
   private readonly document = inject(DOCUMENT);
   protected readonly copy = REPASO_COPY;
   /** El número que se muestra mientras sube hasta el total. */
   private readonly shownCount = signal(0);
-  protected readonly reviewedText = computed(() => reviewedCardsLabel(this.shownCount()));
+  protected readonly countText = computed(() => this.countLabel()(this.shownCount()));
   protected readonly rejectedText = computed(() =>
     this.rejectedAfterFinish() > 0 ? rejectedAfterFinishLabel(this.rejectedAfterFinish()) : null,
   );

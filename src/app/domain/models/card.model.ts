@@ -60,6 +60,12 @@ export interface Card {
   updatedAt: Date;
 }
 
+/**
+ * Lo que se ve de una tarjeta al estudiarla: su id y su contenido, sin programación. Una tarjeta
+ * lo cumple y un ítem de un paquete de práctica también.
+ */
+export type CardFace = Pick<Card, 'id' | 'cardType' | 'front' | 'back' | 'example'>;
+
 /** Lo que el formulario decide de una tarjeta. */
 export interface CardContentDraft {
   cardType: CardType;

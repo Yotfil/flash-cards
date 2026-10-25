@@ -1,0 +1,65 @@
+<section aria-labelledby="practice-packages-heading" class="flex flex-col gap-3">
+  <div class="flex items-center justify-between gap-3">
+    <h2 id="practice-packages-heading" class="text-base font-bold text-text">
+      {{ copy.sectionTitle }}
+    </h2>
+    @if (packages.status() === 'ready') {
+      <button
+        type="button"
+        class="press rounded-xl border border-glass-border px-3 py-2 text-sm font-semibold text-text"
+        (click)="createPackage()"
+      >
+        {{ copy.newPackage }}
+      </button>
+    }
+  </div>
+
+  @switch (packages.status()) {
+    @case ('error') {
+      <div role="alert" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <p class="text-text-dim">{{ copy.loadError }}</p>
+        <button
+          type="button"
+          class="press font-semibold text-accent-text underline-offset-4 hover:underline"
+          (click)="packages.reload()"
+        >
+          {{ copy.retry }}
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (rows().length === 0) {
+        <p class="text-sm leading-relaxed text-text-dim">{{ copy.emptyInvite }}</p>
+      } @else {
+        <ul class="flex flex-col gap-2">
+          @for (row of rows(); track row.id) {
+            <li>
+              <a
+                data-package-row
+                class="glass-soft press flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+                [routerLink]="['/paquetes', row.id]"
+              >
+                <span data-name class="min-w-0 truncate text-sm font-semibold text-text">
+                  {{ row.name }}
+                </span>
+                <span class="flex shrink-0 items-center gap-3 text-xs text-text-dim">
+                  <span data-items>{{ row.items }}</span>
+                  <span data-today class="font-semibold text-accent-text">{{ row.today }}</span>
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+      <a
+        routerLink="/paquetes/completados"
+        class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+      >
+        {{ copy.completedLink }}
+      </a>
+    }
+    @default {
+      <app-skeleton variant="card" [lines]="1" />
+    }
+  }
+</section>

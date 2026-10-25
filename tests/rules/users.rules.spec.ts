@@ -71,6 +71,19 @@ describe('reglas de /users/{uid}', () => {
     await assertSucceeds(setDoc(doc(db, 'users', OWNER_UID, 'reviewLogs', 'log2'), { rating: 3 }));
   });
 
+  it('los paquetes de práctica son del dueño: él los escribe y otro usuario no los lee', async () => {
+    const owner = ownerContext(environment, OWNER_UID, OWNER_EMAIL).firestore();
+    const other = ownerContext(environment, OTHER_UID, OTHER_EMAIL).firestore();
+
+    await assertSucceeds(
+      setDoc(doc(owner, 'users', OWNER_UID, 'practicePackages', 'p1'), { name: 'Película' }),
+    );
+    await assertFails(getDoc(doc(other, 'users', OWNER_UID, 'practicePackages', 'p1')));
+    await assertFails(
+      setDoc(doc(other, 'users', OWNER_UID, 'practicePackages', 'p2'), { name: 'Intruso' }),
+    );
+  });
+
   it('el dueño no escribe en una colección que las reglas no declaran', async () => {
     const db = ownerContext(environment, OWNER_UID, OWNER_EMAIL).firestore();
 

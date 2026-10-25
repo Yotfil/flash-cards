@@ -53,6 +53,8 @@ const PROFILE: User = {
     theme: 'system',
     defaultNewCardsPerDay: 15,
     autoGradeByTime: false,
+    practicePackageCapacity: 12,
+    promptTemplate: 'Mi plantilla: [[REPASADAS]] / [[DIFICILES]]',
   },
 };
 
@@ -80,6 +82,8 @@ describe('FirestoreUserRepository', () => {
 
     expect(read?.settings.defaultNewCardsPerDay).toBe(20);
     expect(read?.settings.autoGradeByTime).toBe(true);
+    expect(read?.settings.practicePackageCapacity).toBe(20);
+    expect(read?.settings).not.toHaveProperty('promptTemplate');
     expect(read?.settings.theme).toBe('dark');
   });
 

@@ -23,6 +23,7 @@ import { aUser } from '@testing/fake-user-repository';
 import {
   CardImportDialogComponent,
   type CardImportDialogData,
+  type PackageImportTarget,
 } from './card-import-dialog.component';
 
 const FIVE = Array.from({ length: 5 }, (_, index) =>
@@ -34,7 +35,9 @@ const FIVE = Array.from({ length: 5 }, (_, index) =>
   }),
 );
 
-async function open(options: { cards?: Card[]; online?: boolean } = {}) {
+async function open(
+  options: { cards?: Card[]; online?: boolean; packageTarget?: PackageImportTarget } = {},
+) {
   const repository = new FakeCardRepository();
   const existing = options.cards ?? FIVE;
   repository.seed(...existing);
@@ -65,10 +68,13 @@ async function open(options: { cards?: Card[]; online?: boolean } = {}) {
       label: 'Importar tarjetas',
       size: 'lg',
       data: {
-        bookId: 'b1',
-        chapterId: 'c1',
-        chapterName: 'Básicos',
-        chapterCards: signal(existing),
+        target: options.packageTarget ?? {
+          kind: 'chapter',
+          bookId: 'b1',
+          chapterId: 'c1',
+          chapterName: 'Básicos',
+          chapterCards: signal(existing),
+        },
       },
     },
   );
@@ -266,5 +272,73 @@ describe('CardImportDialogComponent', () => {
     buttonIn(importDialog(), (text) => text === 'Cancelar')?.click();
     await expect(ref.closed).resolves.toBeUndefined();
     expect(importInto).not.toHaveBeenCalled();
+  });
+});
+
+describe('CardImportDialogComponent · en un paquete', () => {
+  beforeEach(() => allowDialogFocusInJsdom());
+  afterEach(() => vi.restoreAllMocks());
+
+  function packageTarget(save: PackageImportTarget['save']): PackageImportTarget {
+    return {
+      kind: 'package',
+      packageName: 'Película del viernes',
+      existing: signal([{ id: 'i1', cardType: 'basic', front: 'to give up', back: 'rendirse' }]),
+      remaining: 2,
+      save,
+      texts: {
+        title: 'Importar ítems',
+        remaining: 'Caben 2 más en este paquete.',
+        error: 'No se pudieron agregar los ítems. Inténtalo de nuevo.',
+        wording: {
+          one: 'ítem',
+          many: 'ítems',
+          repeatedOne: 'repetido',
+          repeatedMany: 'repetidos',
+          repeatedNote: 'Se agregarán igual.',
+        },
+      },
+    };
+  }
+
+  it('solo agrega: sin modos; cuenta repetidas contra el paquete y limita a lo que cabe', async () => {
+    const save = vi.fn(async () => undefined);
+    const { ref, repository, importDialog, importButton, type } = await open({
+      packageTarget: packageTarget(save),
+    });
+
+    expect(importDialog().querySelector('h2')?.textContent?.trim()).toBe('Importar ítems');
+    expect(importDialog().querySelector('input[type="radio"]')).toBeNull();
+    await type('# Escena 1\nto give up | rendirse\na | b\nc | d\ne | f\ng | h');
+
+    expect(importDialog().textContent).toContain('5 ítems · 1 repetido');
+    expect(importDialog().textContent).toContain('Caben 2 más en este paquete.');
+    expect(importButton()?.textContent?.trim()).toBe('Importar 2');
+    importButton()?.click();
+
+    await expect(ref.closed).resolves.toBe(true);
+    expect(save).toHaveBeenCalledWith([
+      { cardType: 'basic', front: 'to give up', back: 'rendirse' },
+      { cardType: 'basic', front: 'a', back: 'b' },
+    ]);
+    expect(repository.calls.createMany).toBe(0);
+  });
+
+  it('si guardar falla, avisa con su texto y conserva lo pegado', async () => {
+    const save = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    const { importDialog, importButton, type, update } = await open({
+      packageTarget: packageTarget(save),
+    });
+    await type('a | b');
+
+    importButton()?.click();
+    await update();
+
+    expect(importDialog().querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'No se pudieron agregar los ítems. Inténtalo de nuevo.',
+    );
+    expect(importDialog().querySelector('textarea')?.value).toBe('a | b');
   });
 });

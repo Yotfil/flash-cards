@@ -135,10 +135,13 @@ export class CapituloDetailPageComponent {
       label: this.copy.importCards,
       size: 'lg',
       data: {
-        bookId,
-        chapterId: chapter.id,
-        chapterName: chapterDisplayName(chapter),
-        chapterCards: this.cardsService.sorted,
+        target: {
+          kind: 'chapter',
+          bookId,
+          chapterId: chapter.id,
+          chapterName: chapterDisplayName(chapter),
+          chapterCards: this.cardsService.sorted,
+        },
       },
     });
   }

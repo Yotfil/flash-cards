@@ -24,6 +24,7 @@ import {
   BookSettingsDialogComponent,
   type BookSettingsDialogData,
 } from '../book-settings-dialog/book-settings-dialog.component';
+import { PracticePackagesSectionComponent } from '../../practica-ia/practice-packages-section/practice-packages-section.component';
 
 type LibraryView = 'loading' | 'error' | 'empty' | 'list';
 
@@ -31,7 +32,13 @@ type LibraryView = 'loading' | 'error' | 'empty' | 'list';
 // error con Reintentar, vacío como bienvenida o la lista). Un fallo nunca se pinta como vacío.
 @Component({
   selector: 'app-biblioteca-page',
-  imports: [BookCardComponent, EmptyStateComponent, ErrorStateComponent, SkeletonComponent],
+  imports: [
+    BookCardComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    PracticePackagesSectionComponent,
+    SkeletonComponent,
+  ],
   templateUrl: './biblioteca-page.component.html',
   styleUrl: './biblioteca-page.component.scss',
 })

@@ -6,6 +6,7 @@ import type { SessionState } from '@domain/models/session-state';
 import {
   DEFAULT_AUTO_GRADE_BY_TIME,
   DEFAULT_NEW_CARDS_PER_DAY,
+  DEFAULT_PRACTICE_PACKAGE_CAPACITY,
 } from '@domain/models/study-defaults';
 import type { User, UserSettings } from '@domain/models/user.model';
 import { AllowlistRepository } from '@domain/ports/allowlist.repository';
@@ -150,9 +151,9 @@ export class SessionService {
    * Guarda ajustes del perfil: escribe el perfil completo con los cambios y, solo si el guardado
    * termina bien, la sesión pasa a reflejarlos. Si falla, el error sube y la sesión no cambia.
    */
-  async updateSettings(changes: Partial<UserSettings>): Promise<void> {
+  async updateSettings(changes: SettingsChanges): Promise<void> {
     const user = requireSessionUser(this.user());
-    const updated: User = { ...user, settings: { ...user.settings, ...changes } };
+    const updated: User = { ...user, settings: applySettingsChanges(user.settings, changes) };
     await this.users.save(updated);
     this.setState({ kind: 'active', user: updated });
   }
@@ -238,6 +239,7 @@ export class SessionService {
         theme: 'system',
         defaultNewCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
         autoGradeByTime: DEFAULT_AUTO_GRADE_BY_TIME,
+        practicePackageCapacity: DEFAULT_PRACTICE_PACKAGE_CAPACITY,
       },
     };
     await this.users.save(profile);
@@ -252,4 +254,23 @@ export class SessionService {
       this.markInitialResolution();
     }
   }
+}
+
+/** Cambios de ajustes; `promptTemplate: null` vuelve a la plantilla por defecto (se quita). */
+export type SettingsChanges = Partial<Omit<UserSettings, 'promptTemplate'>> & {
+  promptTemplate?: string | null;
+};
+
+export function applySettingsChanges(
+  settings: UserSettings,
+  changes: SettingsChanges,
+): UserSettings {
+  const { promptTemplate, ...rest } = changes;
+  const updated: UserSettings = { ...settings, ...rest };
+  if (promptTemplate === null) {
+    delete updated.promptTemplate;
+  } else if (promptTemplate !== undefined) {
+    updated.promptTemplate = promptTemplate;
+  }
+  return updated;
 }

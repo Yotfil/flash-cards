@@ -36,12 +36,35 @@ export interface ImportCounts {
   readonly repeated: number;
 }
 
+/** Cómo se nombra lo que entra: tarjetas en un libro, ítems en un paquete de práctica. */
+export interface PreviewWording {
+  readonly one: string;
+  readonly many: string;
+  readonly repeatedOne: string;
+  readonly repeatedMany: string;
+  readonly repeatedNote: string;
+}
+
+export const CARD_WORDING: PreviewWording = {
+  one: 'tarjeta',
+  many: 'tarjetas',
+  repeatedOne: 'repetida',
+  repeatedMany: 'repetidas',
+  repeatedNote: IMPORTACION_COPY.repeatedNote,
+};
+
 /** "2 capítulos · 4 tarjetas · 1 repetida" (capítulos solo al importar un libro). */
-export function countsLine(counts: ImportCounts, showChapters: boolean): string {
+export function countsLine(
+  counts: ImportCounts,
+  showChapters: boolean,
+  wording: PreviewWording = CARD_WORDING,
+): string {
   return [
     ...(showChapters ? [pluralize(counts.chapters, 'capítulo', 'capítulos')] : []),
-    pluralize(counts.cards, 'tarjeta', 'tarjetas'),
-    ...(counts.repeated > 0 ? [pluralize(counts.repeated, 'repetida', 'repetidas')] : []),
+    pluralize(counts.cards, wording.one, wording.many),
+    ...(counts.repeated > 0
+      ? [pluralize(counts.repeated, wording.repeatedOne, wording.repeatedMany)]
+      : []),
   ].join(' · ');
 }
 
