@@ -12,20 +12,21 @@ import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
 
-import { PendingPageComponent } from '../../shell/pending-page/pending-page.component';
 import { BIBLIOTECA_COPY, chapterDisplayName } from '../biblioteca.copy';
+import { CardListComponent } from '../card-list/card-list.component';
 
 // Detalle de un capítulo. Reutiliza los libros y capítulos ya cargados y, entrando directo por la
 // dirección, los carga. Qué pinta lo decide `resolveChapterDetail` a partir de los dos recursos.
-// La zona de acciones (estudiar, practicar) y la región de tarjetas las llenan otros changes.
+// La región "Tarjetas" es la lista del capítulo; la zona de acciones (estudiar, practicar) la
+// llenan otros changes.
 @Component({
   selector: 'app-capitulo-detail-page',
   imports: [
     RouterLink,
+    CardListComponent,
     EmptyStateComponent,
     ErrorStateComponent,
     IconComponent,
-    PendingPageComponent,
     SkeletonComponent,
   ],
   templateUrl: './capitulo-detail-page.component.html',

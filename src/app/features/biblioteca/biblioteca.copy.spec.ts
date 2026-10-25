@@ -1,9 +1,13 @@
 import {
   BIBLIOTECA_COPY,
   bookDeletionDetail,
+  bulkDeleteLabel,
+  bulkDeletionMessage,
+  cardDisplayName,
   chapterDeletionDetail,
   chapterDisplayName,
 } from './biblioteca.copy';
+import { aCard } from '@testing/fake-card-repository';
 import { aChapter } from '@testing/fake-chapter-repository';
 
 describe('textos de la Biblioteca', () => {
@@ -48,5 +52,22 @@ describe('textos de la Biblioteca', () => {
   it('un capítulo sin nombre se pinta como "Capítulo sin nombre"', () => {
     expect(chapterDisplayName(aChapter({ name: '' }))).toBe('Capítulo sin nombre');
     expect(chapterDisplayName(aChapter({ name: 'Básicos' }))).toBe('Básicos');
+  });
+
+  it('el borrado masivo concuerda el verbo y nombra cuántas en el botón', () => {
+    expect(bulkDeletionMessage(1)).toBe(
+      'Se eliminará 1 tarjeta de este capítulo, con su progreso de estudio. No se puede deshacer.',
+    );
+    expect(bulkDeletionMessage(4)).toBe(
+      'Se eliminarán 4 tarjetas de este capítulo, con su progreso de estudio. No se puede deshacer.',
+    );
+    expect(bulkDeleteLabel(4)).toBe('Borrar 4');
+  });
+
+  it('una tarjeta se nombra por su anverso, o por su pregunta compacta si es cloze', () => {
+    expect(cardDisplayName(aCard({ front: 'to give up' }))).toBe('to give up');
+    expect(cardDisplayName(aCard({ cardType: 'cloze', front: 'El {{gato}} es negro' }))).toBe(
+      'El […] es negro',
+    );
   });
 });

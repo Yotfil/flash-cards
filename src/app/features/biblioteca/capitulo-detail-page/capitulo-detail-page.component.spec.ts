@@ -1,9 +1,11 @@
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { BookRepository } from '@domain/ports/book.repository';
+import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
@@ -11,12 +13,14 @@ import { BooksService } from '@services/books/books.service';
 import { ChaptersService } from '@services/chapters/chapters.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
+import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
+import { CardListComponent } from '../card-list/card-list.component';
 import { CapituloDetailPageComponent } from './capitulo-detail-page.component';
 
 @Component({ template: '' })
@@ -35,6 +39,8 @@ async function open(
   books.seed(aBook({ id: 'b1', name: 'Phrasal Verbs' }));
   const chapters = new FakeChapterRepository();
   chapters.seed(aChapter({ id: 'c1', bookId: 'b1', name: 'Básicos' }));
+  const cards = new FakeCardRepository();
+  cards.seed(aCard({ id: 'k1', bookId: 'b1', chapterId: 'c1', front: 'to give up' }));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -44,6 +50,7 @@ async function open(
       ]),
       { provide: BookRepository, useValue: books },
       { provide: ChapterRepository, useValue: chapters },
+      { provide: CardRepository, useValue: cards },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
@@ -153,11 +160,16 @@ describe('CapituloDetailPageComponent', () => {
     expect(page().querySelector('[aria-label="Tarjetas"]')).toBeNull();
   });
 
-  it('listo: zona de acciones y región "Tarjetas" provisional', async () => {
-    const { page, update } = await open('/biblioteca/b1/c1');
+  it('listo: zona de acciones y, en la región "Tarjetas", la lista del capítulo', async () => {
+    const { page, harness, update } = await open('/biblioteca/b1/c1');
+    await update();
     await update();
 
     expect(page().querySelector('[data-chapter-actions]')).not.toBeNull();
-    expect(page().querySelector('section[aria-label="Tarjetas"] app-pending-page')).not.toBeNull();
+    const list = harness.fixture.debugElement.query(By.directive(CardListComponent));
+    expect(list.nativeElement.closest('section[aria-label="Tarjetas"]')).not.toBeNull();
+    expect(list.componentInstance.bookId()).toBe('b1');
+    expect(list.componentInstance.chapterId()).toBe('c1');
+    expect(page().querySelector('app-card-row')?.textContent).toContain('to give up');
   });
 });

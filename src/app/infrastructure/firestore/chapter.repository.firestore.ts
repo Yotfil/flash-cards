@@ -3,24 +3,19 @@ import {
   doc,
   getCountFromServer,
   getDocs,
-  increment,
   query,
   setDoc,
   updateDoc,
   where,
-  type DocumentReference,
   type Firestore,
 } from 'firebase/firestore';
 
 import type { Chapter } from '@domain/models/chapter.model';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 
-import { BatchWriter, MAX_BATCH_SIZE } from './batch-writer';
+import { writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
 import { chapterDocumentSchema } from './schemas/chapter.schema';
-
-/** Tarjetas por lote: deja sitio al descuento del libro y al borrado del capítulo. */
-const CARDS_PER_BATCH = MAX_BATCH_SIZE - 2;
 
 // Capítulos del usuario en `users/{uid}/chapters`. Se filtran por libro y se ordenan en memoria:
 // son pocos por libro y así no hace falta un índice compuesto `bookId + order`.
@@ -56,25 +51,19 @@ export class FirestoreChapterRepository extends ChapterRepository {
   }
 
   /**
-   * Borra las tarjetas en grupos y, en el último, el capítulo. Cada grupo es un único lote que lleva
-   * también el descuento de sus tarjetas en el contador del libro: si un lote falla a mitad, el
-   * contador sigue cuadrando con lo que queda, el capítulo sigue existiendo y reintentar termina.
+   * Borra las tarjetas en lotes, cada uno con su descuento en el contador del libro, y el capítulo
+   * en el último: si un lote falla a mitad, el contador sigue cuadrando con lo que queda, el
+   * capítulo sigue existiendo y reintentar termina.
    */
   async deleteWithCards(uid: string, bookId: string, chapterId: string): Promise<number> {
-    const cards = (await getDocs(this.cardsOfChapter(uid, chapterId))).docs.map((card) => card.ref);
-    const groups = chunksOf(cards, CARDS_PER_BATCH);
-    const bookRef = doc(this.firestore, 'users', uid, 'books', bookId);
-    for (const [index, group] of groups.entries()) {
-      const writer = new BatchWriter(this.firestore);
-      group.forEach((card) => writer.delete(card));
-      if (group.length > 0) {
-        writer.update(bookRef, { cardCount: increment(-group.length) });
-      }
-      if (index === groups.length - 1) {
-        writer.delete(doc(this.chaptersOf(uid), chapterId));
-      }
-      await writer.commit();
-    }
+    const cards = (await getDocs(this.cardsOfChapter(uid, chapterId))).docs;
+    await writeInCountedBatches({
+      firestore: this.firestore,
+      bookRef: doc(this.firestore, 'users', uid, 'books', bookId),
+      operations: cards.map((card) => ({ kind: 'delete' as const, ref: card.ref })),
+      delta: -1,
+      trailing: { kind: 'delete', ref: doc(this.chaptersOf(uid), chapterId) },
+    });
     return cards.length;
   }
 
@@ -88,16 +77,4 @@ export class FirestoreChapterRepository extends ChapterRepository {
   private chaptersOf(uid: string) {
     return collection(this.firestore, 'users', uid, 'chapters');
   }
-}
-
-/** Grupos de hasta `size`; siempre al menos uno (vacío), para que el capítulo se borre igual. */
-function chunksOf(cards: readonly DocumentReference[], size: number): DocumentReference[][] {
-  if (cards.length === 0) {
-    return [[]];
-  }
-  const groups: DocumentReference[][] = [];
-  for (let start = 0; start < cards.length; start += size) {
-    groups.push(cards.slice(start, start + size));
-  }
-  return groups;
 }

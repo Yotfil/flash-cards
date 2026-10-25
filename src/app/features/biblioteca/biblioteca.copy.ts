@@ -1,4 +1,6 @@
+import type { Card } from '@domain/models/card.model';
 import type { Chapter } from '@domain/models/chapter.model';
+import { clozeQuestion } from '@services/cards/cloze/parse-cloze';
 import { pluralize } from '@shared/text/pluralize';
 
 // Textos de la Biblioteca y del detalle de libro, centralizados (ADR 0002: copy por feature).
@@ -79,6 +81,69 @@ export const BIBLIOTECA_COPY = {
     pending: 'Borrando…',
     error: 'No se pudo borrar el capítulo. Inténtalo de nuevo.',
   },
+  cardForm: {
+    createTitle: 'Nueva tarjeta',
+    editTitle: 'Editar tarjeta',
+    typeLabel: 'Tipo',
+    basic: 'Básica',
+    cloze: 'Cloze (rellenar el hueco)',
+    frontLabel: 'Anverso',
+    backLabel: 'Reverso',
+    clozeLabel: 'Texto con huecos',
+    clozeHint: 'Marca lo que quieras ocultar con {{…}}. Ej.: El {{gato}} es negro.',
+    frontRequired: 'El anverso es obligatorio.',
+    backRequired: 'El reverso es obligatorio.',
+    clozeRequired: 'Escribe un texto con al menos un hueco marcado con {{…}}.',
+    tooLong: 'Usa como máximo 2000 caracteres.',
+    moreOptions: 'Más opciones',
+    exampleLabel: 'Ejemplo',
+    duplicate: 'Ya tienes una tarjeta igual en este capítulo.',
+    create: 'Crear tarjeta',
+    save: 'Guardar',
+    saving: 'Guardando…',
+    cancel: 'Cancelar',
+    saveError: 'No se pudo guardar la tarjeta. Inténtalo de nuevo.',
+  },
+  cardList: {
+    loadError: 'No pudimos cargar las tarjetas',
+    loadErrorMessage: 'Revisa tu conexión e inténtalo de nuevo.',
+    emptyTitle: 'Este capítulo aún no tiene tarjetas',
+    emptyMessage: 'Escribe una o pega varias de golpe.',
+    create: 'Crear tarjeta',
+    import: 'Importar tarjetas',
+    newCard: 'Nueva tarjeta',
+    select: 'Seleccionar',
+    selectAll: 'Seleccionar todas',
+    cancelSelection: 'Cancelar selección',
+    deleteSelected: 'Eliminar',
+    selectedCount: (count: number) => pluralize(count, 'seleccionada', 'seleccionadas'),
+  },
+  deleteCard: {
+    title: '¿Borrar esta tarjeta?',
+    detail: 'Se pierde su progreso de estudio. No se puede deshacer.',
+    confirm: 'Borrar',
+    pending: 'Borrando…',
+    error: 'No se pudo borrar la tarjeta. Inténtalo de nuevo.',
+  },
+  deleteCards: {
+    title: '¿Borrar las tarjetas seleccionadas?',
+    pending: 'Borrando…',
+    error: 'No se pudieron borrar las tarjetas seleccionadas. Inténtalo de nuevo.',
+  },
+  cardRow: {
+    arrow: '→',
+    cloze: 'cloze',
+    duplicate: 'Repetida',
+    duplicateLabel: 'Tarjeta repetida',
+    suspended: 'Suspendida',
+    hasExample: 'Tiene ejemplo',
+    actionsOf: (name: string) => `Acciones de «${name}»`,
+    selectOf: (name: string) => `Seleccionar «${name}»`,
+    edit: 'Editar',
+    suspend: 'Suspender',
+    reactivate: 'Reactivar',
+    delete: 'Borrar',
+  },
   chapterDetail: {
     backTo: (bookName: string) => `Volver a ${bookName}`,
     notFoundTitle: 'Capítulo no encontrado',
@@ -125,4 +190,21 @@ export function chapterDeletionDetail(cards: number | null): string {
 /** Los capítulos de versiones anteriores pueden no tener nombre. */
 export function chapterDisplayName(chapter: Chapter): string {
   return chapter.name.trim() || 'Capítulo sin nombre';
+}
+
+/** Cómo se nombra una tarjeta en menús y confirmaciones: su anverso, o la pregunta si es cloze. */
+export function cardDisplayName(card: Card): string {
+  return card.cardType === 'cloze' ? clozeQuestion(card.front) : card.front;
+}
+
+/** Mensaje de la confirmación del borrado masivo de tarjetas, con el verbo concordado. */
+export function bulkDeletionMessage(count: number): string {
+  const verb = count === 1 ? 'Se eliminará' : 'Se eliminarán';
+  const cards = pluralize(count, 'tarjeta', 'tarjetas');
+  return `${verb} ${cards} de este capítulo, con su progreso de estudio. ${CANNOT_UNDO}`;
+}
+
+/** Botón de confirmación del borrado masivo: dice cuántas. */
+export function bulkDeleteLabel(count: number): string {
+  return `Borrar ${count}`;
 }

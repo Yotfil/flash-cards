@@ -97,6 +97,9 @@
   --duration-flip: 500ms; // volteo de la tarjeta
   --duration-shimmer: 1600ms; // brillo del esqueleto de carga (un ciclo completo)
 
+  // Atenuación de lo apartado (tarjeta suspendida); siempre va con una etiqueta de texto.
+  --opacity-dimmed: 0.55;
+
   // Degradado de página con los brillos de acento y púrpura.
   --bg-page:
     radial-gradient(560px 380px at 15% -8%, rgb(56 189 248 / 0.16), transparent 60%),
@@ -267,6 +270,21 @@
   }
 }
 
+// Panel de los menús de acciones (`⋯`): SÓLIDO, porque flota sobre filas de acrílico y nunca debe
+// haber vidrio sobre vidrio (ADR 0003).
+.menu-panel {
+  display: flex;
+  min-width: 11rem;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-glass-border);
+  border-radius: 0.875rem;
+  background-color: var(--color-surface);
+  padding: 0.375rem;
+  box-shadow: var(--shadow-card);
+  color: var(--color-text);
+}
+
 // Silueta del esqueleto de carga: un bloque tenue que respira. Bajo "reducir movimiento" la regla
 // global deja la animación en un solo fotograma, así que el bloque queda quieto.
 @keyframes skeleton-shimmer {
@@ -277,6 +295,11 @@
   50% {
     opacity: 0.45;
   }
+}
+
+// Elemento apartado pero presente (tarjeta suspendida): se atenúa sin desaparecer.
+@utility dimmed {
+  opacity: var(--opacity-dimmed);
 }
 
 @utility skeleton-block {

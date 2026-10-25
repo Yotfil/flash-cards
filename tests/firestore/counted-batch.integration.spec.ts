@@ -1,0 +1,131 @@
+import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+
+import { BatchCommitError } from '@infrastructure/firestore/batch-writer';
+import {
+  writeInCountedBatches,
+  type CountedOperation,
+} from '@infrastructure/firestore/counted-batch';
+
+import {
+  createRulesTestEnvironment,
+  modularFirestore,
+  ownerContext,
+  seedAllowlist,
+} from '../support/firestore-test-environment';
+
+const OWNER_UID = 'u1';
+const OWNER_EMAIL = 'ada@ejemplo.com';
+
+let environment: RulesTestEnvironment;
+let db: Firestore;
+
+beforeAll(async () => {
+  environment = await createRulesTestEnvironment();
+});
+
+afterAll(async () => {
+  await environment.cleanup();
+});
+
+beforeEach(async () => {
+  await environment.clearFirestore();
+  await seedAllowlist(environment, [OWNER_EMAIL]);
+  db = modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL));
+  await setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 1000 });
+});
+
+const bookRef = () => doc(db, 'users', OWNER_UID, 'books', 'b1');
+const cardCount = async () => (await getDoc(bookRef())).data()?.['cardCount'];
+const cardRef = (uid: string, index: number) => doc(db, 'users', uid, 'cards', `k${index}`);
+
+function sets(count: number): CountedOperation[] {
+  return Array.from({ length: count }, (_, index) => ({
+    kind: 'set' as const,
+    ref: cardRef(OWNER_UID, index),
+    data: { bookId: 'b1', front: `f${index}`, back: 'b' },
+  }));
+}
+
+function deletes(count: number, uidFor: (index: number) => string = () => OWNER_UID) {
+  return Array.from({ length: count }, (_, index) => ({
+    kind: 'delete' as const,
+    ref: cardRef(uidFor(index), index),
+  }));
+}
+
+describe('writeInCountedBatches', () => {
+  it('3 altas van en un lote y suman 3 al libro', async () => {
+    const result = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: sets(3),
+      delta: 1,
+    });
+
+    expect(result.batches).toBe(1);
+    expect(await cardCount()).toBe(1003);
+    expect((await getDoc(cardRef(OWNER_UID, 2))).exists()).toBe(true);
+  });
+
+  it('1000 bajas van en 3 lotes y restan 1000', async () => {
+    const result = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: deletes(1000),
+      delta: -1,
+    });
+
+    expect(result.batches).toBe(3);
+    expect(await cardCount()).toBe(0);
+  });
+
+  it('sin operaciones no escribe nada', async () => {
+    const result = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: [],
+      delta: -1,
+    });
+
+    expect(result.batches).toBe(0);
+    expect(await cardCount()).toBe(1000);
+  });
+
+  it('la operación final solo va en el último lote (y sola, si no hay más)', async () => {
+    const marker = doc(db, 'users', OWNER_UID, 'chapters', 'final');
+
+    const onlyTrailing = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: [],
+      delta: -1,
+      trailing: { kind: 'set', ref: marker, data: { bookId: 'b1', name: 'Final', order: 0 } },
+    });
+    expect(onlyTrailing.batches).toBe(1);
+    expect((await getDoc(marker)).exists()).toBe(true);
+    expect(await cardCount()).toBe(1000);
+
+    const failing = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: deletes(500, (index) => (index < 448 ? OWNER_UID : 'u2')),
+      delta: -1,
+      trailing: { kind: 'delete', ref: marker },
+    }).catch((error: unknown) => error);
+    expect(failing).toBeInstanceOf(BatchCommitError);
+    expect((await getDoc(marker)).exists()).toBe(true);
+  });
+
+  it('si el segundo lote falla, el contador bajó exactamente lo del primero (448)', async () => {
+    const failure = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: deletes(900, (index) => (index >= 448 && index < 896 ? 'u2' : OWNER_UID)),
+      delta: -1,
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(BatchCommitError);
+    expect(await cardCount()).toBe(1000 - 448);
+  });
+});

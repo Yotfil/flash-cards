@@ -108,7 +108,8 @@ ts-fsrs, Zod, Signal Forms, Angular CDK, Vitest, Netlify.
 - `features/shell/`: el caparazón (`shell`), la navegación (`main-nav`), el indicador sin conexión
   (`offline-indicator`), la página provisional (`pending-page`), el pie de versión
   (`version-footer`, lo coloca Ajustes) y `shell.copy.ts` con los textos y destinos.
-- `shared/`: `icon` (catálogo en `ICON_NAMES`), `empty-state`, `error-state`, `skeleton` y `dialog`.
+- `shared/`: `icon` (catálogo en `ICON_NAMES`), `empty-state`, `error-state`, `skeleton`, `dialog`,
+  `confirm-dialog` y `menu/action-menu`.
 
 **Abrir un diálogo.** El contenido es un componente que inyecta `AppDialogRef` y `DIALOG_DATA`; solo
 se cierra con éxito (si su acción falla, se queda abierto mostrando el error):
@@ -151,11 +152,30 @@ inject(DialogService).open<boolean, ConfirmDialogData>(ConfirmDialogComponent, {
 });
 ```
 
+**Menú de acciones de una fila.** `ActionMenuComponent` (`shared/menu/action-menu`) es el botón
+`⋯` con su menú del CDK (teclado, Escape devuelve el foco): recibe `label` (nombre accesible, p. ej.
+"Acciones de «to give up»"), `items` (`{ id, label, icon, destructive? }`) y `disabled`, y solo
+emite `selected(id)`; la fila decide qué hacer. Su panel es sólido (`menu-panel` en `styles.scss`)
+porque flota sobre filas de acrílico.
+
+**Altas y bajas que mueven el contador del libro.** `writeInCountedBatches`
+(`infrastructure/firestore/counted-batch.ts`) trocea las operaciones en grupos de
+`MAX_BATCH_SIZE - 2` (448): cada grupo es un lote atómico que además suma o resta esas tarjetas del
+`cardCount` del libro, con una operación final opcional (`trailing`) que solo va en el último
+lote. Si un lote falla, el contador sigue cuadrando con lo que de verdad se escribió. Lo usan el
+alta y el borrado de tarjetas y el borrado de un capítulo. Como el borrado de tarjetas va por ids
+concretos, un corte a mitad se traduce en `PartialDeletionError(deletedIds)` (dominio): el servicio
+quita esas tarjetas de la lista y las descuenta, y reintentar pide solo las que faltan (repetir los
+mismos ids las descontaría dos veces).
+
 **Borrados en cascada.** Borrar un libro borra sus tarjetas y capítulos con `BatchWriter` y el
-libro en el último lote. Borrar un capítulo trocea sus tarjetas en grupos de `MAX_BATCH_SIZE - 2`:
-cada grupo es un lote que también descuenta esas tarjetas del `cardCount` del libro, y el capítulo
-va en el último; si un lote falla, el contador sigue cuadrando y reintentar termina. El historial de
-repasos nunca se borra.
+libro en el último lote. Borrar un capítulo borra sus tarjetas con `writeInCountedBatches` y el
+capítulo como operación final; reintentar vuelve a consultar lo que queda. El historial de repasos
+nunca se borra.
+
+**Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
+vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
+crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.
 
 **Pantallas que dependen de dos lecturas.** El detalle de capítulo decide qué pintar con
 `resolveChapterDetail` (`services/chapters/chapter-detail-state.ts`), una función pura sobre los
