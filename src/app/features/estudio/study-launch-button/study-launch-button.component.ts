@@ -1,9 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
-import type { Card } from '@domain/models/card.model';
 import { Logger } from '@domain/ports/logger.port';
-import { StudyHandoffService, type StudySource } from '@services/queue/study-handoff.service';
 
 import { ESTUDIO_COPY } from '../estudio.copy';
 
@@ -14,10 +12,10 @@ const VARIANT_CLASSES = {
   secondary: 'border border-glass-border text-text',
 } as const;
 
-// Botón que prepara una sesión (Hoy, un libro o un capítulo) y la abre: "Preparando…" deshabilitado
-// mientras tanto (un segundo toque no hace nada); con tarjetas, las entrega a la sesión y navega
-// al repaso; sin ninguna, dice que está al día sin salir; si falla, muestra el error con
-// "Reintentar" y nunca el "al día" (un fallo no es un capítulo vacío).
+// Botón que prepara algo (una sesión de repaso, una práctica) y lo abre: "Preparando…" deshabilitado
+// mientras tanto (un segundo toque no hace nada). Quien prepara entrega a su propia bandeja y dice
+// cuántas preparó: con alguna, navega al destino; sin ninguna, muestra el aviso de vacío sin salir;
+// si falla, muestra el error con "Reintentar" y nunca el vacío (un fallo no es un capítulo vacío).
 @Component({
   selector: 'app-study-launch-button',
   templateUrl: './study-launch-button.component.html',
@@ -26,14 +24,15 @@ const VARIANT_CLASSES = {
 export class StudyLaunchButtonComponent {
   readonly label = input.required<string>();
   readonly variant = input<keyof typeof VARIANT_CLASSES>('primary');
-  readonly prepare = input.required<() => Promise<Card[]>>();
-  readonly source = input.required<StudySource>();
-  /** El aviso de "al día" de esa entrada (en Hoy no aplica: el botón se deshabilita con 0). */
+  /** Prepara, entrega a su bandeja y devuelve cuántas tarjetas o preguntas entregó. */
+  readonly prepare = input.required<() => Promise<number>>();
+  /** Adónde ir si se entregó algo (`['/repaso']`, `['/practicar']`). */
+  readonly destination = input.required<string[]>();
+  /** El aviso de vacío de esa entrada (en Hoy no aplica: el botón se deshabilita con 0). */
   readonly emptyMessage = input('');
   readonly errorMessage = input.required<string>();
   readonly disabled = input(false);
 
-  private readonly handoff = inject(StudyHandoffService);
   private readonly router = inject(Router);
   private readonly logger = inject(Logger);
 
@@ -47,13 +46,12 @@ export class StudyLaunchButtonComponent {
     }
     this.state.set('preparing');
     try {
-      const cards = await this.prepare()();
-      if (cards.length === 0) {
+      const prepared = await this.prepare()();
+      if (prepared === 0) {
         this.state.set('empty');
         return;
       }
-      this.handoff.hand({ cards, source: this.source() });
-      await this.router.navigateByUrl('/repaso');
+      await this.router.navigate(this.destination());
       this.state.set('idle');
     } catch (error) {
       this.logger.error(this.errorMessage(), error);

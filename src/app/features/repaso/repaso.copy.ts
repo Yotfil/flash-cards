@@ -4,8 +4,6 @@ import { pluralize } from '@shared/text/pluralize';
 // Textos de la sesión de repaso, centralizados (ADR 0002: copy por feature).
 
 export const REPASO_COPY = {
-  exit: 'Salir',
-  progress: 'Progreso de la sesión',
   showAnswer: 'Mostrar respuesta',
   question: '¿Qué tan bien la recordaste?',
   suggested: 'sugerido',

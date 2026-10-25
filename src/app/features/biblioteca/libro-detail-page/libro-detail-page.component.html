@@ -96,9 +96,17 @@
               <app-study-launch-button
                 [label]="copy.study.book"
                 [prepare]="prepareStudy"
-                [source]="studySource()"
+                [destination]="studyDestination"
                 [emptyMessage]="copy.study.bookSettled"
                 [errorMessage]="copy.study.error"
+              />
+              <app-study-launch-button
+                variant="secondary"
+                [label]="practiceCopy.practice"
+                [prepare]="preparePractice"
+                [destination]="practiceDestination"
+                [emptyMessage]="practiceCopy.nothingToPractice"
+                [errorMessage]="practiceCopy.prepareError"
               />
             }
           </div>

@@ -57,6 +57,12 @@ export class FirestoreCardRepository extends CardRepository {
     return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
+  // La lectura normal (caché primero sin red): para practicar, lo que el dispositivo tenga basta.
+  async listByBook(uid: string, bookId: string): Promise<Card[]> {
+    const snapshot = await getDocs(query(this.cardsOf(uid), where('bookId', '==', bookId)));
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
+  }
+
   async create(uid: string, card: NewCard): Promise<Card> {
     const [created] = await this.createMany(uid, [card]);
     if (!created) {

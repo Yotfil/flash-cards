@@ -12,6 +12,7 @@ import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
 import { Logger } from '@domain/ports/logger.port';
+import { PracticeHandoffService } from '@services/practice/practice-handoff.service';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
@@ -72,6 +73,7 @@ async function open(
         { path: 'biblioteca/:bookId', component: LibroDetailPageComponent },
         { path: 'biblioteca', component: BlankPageComponent },
         { path: 'repaso', component: BlankPageComponent },
+        { path: 'practicar', component: BlankPageComponent },
       ]),
       { provide: BookRepository, useValue: repository },
       { provide: ChapterRepository, useValue: chapters },
@@ -227,7 +229,6 @@ describe('LibroDetailPageComponent', () => {
     );
     expect(page().textContent).toContain('Básicos');
     expect(chapters.calls.listByBook).toBe(1);
-    expect(page().querySelector('app-pending-page')).toBeNull();
   });
 
   it('con el libro inexistente no hay lista de capítulos', async () => {
@@ -318,5 +319,64 @@ describe('LibroDetailPageComponent · estudiar este libro', () => {
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(prepare).toHaveBeenCalledWith('b1');
     expect(button('Preparando…')?.disabled).toBe(true);
+  });
+});
+
+describe('LibroDetailPageComponent · practicar', () => {
+  const basic = (id: string, chapterId: string) =>
+    aCard({ id, bookId: 'b1', chapterId, front: `front ${id}`, back: `back ${id}` });
+
+  it('con los capítulos cargados, "Practicar" secundario junto a "Estudiar este libro"', async () => {
+    const { page, button, update, releaseChapters } = await open('b1', { holdChapters: true });
+
+    expect(button('Practicar')).toBeUndefined();
+    releaseChapters();
+    await update();
+
+    const actions = page().querySelector('[data-book-actions]');
+    expect(actions?.textContent).toContain('Estudiar este libro');
+    expect(button('Practicar')?.closest('[data-book-actions]')).toBe(actions);
+    expect(button('Practicar')?.classList).toContain('border-glass-border');
+  });
+
+  it('con básicas en el libro, arma el quiz con todo el libro y abre la práctica', async () => {
+    const { cards, button, update } = await open('b1', {
+      cards: [basic('k1', 'c1'), basic('k2', 'c2')],
+    });
+
+    button('Practicar')?.click();
+    await update();
+
+    expect(cards.calls.listByBook).toBe(1);
+    expect(TestBed.inject(PracticeHandoffService).prepared()?.origin).toEqual({
+      kind: 'book',
+      bookId: 'b1',
+    });
+    expect(TestBed.inject(Router).url).toBe('/practicar');
+  });
+
+  it('sin tarjetas elegibles: "Nada que practicar aún." y no sale', async () => {
+    const { page, button, update } = await open('b1');
+
+    button('Practicar')?.click();
+    await update();
+
+    expect(page().querySelector('[data-book-actions]')?.textContent).toContain(
+      'Nada que practicar aún.',
+    );
+    expect(TestBed.inject(Router).url).toBe('/biblioteca/b1');
+  });
+
+  it('si la lectura falla: el error de la práctica y no sale', async () => {
+    const { page, cards, button, update } = await open('b1');
+    cards.failWith.listByBook = new Error('sin red');
+
+    button('Practicar')?.click();
+    await update();
+
+    expect(page().querySelector('[data-book-actions] [role="alert"]')?.textContent).toContain(
+      'No se pudo preparar la práctica. Inténtalo de nuevo.',
+    );
+    expect(TestBed.inject(Router).url).toBe('/biblioteca/b1');
   });
 });

@@ -11,6 +11,7 @@ type FailableMethod =
   | 'listReady'
   | 'listReadyByBook'
   | 'listByBookFromServer'
+  | 'listByBook'
   | 'create'
   | 'createMany'
   | 'updateContent'
@@ -30,6 +31,7 @@ export class FakeCardRepository extends CardRepository {
     listReady: 0,
     listReadyByBook: 0,
     listByBookFromServer: 0,
+    listByBook: 0,
     create: 0,
     createMany: 0,
     updateContent: 0,
@@ -73,6 +75,12 @@ export class FakeCardRepository extends CardRepository {
 
   async listByBookFromServer(uid: string, bookId: string): Promise<Card[]> {
     this.record('listByBookFromServer');
+    this.listedUids.push(uid);
+    return [...this.cards.values()].filter((card) => card.bookId === bookId);
+  }
+
+  async listByBook(uid: string, bookId: string): Promise<Card[]> {
+    this.record('listByBook');
     this.listedUids.push(uid);
     return [...this.cards.values()].filter((card) => card.bookId === bookId);
   }

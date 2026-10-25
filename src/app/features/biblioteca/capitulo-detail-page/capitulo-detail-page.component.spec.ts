@@ -13,6 +13,8 @@ import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { ChaptersService } from '@services/chapters/chapters.service';
+import { PracticeHandoffService } from '@services/practice/practice-handoff.service';
+import { PracticeService } from '@services/practice/practice.service';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
@@ -40,6 +42,7 @@ async function open(
     failChapters?: boolean;
     holdBooks?: boolean;
     cards?: Card[];
+    failCards?: boolean;
   } = {},
 ) {
   const books = new FakeBookRepository();
@@ -50,6 +53,9 @@ async function open(
   cards.seed(
     ...(options.cards ?? [aCard({ id: 'k1', bookId: 'b1', chapterId: 'c1', front: 'to give up' })]),
   );
+  if (options.failCards) {
+    cards.failWith.listByChapter = new Error('offline');
+  }
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -57,6 +63,7 @@ async function open(
         { path: 'biblioteca/:bookId', component: BlankPageComponent },
         { path: 'biblioteca', component: BlankPageComponent },
         { path: 'repaso', component: BlankPageComponent },
+        { path: 'practicar', component: BlankPageComponent },
       ]),
       { provide: BookRepository, useValue: books },
       { provide: ChapterRepository, useValue: chapters },
@@ -102,7 +109,7 @@ async function open(
     await settle();
     harness.detectChanges();
   };
-  return { harness, books, chapters, page, update, releaseBooks };
+  return { harness, books, chapters, cards, page, update, releaseBooks };
 }
 
 describe('CapituloDetailPageComponent', () => {
@@ -267,6 +274,70 @@ describe('CapituloDetailPageComponent · estudiar este capítulo', () => {
 
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(prepare).toHaveBeenCalledWith('c1');
+  });
+});
+
+describe('CapituloDetailPageComponent · practicar', () => {
+  const button = (page: HTMLElement, text: string) =>
+    Array.from(page.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.trim() === text,
+    );
+  const basic = (id: string) =>
+    aCard({ id, bookId: 'b1', chapterId: 'c1', front: `front ${id}`, back: `back ${id}` });
+  const cloze = aCard({
+    id: 'cz',
+    bookId: 'b1',
+    chapterId: 'c1',
+    cardType: 'cloze',
+    front: 'El {{gato}} duerme',
+    back: '',
+  });
+
+  async function openWith(options: { cards?: Card[]; failCards?: boolean }) {
+    const opened = await open('/biblioteca/b1/c1', options);
+    await opened.update();
+    await opened.update();
+    return opened;
+  }
+
+  it('con básicas cargadas, "Practicar" junto a estudiar arma el quiz sin releer y abre la práctica', async () => {
+    const loaded = [basic('k1'), basic('k2'), cloze];
+    const { page, cards, update } = await openWith({ cards: loaded });
+    const prepare = vi.spyOn(TestBed.inject(PracticeService), 'prepareChapterPractice');
+    const actions = page().querySelector('[data-chapter-actions]');
+
+    expect(actions?.textContent).toContain('Estudiar este capítulo');
+    button(page(), 'Practicar')?.click();
+    await update();
+
+    expect(prepare).toHaveBeenCalledWith(expect.arrayContaining(loaded), {
+      kind: 'chapter',
+      bookId: 'b1',
+      chapterId: 'c1',
+    });
+    expect(cards.calls.listByChapter).toBe(1);
+    expect(TestBed.inject(PracticeHandoffService).prepared()?.questions).toHaveLength(2);
+    expect(TestBed.inject(Router).url).toBe('/practicar');
+  });
+
+  it('solo clozes: sin "Practicar", y estudiar sigue en su sitio', async () => {
+    const { page } = await openWith({ cards: [cloze] });
+
+    expect(button(page(), 'Practicar')).toBeUndefined();
+    expect(button(page(), 'Estudiar este capítulo')).toBeDefined();
+  });
+
+  it('un capítulo vacío no ofrece practicar', async () => {
+    const { page } = await openWith({ cards: [] });
+
+    expect(button(page(), 'Practicar')).toBeUndefined();
+  });
+
+  it('si la lista de tarjetas falló, su error y sin "Practicar"', async () => {
+    const { page } = await openWith({ failCards: true });
+
+    expect(page().querySelector('app-card-list [role="alert"]')).not.toBeNull();
+    expect(button(page(), 'Practicar')).toBeUndefined();
   });
 });
 

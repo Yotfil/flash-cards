@@ -8,8 +8,9 @@ import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { ChaptersService } from '@services/chapters/chapters.service';
+import { PracticeService } from '@services/practice/practice.service';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
-import type { StudySource } from '@services/queue/study-handoff.service';
+import { StudyHandoffService, type StudySource } from '@services/queue/study-handoff.service';
 import { DialogService } from '@shared/dialog/dialog.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
@@ -27,6 +28,7 @@ import {
 } from '../book-settings-dialog/book-settings-dialog.component';
 import { StudyLaunchButtonComponent } from '../../estudio/study-launch-button/study-launch-button.component';
 import { ChapterListComponent } from '../chapter-list/chapter-list.component';
+import { PRACTICA_COPY } from '../../practica/practica.copy';
 import {
   ExportBookDialogComponent,
   type ExportBookDialogData,
@@ -35,10 +37,10 @@ import {
 type DetailView = 'loading' | 'error' | 'notFound' | 'book';
 
 // Detalle de un libro: cabecera (volver, nombre, materia, totales por estado, editar, exportar y
-// ajustes, y la zona de acciones con "Estudiar este libro") y debajo la lista de capítulos (que
-// avisa cuando un borrado cambia los totales). Entrando directo por la dirección, carga la
-// Biblioteca. Los totales se cuentan en el servidor: sin red o si el conteo falla se omiten, sin
-// error. Exportar lee el libro del servidor, así que sin red se deshabilita con el motivo.
+// ajustes, y la zona de acciones con "Estudiar este libro" y "Practicar") y debajo la lista de
+// capítulos (que avisa cuando un borrado cambia los totales). Entrando directo por la dirección,
+// carga la Biblioteca. Los totales se cuentan en el servidor: sin red o si el conteo falla se
+// omiten, sin error. Exportar lee el libro del servidor, así que sin red se deshabilita con el motivo.
 @Component({
   selector: 'app-libro-detail-page',
   imports: [
@@ -57,6 +59,8 @@ export class LibroDetailPageComponent {
   private readonly booksService = inject(BooksService);
   private readonly chaptersService = inject(ChaptersService);
   private readonly bookReady = inject(BookReadyCardsService);
+  private readonly studyHandoff = inject(StudyHandoffService);
+  private readonly practice = inject(PracticeService);
   private readonly dialogs = inject(DialogService);
   private readonly logger = inject(Logger);
 
@@ -91,7 +95,15 @@ export class LibroDetailPageComponent {
     kind: 'book',
     bookId: this.bookId(),
   }));
-  protected readonly prepareStudy = () => this.bookReady.prepareBookSession(this.bookId());
+  protected readonly prepareStudy = async () =>
+    this.studyHandoff.handCards(
+      await this.bookReady.prepareBookSession(this.bookId()),
+      this.studySource(),
+    );
+  protected readonly studyDestination = ['/repaso'];
+  protected readonly practiceCopy = PRACTICA_COPY;
+  protected readonly preparePractice = () => this.practice.prepareBookPractice(this.bookId());
+  protected readonly practiceDestination = ['/practicar'];
 
   constructor() {
     // Las listas por capítulo (filas) y el botón de estudiar usan las del libro abierto.

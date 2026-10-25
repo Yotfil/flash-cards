@@ -6,8 +6,6 @@ export const SHELL_COPY = {
   brand: 'Cadence',
   navLabel: 'Navegación principal',
   offline: 'Sin conexión. Tus repasos se guardan aquí y se sincronizan al volver.',
-  pendingTitle: 'Pronto',
-  pendingMessage: 'Esta pantalla llega en un próximo paso.',
 } as const;
 
 export interface NavDestination {

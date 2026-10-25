@@ -21,4 +21,15 @@ describe('StudyHandoffService', () => {
   it('sin nada preparado no entrega nada', () => {
     expect(TestBed.inject(StudyHandoffService).take()).toBeNull();
   });
+
+  it('handCards entrega solo una sesión con tarjetas y dice cuántas son', () => {
+    const handoff = TestBed.inject(StudyHandoffService);
+    const cards = [aCard({ id: 'k1' }), aCard({ id: 'k2' })];
+
+    expect(handoff.handCards([], { kind: 'today' })).toBe(0);
+    expect(handoff.prepared()).toBeNull();
+
+    expect(handoff.handCards(cards, { kind: 'today' })).toBe(2);
+    expect(handoff.take()).toEqual({ cards, source: { kind: 'today' } });
+  });
 });

@@ -9,8 +9,10 @@ import { BooksService } from '@services/books/books.service';
 import { CardsService } from '@services/cards/cards.service';
 import { resolveChapterDetail } from '@services/chapters/chapter-detail-state';
 import { ChaptersService } from '@services/chapters/chapters.service';
+import { selectEligibleCards } from '@services/practice/eligible-cards';
+import { PracticeService } from '@services/practice/practice.service';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
-import type { StudySource } from '@services/queue/study-handoff.service';
+import { StudyHandoffService, type StudySource } from '@services/queue/study-handoff.service';
 import { DialogService } from '@shared/dialog/dialog.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
@@ -24,11 +26,13 @@ import {
 } from '../../importacion/card-import-dialog/card-import-dialog.component';
 import { BIBLIOTECA_COPY, chapterDisplayName } from '../biblioteca.copy';
 import { CardListComponent } from '../card-list/card-list.component';
+import { PRACTICA_COPY } from '../../practica/practica.copy';
 
 // Detalle de un capítulo. Reutiliza los libros y capítulos ya cargados y, entrando directo por la
 // dirección, los carga. Qué pinta lo decide `resolveChapterDetail` a partir de los dos recursos.
 // La región "Tarjetas" es la lista del capítulo; la zona de acciones ofrece "Estudiar este capítulo"
-// cuando sus tarjetas cargaron y hay al menos una (practicar llega con su change).
+// cuando sus tarjetas cargaron y hay al menos una, y "Practicar" cuando alguna es básica: el quiz
+// se arma con las tarjetas ya cargadas, sin releerlas.
 @Component({
   selector: 'app-capitulo-detail-page',
   imports: [
@@ -48,6 +52,8 @@ export class CapituloDetailPageComponent {
   private readonly chaptersService = inject(ChaptersService);
   private readonly cardsService = inject(CardsService);
   private readonly bookReady = inject(BookReadyCardsService);
+  private readonly studyHandoff = inject(StudyHandoffService);
+  private readonly practice = inject(PracticeService);
   private readonly dialogs = inject(DialogService);
   private readonly logger = inject(Logger);
 
@@ -82,18 +88,36 @@ export class CapituloDetailPageComponent {
     });
   });
 
-  protected readonly canStudy = computed(() => {
+  /** Las tarjetas del capítulo, solo cuando su lista cargó (nunca durante una carga o un error). */
+  private readonly loadedCards = computed(() => {
     const cards = this.cardsService.cards;
     const status = cards.status();
     const loaded = status === 'resolved' || status === 'local';
-    return loaded && cards.hasValue() && cards.value().length > 0;
+    return loaded && cards.hasValue() ? cards.value() : [];
   });
+  protected readonly canStudy = computed(() => this.loadedCards().length > 0);
+  protected readonly canPractice = computed(
+    () => selectEligibleCards(this.loadedCards()).length > 0,
+  );
   protected readonly studySource = computed<StudySource>(() => ({
     kind: 'chapter',
     bookId: this.bookId(),
     chapterId: this.chapterId(),
   }));
-  protected readonly prepareStudy = () => this.bookReady.prepareChapterSession(this.chapterId());
+  protected readonly prepareStudy = async () =>
+    this.studyHandoff.handCards(
+      await this.bookReady.prepareChapterSession(this.chapterId()),
+      this.studySource(),
+    );
+  protected readonly studyDestination = ['/repaso'];
+  protected readonly practiceCopy = PRACTICA_COPY;
+  protected readonly preparePractice = () =>
+    this.practice.prepareChapterPractice(this.loadedCards(), {
+      kind: 'chapter',
+      bookId: this.bookId(),
+      chapterId: this.chapterId(),
+    });
+  protected readonly practiceDestination = ['/practicar'];
 
   constructor() {
     this.booksService.ensureLoaded().catch((error: unknown) => {

@@ -2,6 +2,7 @@ import { Component, computed, inject, type OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { DailyQueueService } from '@services/queue/daily-queue.service';
+import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
 import { formatLocalDate } from '@services/study-day/study-day';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
@@ -40,6 +41,7 @@ type HoyView = 'loading' | 'error' | 'welcome' | 'settled' | 'queue';
 export class HoyPageComponent implements OnInit {
   protected readonly queue = inject(DailyQueueService);
   private readonly session = inject(SessionService);
+  private readonly studyHandoff = inject(StudyHandoffService);
 
   protected readonly copy = HOY_COPY;
   protected readonly dateLabel = computed(() => {
@@ -67,7 +69,8 @@ export class HoyPageComponent implements OnInit {
     const view = this.view();
     return view !== 'loading' && view !== 'welcome';
   });
-  protected readonly prepare = () => this.queue.prepareSession();
+  protected readonly prepare = async () =>
+    this.studyHandoff.handCards(await this.queue.prepareSession(), { kind: 'today' });
 
   ngOnInit(): void {
     this.queue.refresh();

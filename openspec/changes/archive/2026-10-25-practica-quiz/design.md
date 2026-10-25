@@ -57,6 +57,17 @@ Ver `proposal.md` (Why) y el delta `specs/practica-quiz/spec.md`. Estado esperad
 - `CapituloDetailPageComponent`: junto a "Estudiar este capítulo", `StudyLaunchButtonComponent` secundario "Practicar" con `prepare = () => practice.prepareChapterPractice(cards.sorted(), { kind: 'chapter', bookId, chapterId })`, `destination = ['/practicar']`, visible solo si `cards.status() === 'resolved'` y `selectEligibleCards(cards.value()).length > 0` (computed `canPractice`). Como la preparación es en memoria, "Preparando…" dura un tick; `emptyMessage` no se usa porque el botón no existe sin elegibles.
 - `LibroDetailPageComponent`: junto a "Estudiar este libro", `StudyLaunchButtonComponent` secundario "Practicar" con `prepare = () => practice.prepareBookPractice(bookId)`, `destination = ['/practicar']`, `emptyMessage = "Nada que practicar aún."`, `errorMessage = "No se pudo preparar la práctica. Inténtalo de nuevo."`, visible cuando `chapters.status() === 'resolved'`.
 
+### 5. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+1. **`StudyHandoffService.handCards(cards, source)`**: entrega solo si hay tarjetas y devuelve cuántas. Los tres usos de estudiar (Hoy, libro, capítulo) envuelven su preparación con él en una línea, en vez de repetir el `if` en cada pantalla.
+2. **Guardia de sesión:** el código usa `requireSessionGuard` (no `authGuard`), como el repaso.
+3. **`WrittenQuestionComponent`** recibe `questionId` y `answered: boolean`, y su salida se llama `submitted`: la regla de Angular ESLint `no-output-native` prohíbe una salida `submit`.
+4. **Página provisional retirada:** `/practicar` era la última ruta con `PendingPageComponent`; se borran el componente, su `pendingPage` en `app.routes.ts` y sus textos de `SHELL_COPY`.
+5. **Textos de la barra:** "Salir" y "Progreso de la sesión" pasan de `REPASO_COPY` a `shared/session-top-bar/session-top-bar.copy.ts` (la barra es de `shared`).
+6. **Foco con teclado:** la pregunta escrita toma el foco al aparecer y "Siguiente"/"Ver resultado" al responder (Enter responde, Enter avanza).
+7. **`seededRandom`** en `testing/` da el azar determinista de las pruebas del generador.
+8. **Clases de las opciones:** el fondo va dentro de cada estado (`bg-surface` o `bg-accent-tint`); fijo en la plantilla, Tailwind dejaba ganar a `bg-surface` sobre el tinte de la correcta.
+
 ## Superficies con acrílico (ADR 0003)
 
 | Superficie | Tratamiento | Capa visible |

@@ -1,0 +1,32 @@
+<section class="flex flex-col gap-5" aria-labelledby="question-prompt">
+  <div class="rounded-3xl border border-glass-border bg-surface px-6 py-8 text-center shadow-card">
+    <p class="text-xs font-semibold tracking-wide text-text-faint uppercase">
+      {{ copy.chooseAnswer }}
+    </p>
+    <h2
+      id="question-prompt"
+      class="mt-2 text-2xl font-extrabold tracking-tight break-words text-text"
+    >
+      {{ prompt() }}
+    </h2>
+  </div>
+  <div class="grid gap-2 sm:grid-cols-2">
+    @for (choice of choices(); track choice.text) {
+      <button
+        type="button"
+        class="press flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold"
+        [class]="choice.classes"
+        [disabled]="answered() !== null"
+        (click)="choose.emit(choice.text)"
+      >
+        <span class="break-words">{{ choice.text }}</span>
+        @if (choice.state === 'correct') {
+          <app-icon name="check" size="sm" class="text-accent-text" />
+        }
+        @if (choice.state === 'wrong') {
+          <app-icon name="x" size="sm" />
+        }
+      </button>
+    }
+  </div>
+</section>

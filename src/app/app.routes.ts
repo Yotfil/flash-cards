@@ -1,17 +1,12 @@
 import type { Routes } from '@angular/router';
 
 import { guestOnlyGuard, requireSessionGuard } from '@core/session.guards';
+import { practiceHandoffGuard } from '@features/practica/practice-handoff.guard';
 import { studyHandoffGuard } from '@features/repaso/study-handoff.guard';
 
-// Mapa de rutas completo desde ya. Cada pantalla carga bajo demanda; mientras su capacidad no
-// llega, la ruta pinta la página provisional y cada change sustituye su `loadComponent`. Todo
-// exige sesión activa salvo `/login` (solo invitados) y `/sin-acceso` (abierta: su pantalla
-// redirige sola según el estado de la sesión).
-
-const pendingPage = () =>
-  import('@features/shell/pending-page/pending-page.component').then(
-    (module) => module.PendingPageComponent,
-  );
+// Mapa de rutas completo. Cada pantalla carga bajo demanda. Todo exige sesión activa salvo
+// `/login` (solo invitados) y `/sin-acceso` (abierta: su pantalla redirige sola según el estado de
+// la sesión). Repaso y práctica, a pantalla completa, solo se abren con lo que se les entregó.
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'hoy' },
@@ -40,7 +35,14 @@ export const routes: Routes = [
         (module) => module.RepasoPageComponent,
       ),
   },
-  { path: 'practicar', canActivate: [requireSessionGuard], loadComponent: pendingPage },
+  {
+    path: 'practicar',
+    canActivate: [requireSessionGuard, practiceHandoffGuard],
+    loadComponent: () =>
+      import('@features/practica/practica-page/practica-page.component').then(
+        (module) => module.PracticaPageComponent,
+      ),
+  },
 
   // Las cuatro secciones y sus rutas hijas, dentro del caparazón.
   {

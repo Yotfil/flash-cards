@@ -95,6 +95,14 @@ describe('RepasoPageComponent', () => {
     expect(handoff.take()).toBeNull();
   });
 
+  it('la barra superior dice cuántas quedan y cuánto se avanzó', async () => {
+    const { page } = await open();
+    const bar = page().querySelector('app-session-top-bar');
+
+    expect(bar?.textContent).toMatch(/Quedan \d+|Queda 1/);
+    expect(bar?.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('0');
+  });
+
   it('con la lista vacía vuelve a Hoy', async () => {
     const { url, session } = await open({ cards: [] });
 

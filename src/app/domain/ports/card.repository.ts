@@ -17,6 +17,11 @@ export abstract class CardRepository {
    * la caché local, que puede tener solo parte del libro: sin red, falla.
    */
   abstract listByBookFromServer(uid: string, bookId: string): Promise<Card[]>;
+  /**
+   * Las tarjetas del libro con la lectura normal: sin red responde con lo que el dispositivo tenga
+   * guardado (para practicar, una caché parcial basta).
+   */
+  abstract listByBook(uid: string, bookId: string): Promise<Card[]>;
   /** Crea una tarjeta y suma 1 al libro. */
   abstract create(uid: string, card: NewCard): Promise<Card>;
   /** Crea varias tarjetas de un mismo libro en lotes, cada lote con su suma al libro. */

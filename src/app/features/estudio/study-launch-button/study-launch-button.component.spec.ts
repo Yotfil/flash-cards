@@ -2,10 +2,7 @@ import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
-import type { Card } from '@domain/models/card.model';
 import { Logger } from '@domain/ports/logger.port';
-import { StudyHandoffService } from '@services/queue/study-handoff.service';
-import { aCard } from '@testing/fake-card-repository';
 import { FakeLogger } from '@testing/fake-logger';
 
 import { StudyLaunchButtonComponent } from './study-launch-button.component';
@@ -13,16 +10,18 @@ import { StudyLaunchButtonComponent } from './study-launch-button.component';
 @Component({ template: '' })
 class BlankPageComponent {}
 
-const SOURCE = { kind: 'chapter', bookId: 'b1', chapterId: 'c1' } as const;
-
 async function render(
-  prepare: () => Promise<Card[]>,
+  prepare: () => Promise<number>,
   variant: 'primary' | 'secondary' = 'primary',
+  destination: string[] = ['/repaso'],
 ) {
   const logger = new FakeLogger();
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ path: 'repaso', component: BlankPageComponent }]),
+      provideRouter([
+        { path: 'repaso', component: BlankPageComponent },
+        { path: 'practicar', component: BlankPageComponent },
+      ]),
       { provide: Logger, useValue: logger },
     ],
   });
@@ -30,7 +29,7 @@ async function render(
   fixture.componentRef.setInput('label', 'Estudiar este capítulo');
   fixture.componentRef.setInput('variant', variant);
   fixture.componentRef.setInput('prepare', prepare);
-  fixture.componentRef.setInput('source', SOURCE);
+  fixture.componentRef.setInput('destination', destination);
   fixture.componentRef.setInput(
     'emptyMessage',
     'Estás al día con este capítulo. No hay tarjetas para repasar ahora.',
@@ -56,8 +55,8 @@ async function render(
 
 describe('StudyLaunchButtonComponent', () => {
   it('mientras prepara dice "Preparando…", se deshabilita y un segundo toque no prepara otra vez', async () => {
-    let release!: (cards: Card[]) => void;
-    const prepare = vi.fn(() => new Promise<Card[]>((resolve) => (release = resolve)));
+    let release!: (count: number) => void;
+    const prepare = vi.fn(() => new Promise<number>((resolve) => (release = resolve)));
     const { button, update } = await render(prepare);
 
     button('Estudiar este capítulo')?.click();
@@ -67,22 +66,29 @@ describe('StudyLaunchButtonComponent', () => {
     expect(button('Preparando…')?.disabled).toBe(true);
     button('Preparando…')?.click();
     expect(prepare).toHaveBeenCalledTimes(1);
-    release([]);
+    release(0);
   });
 
-  it('con tarjetas, entrega la sesión con su origen y navega al repaso', async () => {
-    const cards = [aCard({ id: 'k1' })];
-    const { button, update } = await render(async () => cards);
+  it('si quien prepara entregó algo, navega a su destino', async () => {
+    const { button, update } = await render(async () => 3);
 
     button('Estudiar este capítulo')?.click();
     await update();
 
-    expect(TestBed.inject(StudyHandoffService).take()).toEqual({ cards, source: SOURCE });
     expect(TestBed.inject(Router).url).toBe('/repaso');
   });
 
+  it('el destino es configurable (la práctica)', async () => {
+    const { button, update } = await render(async () => 10, 'secondary', ['/practicar']);
+
+    button('Estudiar este capítulo')?.click();
+    await update();
+
+    expect(TestBed.inject(Router).url).toBe('/practicar');
+  });
+
   it('sin tarjetas listas, dice que está al día y no navega', async () => {
-    const { element, button, update } = await render(async () => []);
+    const { element, button, update } = await render(async () => 0);
 
     button('Estudiar este capítulo')?.click();
     await update();
@@ -95,7 +101,7 @@ describe('StudyLaunchButtonComponent', () => {
 
   it('si la preparación falla: error con Reintentar, nunca "al día", y se registra', async () => {
     const failure = new Error('offline');
-    const prepare = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce([]);
+    const prepare = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce(0);
     const { element, button, update, logger } = await render(prepare);
 
     button('Estudiar este capítulo')?.click();
@@ -114,11 +120,11 @@ describe('StudyLaunchButtonComponent', () => {
   });
 
   it('primario en acento; secundario con borde', async () => {
-    const primary = await render(async () => []);
+    const primary = await render(async () => 0);
     expect(primary.button('Estudiar este capítulo')?.classList).toContain('bg-accent');
     TestBed.resetTestingModule();
 
-    const secondary = await render(async () => [], 'secondary');
+    const secondary = await render(async () => 0, 'secondary');
     expect(secondary.button('Estudiar este capítulo')?.classList).toContain('border-glass-border');
     expect(secondary.button('Estudiar este capítulo')?.classList).not.toContain('bg-accent');
   });

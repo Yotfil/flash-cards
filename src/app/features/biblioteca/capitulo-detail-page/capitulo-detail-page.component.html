@@ -54,9 +54,18 @@
           <app-study-launch-button
             [label]="copy.study.chapter"
             [prepare]="prepareStudy"
-            [source]="studySource()"
+            [destination]="studyDestination"
             [emptyMessage]="copy.study.chapterSettled"
             [errorMessage]="copy.study.error"
+          />
+        }
+        @if (canPractice()) {
+          <app-study-launch-button
+            variant="secondary"
+            [label]="practiceCopy.practice"
+            [prepare]="preparePractice"
+            [destination]="practiceDestination"
+            [errorMessage]="practiceCopy.prepareError"
           />
         }
       </div>

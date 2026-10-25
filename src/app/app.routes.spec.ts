@@ -13,6 +13,7 @@ import { ImportRepository } from '@domain/ports/import.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
+import { PracticeHandoffService } from '@services/practice/practice-handoff.service';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
@@ -57,7 +58,16 @@ async function navigate(
     ],
   });
   if (options.handOff) {
-    TestBed.inject(StudyHandoffService).hand({ cards: [aCard()], source: { kind: 'today' } });
+    if (url === '/practicar') {
+      TestBed.inject(PracticeHandoffService).hand({
+        questions: [
+          { id: 'q1', cardId: 'k1', type: 'written', prompt: 'to give up', answer: 'rendirse' },
+        ],
+        origin: { kind: 'book', bookId: 'b1' },
+      });
+    } else {
+      TestBed.inject(StudyHandoffService).hand({ cards: [aCard()], source: { kind: 'today' } });
+    }
   }
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
@@ -101,7 +111,9 @@ describe('mapa de rutas', () => {
     ['/repaso', ACTIVE],
     ['/practicar', ACTIVE],
   ] as const)('%s se pinta a pantalla completa, sin navegación', async (url, session) => {
-    const { element, finalUrl } = await navigate(url, session, { handOff: url === '/repaso' });
+    const { element, finalUrl } = await navigate(url, session, {
+      handOff: url === '/repaso' || url === '/practicar',
+    });
 
     expect(finalUrl).toBe(url);
     expect(element.querySelector('app-main-nav')).toBeNull();
@@ -123,6 +135,19 @@ describe('pantallas de las secciones', () => {
     expect(element.querySelector('app-shell main app-hoy-page h1')?.textContent?.trim()).toBe(
       'Hoy',
     );
+  });
+
+  it('/practicar con una práctica entregada pinta la práctica, sin la navegación principal', async () => {
+    const { element } = await navigate('/practicar', ACTIVE, { handOff: true });
+
+    expect(element.querySelector('app-practica-page app-written-question')?.textContent).toContain(
+      'to give up',
+    );
+    expect(element.querySelector('app-main-nav')).toBeNull();
+  });
+
+  it('/practicar sin una práctica entregada (recarga, URL directa, "atrás") vuelve a la Biblioteca', async () => {
+    expect((await navigate('/practicar')).finalUrl).toBe('/biblioteca');
   });
 
   it('/progreso pinta Progreso dentro del caparazón', async () => {

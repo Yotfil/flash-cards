@@ -333,3 +333,20 @@ describe('FirestoreCardRepository · lectura completa de un libro', () => {
     expect(failure).toBeInstanceOf(InvalidDocumentError);
   });
 });
+
+describe('FirestoreCardRepository · tarjetas de un libro', () => {
+  it('trae las tarjetas del libro y ninguna de otro', async () => {
+    await repository.createMany(
+      OWNER_UID,
+      Array.from({ length: 3 }, (_, index) => newCard({ front: `a${index}` })),
+    );
+    await asAdmin((db) =>
+      setDoc(doc(db, 'users', OWNER_UID, 'books', 'b2'), { name: 'Otro', cardCount: 0 }),
+    );
+    await repository.createMany(OWNER_UID, [newCard({ bookId: 'b2', front: 'ajena' })]);
+
+    const cards = await repository.listByBook(OWNER_UID, 'b1');
+
+    expect(cards.map((card) => card.front).sort()).toEqual(['a0', 'a1', 'a2']);
+  });
+});

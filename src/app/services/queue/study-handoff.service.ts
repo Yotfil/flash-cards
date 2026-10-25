@@ -1,6 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable } from '@angular/core';
 
 import type { Card } from '@domain/models/card.model';
+import { HandoffTray } from '@services/handoff/handoff-tray';
 
 /** De dónde sale una sesión: Hoy, un libro o un capítulo. */
 export type StudySource =
@@ -14,23 +15,15 @@ export interface PreparedStudy {
   readonly source: StudySource;
 }
 
-// Punto de entrega entre quien prepara una sesión (Hoy, un libro, un capítulo) y la pantalla de
-// repaso. Se entrega una sola vez: `take` la devuelve y la limpia, así volver a /repaso sin pasar
-// por un botón no reabre una sesión vieja. Una señal en un servicio se prueba sin router (el
-// `state` de la navegación se tipa débil y también se pierde al recargar).
+// La bandeja del repaso: Hoy, un libro o un capítulo entregan aquí su sesión y la pantalla de
+// repaso la toma una sola vez (ver `HandoffTray`).
 @Injectable({ providedIn: 'root' })
-export class StudyHandoffService {
-  private readonly tray = signal<PreparedStudy | null>(null);
-  /** Lo entregado, sin consumirlo (la guardia de /repaso solo mira). */
-  readonly prepared = this.tray.asReadonly();
-
-  hand(prepared: PreparedStudy): void {
-    this.tray.set(prepared);
-  }
-
-  take(): PreparedStudy | null {
-    const prepared = this.tray();
-    this.tray.set(null);
-    return prepared;
+export class StudyHandoffService extends HandoffTray<PreparedStudy> {
+  /** Entrega la sesión si tiene tarjetas y dice cuántas (lo que espera el botón de lanzamiento). */
+  handCards(cards: Card[], source: StudySource): number {
+    if (cards.length > 0) {
+      this.hand({ cards, source });
+    }
+    return cards.length;
   }
 }
