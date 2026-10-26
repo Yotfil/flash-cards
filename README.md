@@ -5,9 +5,10 @@ offline. Materia-agnóstica: el primer caso de uso es vocabulario de inglés, pe
 siempre un anverso y un reverso genéricos. El repositorio se llama `flash-cards`; el producto,
 **Cadence**.
 
-> Estado: **reescritura en curso** sobre `dev`, capacidad por capacidad, guiada por specs
-> (OpenSpec) y TDD. `main` sigue desplegando la versión anterior (0.1.1) hasta alcanzar la
-> paridad; el código viejo vive en la rama `backup/old-version`.
+> Estado: **reescritura Cadence completa**, guiada por specs (OpenSpec) y TDD: las 15 capacidades
+> de `openspec/specs/` están implementadas. La 1.0.0 trae la paridad con la versión anterior más
+> la exportación de libros; la 1.1.0, la práctica con IA. El código viejo (0.1.1) vive en la rama
+> `backup/old-version`.
 
 ## Requisitos
 
@@ -61,10 +62,29 @@ En el emulador, autoriza un correo una vez (con los emuladores corriendo):
 npm run seed:allowlist -- prueba@ejemplo.com
 ```
 
+O a mano, en la interfaz de los emuladores (`http://127.0.0.1:4000/firestore`, solo con
+`npm run emulators`; las pruebas de integración no la arrancan): en la colección `allowlist`,
+un documento cuyo ID es el correo exacto, con cualquier campo. Ahí mismo se ven los datos y las
+cuentas (pestaña Authentication).
+
 Después crea la cuenta con ese correo en `http://localhost:4200/login`, o entra con
 "Continuar con Google": el emulador abre una ventana falsa donde se elige o inventa la cuenta.
 Un correo fuera de la lista no crea cuenta; uno de Google fuera de la lista se borra al instante
 y la app muestra "sin acceso".
+
+### Si algo no arranca
+
+- **Hace falta Java** para los emuladores: ver [Requisitos](#requisitos) (el JDK de Homebrew no
+  entra al PATH solo).
+- **"Could not start Firestore Emulator, port taken"**: otro proceso usa el 8080 (por ejemplo, un
+  contenedor de Docker publicado en ese puerto). Detenlo o publícalo en otro puerto: la app y las
+  pruebas esperan el emulador de Firestore en el 8080 y el de Auth en el 9099 (`firebase.json`).
+- **El login falla con "connection refused"**: los emuladores no están corriendo (`npm run emulators`).
+- **"Auth Emulator Internal Error: No matching frame"** al entrar con Google: la ventanita del
+  emulador no encuentra su iframe en la pestaña de la app. Pasa si la pestaña se recargó con la
+  ventanita abierta (cierra, recarga y vuelve a intentar) o si algo bloquea `apis.google.com`
+  (bloqueadores, Brave, sin internet), de donde Firebase carga el script que crea ese iframe. Prueba
+  en una ventana de incógnito sin extensiones, o entra con correo y contraseña.
 
 **Probar contra los datos reales** (proyecto `flash-cards-aca86`): se sirve el build de
 producción, que usa `environment.production.ts` y ningún emulador. Nunca con `npm start`.
@@ -227,6 +247,15 @@ tarjetas) y lo entrega con `FileDeliveryPort`: "Compartir" con la hoja del siste
 navegador comparte archivos, o "Descargar .txt" donde no, y siempre "Copiar texto". Lee el libro
 del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita.
 
+**Práctica con IA.** Una rama aparte de los libros: **paquetes de práctica** (`/users/{uid}/practicePackages`,
+un documento por paquete con sus ítems dentro) que el usuario llena con lo que se cruza en el día,
+con el formulario de tarjeta o pegando texto (hasta "Ítems por paquete", 20 por defecto). Cada día
+practica los nuevos y los difíciles de días anteriores en la pantalla de repaso, con los cuatro
+cerebros pero **sin FSRS**: la nota solo decide si el ítem vuelve mañana (el conjunto se fija en
+la primera práctica del día). Al terminar, copia un **prompt** (plantilla editable en Ajustes, con
+`[[REPASADAS]]` y `[[DIFICILES]]`) para llevarlo a su chat de IA: la app no llama a ningún modelo.
+Nunca toca tarjetas, historial ni el día de los libros. Los ítems cloze se admiten a prueba.
+
 **Tarjeta nueva.** La programación inicial (`initialCardScheduling`, `domain/models/card-scheduling.ts`)
 vive en el dominio, sin depender de ts-fsrs: una tarjeta nueva nace con estado `New`, vence al
 crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de ts-fsrs.
@@ -256,14 +285,17 @@ plantilla distingue cuatro estados; un fallo nunca se pinta como vacío. Las mut
 
 ## Especificaciones y diseño
 
-- `openspec/specs/`: las 14 capacidades como specs base (comportamiento observable). Índice y
+- `openspec/specs/`: las 15 capacidades como specs base (comportamiento observable). Índice y
   orden de implementación en `openspec/specs/README.md`.
 - `openspec/changes/`: el change en curso, con proposal, design (incluido su plan de pruebas) y
-  tasks.
+  tasks. Los cerrados quedan en `openspec/changes/archive/`, con las correcciones de cada design
+  hechas durante la implementación.
 - `docs/design/`: la guía de rediseño UI/UX Cadence y los prototipos interactivos aprobados.
 
 ## Flujo de trabajo
 
-Cada capacidad es un change de OpenSpec y una rama `feature/<spec-id>` sacada de `dev`:
+Cada capacidad es un change de OpenSpec y una rama `feature/<spec-id>` sacada de `dev` (la
+reescritura fue la excepción: los 15 changes en la rama única `feature/reescritura-cadence`, un
+commit por change):
 `opsx:explore` (decisiones de esa capacidad) → `opsx:propose` → `opsx:apply` con TDD →
 PR hacia `dev` con CI en verde → `opsx:archive` → se borra la rama. Commits atómicos.

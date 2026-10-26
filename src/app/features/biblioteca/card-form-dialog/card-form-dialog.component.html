@@ -101,7 +101,7 @@
   </div>
 
   @if (isDuplicate()) {
-    <p role="status" class="text-sm text-text-dim">{{ copy.duplicate }}</p>
+    <p role="status" class="text-sm text-text-dim">{{ duplicateMessage }}</p>
   }
   @if (!online()) {
     <p class="text-sm text-text-dim">{{ needsConnection }}</p>

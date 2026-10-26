@@ -15,12 +15,14 @@ export interface NavDestination {
   readonly section: string;
   readonly label: string;
   readonly icon: IconName;
+  /** Otras secciones que viven bajo este destino (los paquetes de práctica, en la Biblioteca). */
+  readonly alsoFor?: readonly string[];
 }
 
 /** Los cuatro destinos de la navegación principal, en su orden. */
 export const NAV_DESTINATIONS: readonly NavDestination[] = [
   { section: 'hoy', label: 'Hoy', icon: 'calendar' },
-  { section: 'biblioteca', label: 'Biblioteca', icon: 'books' },
+  { section: 'biblioteca', label: 'Biblioteca', icon: 'books', alsoFor: ['paquetes'] },
   { section: 'progreso', label: 'Progreso', icon: 'chart' },
   { section: 'ajustes', label: 'Ajustes', icon: 'sliders' },
 ];

@@ -3,7 +3,14 @@ import { Component, computed, input } from '@angular/core';
 import type { ImportPreview } from '@services/import/import.service';
 import { IconComponent } from '@shared/icon/icon.component';
 
-import { IMPORTACION_COPY, countsLine, omittedHeading, omittedLine } from '../importacion.copy';
+import {
+  CARD_WORDING,
+  IMPORTACION_COPY,
+  countsLine,
+  omittedHeading,
+  omittedLine,
+  type PreviewWording,
+} from '../importacion.copy';
 
 // Lo que entrará antes de guardar nada: capítulos, tarjetas y repetidas, y qué líneas se omiten y
 // por qué. La comparten la página de importar un libro y el diálogo de importar tarjetas. Sólida:
@@ -18,6 +25,7 @@ export class ImportPreviewComponent {
   readonly preview = input.required<ImportPreview>();
   /** Al importar un libro se cuentan los capítulos; en un capítulo, no. */
   readonly showChapters = input(true);
+  readonly wording = input<PreviewWording>(CARD_WORDING);
 
   protected readonly copy = IMPORTACION_COPY;
   protected readonly counts = computed(() =>
@@ -28,6 +36,7 @@ export class ImportPreviewComponent {
         repeated: this.preview().repeatedCount,
       },
       this.showChapters(),
+      this.wording(),
     ),
   );
   protected readonly omitted = computed(() =>

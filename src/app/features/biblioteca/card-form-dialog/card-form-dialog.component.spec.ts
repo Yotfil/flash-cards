@@ -267,3 +267,58 @@ describe('CardFormDialogComponent · editar', () => {
     await expect(ref.closed).resolves.toMatchObject({ id: 'k1', back: 'abandonar' });
   });
 });
+
+describe('CardFormDialogComponent · con su propio guardado (un paquete)', () => {
+  beforeEach(() => allowDialogFocusInJsdom());
+  afterEach(() => vi.restoreAllMocks());
+
+  const ITEM = {
+    id: 'i1',
+    cardType: 'basic' as const,
+    front: 'to call it a day',
+    back: 'dar el día por terminado',
+  };
+
+  it('crear llama a su save con el borrador, sin tocar las tarjetas, y avisa de repetidas contra su lista', async () => {
+    const save = vi.fn(async () => undefined);
+    const { ref, repository, update, submit } = await setup({
+      mode: 'create',
+      save,
+      existing: { cards: signal([ITEM]), message: 'Ya tienes un ítem igual en este paquete.' },
+    });
+
+    typeInto('#card-front', 'To call it a day');
+    typeInto('#card-back', 'dar el día por terminado');
+    await update();
+    expect(openDialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Ya tienes un ítem igual en este paquete.',
+    );
+    submit();
+    await update();
+
+    expect(save).toHaveBeenCalledWith({
+      cardType: 'basic',
+      front: 'To call it a day',
+      back: 'dar el día por terminado',
+      example: '',
+    });
+    expect(repository.calls.create + repository.calls.createMany).toBe(0);
+    await expect(ref.closed).resolves.toBeUndefined();
+  });
+
+  it('editar precarga la cara y guarda con su save', async () => {
+    const save = vi.fn(async () => undefined);
+    const { repository, update, submit } = await setup({ mode: 'edit', card: ITEM, save });
+
+    expect(openDialog().querySelector<HTMLTextAreaElement>('#card-front')?.value).toBe(
+      'to call it a day',
+    );
+    typeInto('#card-back', 'terminar por hoy');
+    await update();
+    submit();
+    await update();
+
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ back: 'terminar por hoy' }));
+    expect(repository.contentChanges).toEqual([]);
+  });
+});

@@ -7,6 +7,7 @@ import type { UserSettings } from '@domain/models/user.model';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { ThemePort } from '@domain/ports/theme.port';
+import { DEFAULT_PROMPT_TEMPLATE } from '@services/practice-ai/build-prompt';
 import { SessionService } from '@services/session/session.service';
 import { deviceTimeZone } from '@services/settings/time-zones';
 import { ThemeService } from '@services/theme/theme.service';
@@ -37,6 +38,7 @@ async function render(options: { settings?: Partial<UserSettings>; online?: bool
         theme: 'system',
         defaultNewCardsPerDay: 15,
         autoGradeByTime: true,
+        practicePackageCapacity: 20,
         ...options.settings,
       },
     },
@@ -99,13 +101,19 @@ async function render(options: { settings?: Partial<UserSettings>; online?: bool
 }
 
 describe('AjustesPageComponent · estructura', () => {
-  it('ordena las secciones Sesión, Estudio, Día de estudio y Apariencia', async () => {
+  it('ordena las secciones Sesión, Estudio, Día de estudio, Práctica con IA y Apariencia', async () => {
     const { element } = await render();
 
     const headings = Array.from(element.querySelectorAll('section h2')).map((heading) =>
       heading.textContent?.trim(),
     );
-    expect(headings).toEqual(['Sesión', 'Estudio', 'Día de estudio', 'Apariencia']);
+    expect(headings).toEqual([
+      'Sesión',
+      'Estudio',
+      'Día de estudio',
+      'Práctica con IA',
+      'Apariencia',
+    ]);
   });
 
   it('muestra con quién está iniciada la sesión', async () => {
@@ -374,6 +382,96 @@ describe('AjustesPageComponent · cerrar sesión', () => {
     await update();
     expect(session.signOuts).toBe(1);
     expect(router.url).toBe('/login');
+  });
+});
+
+describe('AjustesPageComponent · práctica con IA', () => {
+  async function renderPractice(settings: Partial<UserSettings> = {}, online = true) {
+    const rendered = await render({ settings, online });
+    const template = () => rendered.query<HTMLTextAreaElement>('#prompt-template');
+    const capacity = () => rendered.query<HTMLInputElement>('#package-capacity');
+    const save = () => rendered.query<HTMLButtonElement>('#save-practice');
+    const type = async (control: HTMLInputElement | HTMLTextAreaElement | null, value: string) => {
+      if (!control) throw new Error('Falta el control');
+      control.value = value;
+      control.dispatchEvent(new Event('input'));
+      await rendered.update();
+    };
+    const section = () =>
+      Array.from(rendered.element.querySelectorAll('section')).find(
+        (candidate) => candidate.querySelector('h2')?.textContent?.trim() === 'Práctica con IA',
+      );
+    return { ...rendered, template, capacity, save, type, section };
+  }
+
+  it('muestra la plantilla (la por defecto si no hay propia), su pista y los ítems por paquete', async () => {
+    const { template, capacity, section, save } = await renderPractice();
+
+    expect(template()?.value).toBe(DEFAULT_PROMPT_TEMPLATE);
+    expect(section()?.textContent).toContain(
+      'Usa [[REPASADAS]] y [[DIFICILES]] donde quieras que vayan tus términos.',
+    );
+    expect(capacity()?.value).toBe('20');
+    expect(save()?.disabled).toBe(true);
+  });
+
+  it('"Guardar" envía la plantilla y la capacidad', async () => {
+    const { template, capacity, save, type, update, session, section } = await renderPractice();
+    await type(template(), 'Mi plantilla [[REPASADAS]] / [[DIFICILES]]');
+    await type(capacity(), '12');
+
+    save()?.click();
+    await update();
+
+    expect(session.settingsUpdates.at(-1)).toEqual({
+      promptTemplate: 'Mi plantilla [[REPASADAS]] / [[DIFICILES]]',
+      practicePackageCapacity: 12,
+    });
+    expect(section()?.querySelector('[role="status"]')?.textContent?.trim()).toBe('Guardado.');
+  });
+
+  it('"Restaurar plantilla por defecto" la rellena y se guarda como ausente', async () => {
+    const { template, save, update, session, button } = await renderPractice({
+      promptTemplate: 'Mi propia',
+    });
+    expect(template()?.value).toBe('Mi propia');
+
+    button('Restaurar plantilla por defecto')?.click();
+    await update();
+    expect(template()?.value).toBe(DEFAULT_PROMPT_TEMPLATE);
+    save()?.click();
+    await update();
+
+    expect(session.settingsUpdates.at(-1)).toEqual({
+      promptTemplate: null,
+      practicePackageCapacity: 20,
+    });
+  });
+
+  it.each(['3', '2.5', '101'])('"%s" ítems por paquete no se puede guardar', async (value) => {
+    const { capacity, save, type, section } = await renderPractice();
+
+    await type(capacity(), value);
+
+    expect(save()?.disabled).toBe(true);
+    expect(section()?.textContent).toContain('Entre 5 y 100, sin decimales.');
+  });
+
+  it('una plantilla vacía no se puede guardar', async () => {
+    const { template, save, type, section } = await renderPractice();
+
+    await type(template(), '   ');
+
+    expect(save()?.disabled).toBe(true);
+    expect(section()?.textContent).toContain('La plantilla no puede estar vacía.');
+  });
+
+  it('sin red no se guarda', async () => {
+    const { capacity, save, type } = await renderPractice({}, false);
+
+    await type(capacity(), '12');
+
+    expect(save()?.disabled).toBe(true);
   });
 });
 

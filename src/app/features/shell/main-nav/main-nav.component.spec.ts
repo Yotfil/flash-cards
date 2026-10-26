@@ -66,6 +66,15 @@ describe('MainNavComponent', () => {
     expect(navIndex(element)).toBe('1');
   });
 
+  it('los paquetes de práctica viven en la Biblioteca: la mantienen activa', async () => {
+    const element = await navigateTo('/paquetes/p1');
+
+    const current = links(element).filter((link) => link.getAttribute('aria-current') === 'page');
+    expect(current.map((link) => link.textContent?.trim())).toEqual(['Biblioteca']);
+    expect(current[0]?.classList).toContain('text-accent-text');
+    expect(navIndex(element)).toBe('1');
+  });
+
   it('una ruta sin destino propio no activa ninguno y esconde la píldora', async () => {
     const element = await navigateTo('/importar');
 

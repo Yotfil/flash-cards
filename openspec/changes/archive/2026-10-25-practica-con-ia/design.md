@@ -68,6 +68,19 @@ interface PracticePackage { id; name; capacity; status: 'open' | 'completed'; it
 - `PracticeAiPageComponent` (`/practica-ia`, fuera del caparazón, `authGuard` + `practiceAiHandoffGuard` → `/biblioteca`): `take()` → `session.start`; `SessionTopBarComponent` (progreso, "4 / 11", Salir → `/paquetes/{id}`), `FlipCardComponent` con `current`, botón "Mostrar respuesta", `RatingBarComponent` con `previews = null`; teclado como el repaso (Espacio, 1-4; sin sugerencia). Al terminar: `SessionSummaryComponent` con `title` "Práctica terminada", `countLabel` "Practicaste N ítems", pastillas por grado, `backLabel` "Volver al paquete", y en `[practice]`: `hardCountLabel` ("5 para reforzar con la IA" / "Ninguno difícil esta vez") + `CopyPromptButtonComponent` con `promptFor(packageId)`. `DestroyRef.onDestroy(() => session.reset())`.
 - Textos en `features/practica-ia/practica-ia.copy.ts` (plural real con `pluralize`).
 
+### 5. Correcciones de la fase B (2026-10-25, vía `/opsx:update`)
+
+1. **Una nota rechazada devuelve el ítem al final** (`requeueRejected` en el núcleo, con identidad de sesión como el repaso): lo exige la spec base ("el ítem vuelve al final con el aviso del repaso") aunque el design y la tarea 3.1 solo pedían alerta y registro. Si la práctica ya terminó, solo se cuenta (`rejectedAfterFinish`).
+2. **La práctica refleja cada nota en la lista de paquetes** (`PracticePackagesService.applyGrade`): sin eso, el detalle y el prompt del cierre quedaban con las notas viejas hasta releer.
+3. **`listByUser` ordena en memoria**, no con `orderBy('createdAt')`: Firestore deja fuera, sin avisar, un documento sin ese campo, y la spec pide que un documento malformado se vea como fallo de carga.
+4. **`fixTodaySet` no se espera** (sin red quedaría colgado): el conjunto se fija en la lista local al instante y la escritura va a la cola del almacén; un fallo se registra.
+5. **`CardFormDialog`** recibe, con su `save`, `existing: { cards; message }`: el aviso de repetida del capítulo ("en este capítulo") sería falso en un paquete. **`CardImportDialog`** con `target: package` lleva también sus textos (título, "Caben N más…", error y la palabra "ítems"): `features/importacion` no conoce los paquetes. La previsualización ganó `wording` (tarjetas/ítems).
+6. **`SessionSummary.countLabel` es una función** (número → texto) para conservar el conteo animado; su salida es `back`.
+7. **`updateSettings` acepta `promptTemplate: null`** (la plantilla por defecto se guarda como ausente). La sección de Ajustes tiene su propio "Guardar" (no el de las tarjetas nuevas).
+8. **Navegación:** un destino puede cubrir otras secciones (`alsoFor`); la Biblioteca queda activa en `/paquetes/...`.
+9. **Escena de la verificación 6.1:** con los 4 agregados tras practicar el día uno, el día dos tiene 5 difíciles + 4 + 6 nuevos = 15 (la tarea decía 11, que es el escenario de la spec sin esos 4).
+10. **Riesgo nuevo:** calificar un ítem borrado desde otro dispositivo crearía un ítem a medias (la nota escribe rutas punteadas sin transacción, para funcionar sin red). Improbable (la práctica es a pantalla completa en un dispositivo); queda anotado.
+
 ## Superficies con acrílico (ADR 0003)
 
 | Superficie | Tratamiento | Capa visible |

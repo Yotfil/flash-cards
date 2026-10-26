@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 
-import type { Card } from '@domain/models/card.model';
+import type { CardFace } from '@domain/models/card.model';
 import { clozeQuestion, clozeSegments } from '@services/cards/cloze/parse-cloze';
 
 import { REPASO_COPY } from '../repaso.copy';
@@ -13,14 +13,15 @@ const ENTRY_GUARD_MS = 320;
 
 // La tarjeta de estudio: sólida, de alto contraste, nunca acrílico. Primero solo la pregunta y
 // "Mostrar respuesta"; al revelar se voltea y muestra el reverso (y el ejemplo, si lo hay). Una
-// cloze pregunta con sus huecos como "[…]" y al revelar los muestra en acento, sin reverso.
+// cloze pregunta con sus huecos como "[…]" y al revelar los muestra en acento, sin reverso. Solo
+// necesita la cara de la tarjeta: sirve igual para un ítem de un paquete de práctica.
 @Component({
   selector: 'app-flip-card',
   templateUrl: './flip-card.component.html',
   styleUrl: './flip-card.component.scss',
 })
 export class FlipCardComponent {
-  readonly card = input.required<Card>();
+  readonly card = input.required<CardFace>();
   readonly revealed = input(false);
   readonly revealRequested = output<void>();
 

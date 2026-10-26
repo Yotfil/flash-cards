@@ -33,10 +33,14 @@
     @case ('finished') {
       <div class="flex flex-1 items-center">
         <app-session-summary
+          [title]="copy.summaryTitle"
+          [countLabel]="reviewedLabel"
+          [note]="copy.summaryNote"
+          [backLabel]="copy.backToToday"
           [distinctCount]="session.distinctCount()"
           [ratingCounts]="session.ratingCounts()"
           [rejectedAfterFinish]="session.rejectedAfterFinish()"
-          (homeRequested)="home()"
+          (back)="home()"
         />
       </div>
     }

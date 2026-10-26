@@ -6,8 +6,9 @@ import type { SessionState } from '@domain/models/session-state';
 import {
   DEFAULT_AUTO_GRADE_BY_TIME,
   DEFAULT_NEW_CARDS_PER_DAY,
+  DEFAULT_PRACTICE_PACKAGE_CAPACITY,
 } from '@domain/models/study-defaults';
-import type { User, UserSettings } from '@domain/models/user.model';
+import { applySettingsChanges, type SettingsChanges, type User } from '@domain/models/user.model';
 import { AllowlistRepository } from '@domain/ports/allowlist.repository';
 import {
   AuthPort,
@@ -174,14 +175,14 @@ export class SessionService {
    * el perfil vigente al terminar, no sobre la copia de antes: si otro ajuste se guardó mientras
    * tanto, se conservan los dos. Si falla, el error sube y la sesión no cambia.
    */
-  async updateSettings(changes: Partial<UserSettings>): Promise<void> {
+  async updateSettings(changes: SettingsChanges): Promise<void> {
     const { id } = requireSessionUser(this.user());
     await this.users.updateSettings(id, changes);
     const current = this.user();
     if (current?.id === id) {
       this.setState({
         kind: 'active',
-        user: { ...current, settings: { ...current.settings, ...changes } },
+        user: { ...current, settings: applySettingsChanges(current.settings, changes) },
       });
     }
   }
@@ -269,6 +270,7 @@ export class SessionService {
         theme: 'system',
         defaultNewCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
         autoGradeByTime: DEFAULT_AUTO_GRADE_BY_TIME,
+        practicePackageCapacity: DEFAULT_PRACTICE_PACKAGE_CAPACITY,
       },
     };
     await this.users.save(profile);

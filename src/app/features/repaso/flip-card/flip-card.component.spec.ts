@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import type { Card } from '@domain/models/card.model';
+import type { CardFace } from '@domain/models/card.model';
 import { aCard } from '@testing/fake-card-repository';
 
 import { FlipCardComponent } from './flip-card.component';
 
 const T0 = new Date('2026-10-24T15:00:00Z');
 
-function render(card: Card, revealed = false) {
+function render(card: CardFace, revealed = false) {
   const fixture = TestBed.createComponent(FlipCardComponent);
   fixture.componentRef.setInput('card', card);
   fixture.componentRef.setInput('revealed', revealed);
@@ -99,5 +99,18 @@ describe('FlipCardComponent', () => {
 
   it('una tarjeta en dirección inversa pregunta igual por su anverso', () => {
     expect(render(aCard({ ...BASIC, direction: 'reverse' })).front()).toBe('to give up');
+  });
+
+  it('también muestra una cara sin programación (un ítem de paquete)', () => {
+    const item: CardFace = {
+      id: 'i1',
+      cardType: 'basic',
+      front: 'to call it a day',
+      back: 'dar el día por terminado',
+    };
+    const { front, back } = render(item, true);
+
+    expect(front()).toBe('to call it a day');
+    expect(back()?.textContent).toContain('dar el día por terminado');
   });
 });
