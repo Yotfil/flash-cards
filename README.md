@@ -79,6 +79,9 @@ y la app muestra "sin acceso".
 - **"Could not start Firestore Emulator, port taken"**: otro proceso usa el 8080 (por ejemplo, un
   contenedor de Docker publicado en ese puerto). Detenlo o publícalo en otro puerto: la app y las
   pruebas esperan el emulador de Firestore en el 8080 y el de Auth en el 9099 (`firebase.json`).
+- **`npm run test:integration` con `npm run emulators` encendido** falla con "port taken": arranca su
+  propio emulador en el 8080. Las pruebas usan otro proyecto (`demo-cadence-test`) y cada una vacía
+  solo ese: aunque llegaran a tu emulador de desarrollo, tus datos de `demo-cadence` no se tocan.
 - **El login falla con "connection refused"**: los emuladores no están corriendo (`npm run emulators`).
 - **"Auth Emulator Internal Error: No matching frame"** al entrar con Google: la ventanita del
   emulador no encuentra su iframe en la pestaña de la app. Pasa si la pestaña se recargó con la
