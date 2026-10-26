@@ -8,12 +8,14 @@ import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { BookReadyCardsService } from '@services/queue/book-ready-cards.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -43,6 +45,7 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      { provide: Logger, useValue: new FakeLogger() },
       { provide: ChapterRepository, useValue: repository },
       { provide: BookRepository, useValue: new FakeBookRepository() },
       {

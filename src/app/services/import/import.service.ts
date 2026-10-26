@@ -95,13 +95,16 @@ export class ImportService {
     return done;
   }
 
-  /** El texto se vuelve a procesar aquí (puro, milisegundos): da lo mismo que la previsualización. */
+  /**
+   * El texto se vuelve a procesar aquí (puro, milisegundos): da lo mismo que la previsualización.
+   * Todo fallo queda registrado, también el de las lecturas previas (la Biblioteca, la sesión).
+   */
   private async writeBook({ name, subject, text }: BookImportDraft): Promise<ImportBookSummary> {
     const parse = this.previewForBook(text, name.trim() || DEFAULT_IMPORTED_BOOK_NAME).parse;
-    const user = requireSessionUser(this.session.user());
-    const library = await this.books.ensureLoaded();
     const now = new Date();
     try {
+      const user = requireSessionUser(this.session.user());
+      const library = await this.books.ensureLoaded();
       const book = await this.repository.importBook(user.id, {
         book: {
           name: name.trim() || DEFAULT_IMPORTED_BOOK_NAME,
@@ -121,11 +124,7 @@ export class ImportService {
       this.books.addLocal(book);
       return { bookId: book.id, chapterCount: parse.chapterCount, cardCount: parse.validCardCount };
     } catch (error) {
-      const detail =
-        error instanceof ImportBookError
-          ? ` (${error.committedCount} escrituras confirmadas, deshechas: ${error.rolledBack})`
-          : '';
-      this.logger.error(`No se pudo importar el libro${detail}`, error);
+      this.logger.error(`No se pudo importar el libro${importFailureDetail(error)}`, error);
       throw error;
     }
   }
@@ -146,6 +145,16 @@ export class ImportService {
       await this.cards.replaceAll(bookId, chapterId, drafts);
     }
   }
+}
+
+/** Qué quedó escrito y, si no se pudo deshacer, por qué: lo que hace falta para limpiar a mano. */
+function importFailureDetail(error: unknown): string {
+  if (!(error instanceof ImportBookError)) {
+    return '';
+  }
+  const rollback =
+    error.rollbackFailure === undefined ? '' : `; al deshacer: ${String(error.rollbackFailure)}`;
+  return ` (${error.committedCount} escrituras confirmadas, deshechas: ${error.rolledBack}${rollback})`;
 }
 
 function draftsOf(parse: ImportParseResult): CardContentDraft[] {

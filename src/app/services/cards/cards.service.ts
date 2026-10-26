@@ -9,6 +9,7 @@ import type {
 } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { CardRepository } from '@domain/ports/card.repository';
+import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
@@ -24,13 +25,21 @@ export class CardsService {
   private readonly repository = inject(CardRepository);
   private readonly session = inject(SessionService);
   private readonly books = inject(BooksService);
+  private readonly logger = inject(Logger);
 
   private readonly chapterId = signal<string | undefined>(undefined);
 
   readonly cards = resource({
     params: () => this.chapterId(),
-    loader: ({ params }) =>
-      this.repository.listByChapter(requireSessionUid(this.session.user()), params),
+    loader: async ({ params }) => {
+      try {
+        return await this.repository.listByChapter(requireSessionUid(this.session.user()), params);
+      } catch (error) {
+        // La pantalla pinta el error; aquí queda el detalle (p. ej. qué documento rechazó la frontera).
+        this.logger.error(`No se pudieron leer las tarjetas del capítulo ${params}`, error);
+        throw error;
+      }
+    },
   });
 
   private readonly loaded = computed(() => (this.cards.hasValue() ? this.cards.value() : []));

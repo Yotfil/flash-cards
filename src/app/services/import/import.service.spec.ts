@@ -50,7 +50,7 @@ function setup(state: SessionState = ACTIVE) {
     TestBed.tick();
     await TestBed.inject(ApplicationRef).whenStable();
   };
-  return { service: TestBed.inject(ImportService), imports, cards, logger, settle };
+  return { service: TestBed.inject(ImportService), imports, books, cards, logger, settle };
 }
 
 describe('ImportService · libro', () => {
@@ -131,6 +131,44 @@ describe('ImportService · libro', () => {
 
     expect(addLocal).not.toHaveBeenCalled();
     expect(logger.entries.at(-1)?.cause).toBe(failure);
+  });
+
+  it('un fallo antes de escribir (la Biblioteca no cargó) queda registrado y reintentar sirve', async () => {
+    const { service, imports, books, logger } = setup();
+    const failure = new Error('Lectura de libros rechazada');
+    books.failWith.listByUser = failure;
+
+    await expect(service.importBook({ name: 'X', subject: '', text: 'a | b' })).rejects.toBe(
+      failure,
+    );
+    expect(logger.entries).toContainEqual({
+      level: 'error',
+      message: 'No se pudo importar el libro',
+      cause: failure,
+    });
+
+    // La causa era pasajera: el usuario pulsa otra vez "Importar 1".
+    delete books.failWith.listByUser;
+    await service.importBook({ name: 'X', subject: '', text: 'a | b' });
+    expect(imports.calls).toBe(1);
+  });
+
+  it('si además falla deshacer lo escrito, el registro dice por qué', async () => {
+    const { service, imports, logger } = setup();
+    imports.failWith = new ImportBookError(
+      450,
+      false,
+      new Error('permiso'),
+      new Error('sin red al deshacer'),
+    );
+
+    await expect(
+      service.importBook({ name: 'X', subject: '', text: 'a | b' }),
+    ).rejects.toBeInstanceOf(ImportBookError);
+
+    expect(logger.entries.at(-1)?.message).toBe(
+      'No se pudo importar el libro (450 escrituras confirmadas, deshechas: false; al deshacer: Error: sin red al deshacer)',
+    );
   });
 
   it('mientras importa recuerda qué libro es (para la página que vuelve) y al terminar lo olvida', async () => {

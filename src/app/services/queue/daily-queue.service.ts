@@ -65,7 +65,15 @@ export class DailyQueueService {
       const day = this.studyDay();
       return day ? { uid: this.session.user()?.id ?? '', day } : undefined;
     },
-    loader: ({ params }) => this.read(params.day),
+    loader: async ({ params }) => {
+      try {
+        return await this.read(params.day);
+      } catch (error) {
+        // Hoy pinta "No pudimos cargar tu cola de hoy"; aquí queda el detalle.
+        this.logger.error('No se pudo armar la cola de Hoy', error);
+        throw error;
+      }
+    },
   });
 
   /**

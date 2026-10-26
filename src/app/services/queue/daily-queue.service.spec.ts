@@ -159,6 +159,22 @@ describe('DailyQueueService · carga', () => {
     ]);
   });
 
+  it('si la cola no se puede armar, queda registrado', async () => {
+    const { service, cards, logger, settle } = setup();
+    const failure = new Error('Documento inválido en users/u1/cards/k1');
+    cards.failWith.listReady = failure;
+
+    service.refresh();
+    await settle();
+
+    expect(service.status()).toBe('error');
+    expect(logger.entries).toContainEqual({
+      level: 'error',
+      message: 'No se pudo armar la cola de Hoy',
+      cause: failure,
+    });
+  });
+
   it('si fallan las tarjetas o los libros, la cola está en error', async () => {
     const failingCards = setup();
     failingCards.cards.failWith.listReady = new Error('offline');

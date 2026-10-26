@@ -20,6 +20,8 @@ export class ImportBookError extends Error {
     readonly committedCount: number,
     readonly rolledBack: boolean,
     cause: unknown,
+    /** Por qué no se pudo deshacer lo escrito (solo si `rolledBack` es falso). */
+    readonly rollbackFailure?: unknown,
   ) {
     super(`La importación se cortó tras ${committedCount} escrituras`, { cause });
   }
