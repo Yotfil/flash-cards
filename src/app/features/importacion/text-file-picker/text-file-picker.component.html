@@ -1,0 +1,11 @@
+<div class="flex flex-col items-end gap-1">
+  <label
+    class="press cursor-pointer rounded-xl border border-glass-border px-3 py-1.5 text-sm font-semibold text-text focus-within:outline-2 focus-within:outline-offset-3 focus-within:outline-accent"
+  >
+    {{ copy.loadFile }}
+    <input type="file" accept=".txt,.md,text/plain" class="sr-only" (change)="load($event)" />
+  </label>
+  @if (readFailed()) {
+    <p role="alert" class="text-xs text-danger">{{ copy.readFileError }}</p>
+  }
+</div>

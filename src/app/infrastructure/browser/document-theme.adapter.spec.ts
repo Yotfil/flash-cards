@@ -21,6 +21,35 @@ describe('DocumentThemeAdapter', () => {
     vi.restoreAllMocks();
     localStorage.clear();
     delete document.documentElement.dataset['theme'];
+    document.head.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.remove());
+  });
+
+  /** Las dos etiquetas de color de la barra, como en index.html. */
+  function addBrowserBarColors(): HTMLMetaElement[] {
+    return (['light', 'dark'] as const).map((scheme) => {
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.dataset['scheme'] = scheme;
+      meta.media = `(prefers-color-scheme: ${scheme})`;
+      document.head.append(meta);
+      return meta;
+    });
+  }
+
+  it('un tema elegido manda también en la barra del navegador; "sistema" la devuelve al sistema', () => {
+    const [light, dark] = addBrowserBarColors();
+
+    adapter.apply('light');
+    expect([light?.media, dark?.media]).toEqual(['all', 'not all']);
+
+    adapter.apply('dark');
+    expect([light?.media, dark?.media]).toEqual(['not all', 'all']);
+
+    adapter.apply('system');
+    expect([light?.media, dark?.media]).toEqual([
+      '(prefers-color-scheme: light)',
+      '(prefers-color-scheme: dark)',
+    ]);
   });
 
   it('aplicar oscuro fija el atributo de tema y lo recuerda', () => {

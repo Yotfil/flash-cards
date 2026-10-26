@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { Logger } from '@domain/ports/logger.port';
+import { UnexpectedErrorNotice } from '@services/notices/unexpected-error-notice.service';
 import { FakeLogger } from '@testing/fake-logger';
 
 import { GlobalErrorHandler } from './global-error-handler';
@@ -25,6 +26,14 @@ describe('GlobalErrorHandler', () => {
     expect(logger.entries).toEqual([
       { level: 'error', message: 'Error no controlado', cause: error },
     ]);
+  });
+
+  it('además de registrarlo, muestra el aviso discreto de fallo no previsto', () => {
+    const notice = TestBed.inject(UnexpectedErrorNotice);
+
+    handler.handleError(new Error('boom'));
+
+    expect(notice.visible()).toBe(true);
   });
 
   it('acepta valores que no son Error y los conserva como causa', () => {

@@ -5,11 +5,13 @@ import type { SessionState } from '@domain/models/session-state';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { SessionService } from '@services/session/session.service';
 import { BooksService } from '@services/books/books.service';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -19,12 +21,14 @@ function setup(state: SessionState = { kind: 'active', user: aUser({ id: 'u1' })
   const repository = new FakeChapterRepository();
   const books = new FakeBookRepository();
   const connectivity = new FakeConnectivity(online);
+  const logger = new FakeLogger();
   TestBed.configureTestingModule({
     providers: [
       { provide: ChapterRepository, useValue: repository },
       { provide: BookRepository, useValue: books },
       { provide: SessionService, useValue: new FakeSessionService(state) },
       { provide: ConnectivityPort, useValue: connectivity },
+      { provide: Logger, useValue: logger },
     ],
   });
   const service = TestBed.inject(ChaptersService);
@@ -32,7 +36,7 @@ function setup(state: SessionState = { kind: 'active', user: aUser({ id: 'u1' })
     TestBed.tick();
     await TestBed.inject(ApplicationRef).whenStable();
   };
-  return { service, repository, books, connectivity, settle };
+  return { service, repository, books, connectivity, logger, settle };
 }
 
 describe('ChaptersService · recurso', () => {
@@ -223,5 +227,21 @@ describe('ChaptersService · conteos', () => {
     await settle();
     expect(repository.calls.countCards).toBe(1);
     expect(count.value()).toBe(42);
+  });
+});
+
+describe('ChaptersService · registro de fallos', () => {
+  it('si la lectura de los capítulos falla, queda registrada', async () => {
+    const { service, repository, logger, settle } = setup();
+    const failure = new Error('Documento inválido en users/u1/chapters/c1');
+    repository.failWith.listByBook = failure;
+
+    service.openBook('b1');
+    await settle();
+
+    expect(service.chapters.status()).toBe('error');
+    expect(logger.entries).toEqual([
+      { level: 'error', message: 'No se pudieron leer los capítulos del libro b1', cause: failure },
+    ]);
   });
 });

@@ -6,6 +6,8 @@ export const SHELL_COPY = {
   brand: 'Cadence',
   navLabel: 'Navegación principal',
   offline: 'Sin conexión. Tus repasos se guardan aquí y se sincronizan al volver.',
+  unexpectedError: 'Algo salió mal. Si se repite, recarga la app.',
+  dismissUnexpectedError: 'Cerrar aviso',
 } as const;
 
 export interface NavDestination {

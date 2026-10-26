@@ -186,4 +186,29 @@ describe('FirestoreChapterRepository · conteo y cascada', () => {
     expect(await remaining('cards')).toEqual([]);
     expect(await bookCardCount()).toBe(100);
   });
+
+  it('con la red caída, borrar falla sin dejar tarjetas sueltas y el reintento lo borra todo', async () => {
+    await seedBookWithCards(3, { A: 3 });
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const db = modularFirestore(context);
+    const device = new FirestoreChapterRepository(db);
+    // El dispositivo solo había visto una de las tres tarjetas: es lo único que tiene en caché.
+    await getDoc(doc(db, 'users', OWNER_UID, 'cards', 'A-0'));
+
+    await context.firestore().disableNetwork();
+    const offlineDeletion = device.deleteWithCards(OWNER_UID, 'b1', 'A').then(
+      () => 'borró',
+      () => 'falló',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await context.firestore().enableNetwork();
+
+    expect(await offlineDeletion).toBe('falló');
+    expect(await remaining('cards')).toHaveLength(3);
+    expect(await remaining('chapters')).toEqual(['A']);
+    expect(await device.deleteWithCards(OWNER_UID, 'b1', 'A')).toBe(3);
+    expect(await remaining('cards')).toEqual([]);
+    expect(await remaining('chapters')).toEqual([]);
+    expect(await bookCardCount()).toBe(0);
+  });
 });

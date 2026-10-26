@@ -111,6 +111,23 @@ describe('FirestoreImportRepository', () => {
     expect(book.cardCount).toBe(1000);
   });
 
+  it('las tarjetas nacen con fechas de creación crecientes en el orden del archivo', async () => {
+    // Así Hoy presenta las nuevas en ese orden (desempata por fecha de creación).
+    const book = await repository.importBook(OWNER_UID, {
+      book: { ...bigBook().book, cardCount: 4 },
+      chapters: [
+        { name: 'Unidad 1', order: 0, cards: [card(1), card(2)] },
+        { name: 'Unidad 2', order: 1, cards: [card(3), card(4)] },
+      ],
+    });
+
+    const byCreation = (await docsOf('cards', book.id))
+      .map((stored) => stored.data())
+      .sort((a, b) => a['createdAt'].toMillis() - b['createdAt'].toMillis());
+    expect(byCreation.map((stored) => stored['front'])).toEqual(['f1', 'f2', 'f3', 'f4']);
+    expect(new Set(byCreation.map((stored) => stored['createdAt'].toMillis())).size).toBe(4);
+  });
+
   it('si un lote falla a mitad, se borra lo escrito y el libro nunca aparece', async () => {
     // Un documento de más de 1 MiB: Firestore rechaza el segundo lote entero.
     const huge = 'x'.repeat(1_100_000);

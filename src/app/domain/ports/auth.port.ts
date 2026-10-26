@@ -10,6 +10,12 @@ export interface Registration extends EmailCredentials {
   displayName: string;
 }
 
+/** Lo que cuenta la ventana de Google al cerrarse. */
+export interface GoogleSignIn {
+  /** El proveedor creó la identidad en este acceso (si no lo sabe, `false`). */
+  readonly isNewIdentity: boolean;
+}
+
 // Puerto del proveedor de identidad. La sesión de la app NO sale del resultado de estos métodos
 // sino del observador: el proveedor avisa cada vez que la identidad cambia. Los fallos se lanzan
 // como `AuthError` ya clasificado. Callback y no Observable: el dominio no depende de librerías.
@@ -19,8 +25,11 @@ export abstract class AuthPort {
   /** Crea la identidad y fija su nombre visible en el proveedor. */
   abstract registerWithEmail(registration: Registration): Promise<void>;
   abstract signInWithEmail(credentials: EmailCredentials): Promise<void>;
-  /** Abre la ventana emergente de Google; la identidad llega por el observador. */
-  abstract signInWithGoogle(): Promise<void>;
+  /**
+   * Abre la ventana emergente de Google; la identidad llega por el observador (a veces antes de
+   * que la ventana resuelva). Dice si la identidad es nueva.
+   */
+  abstract signInWithGoogle(): Promise<GoogleSignIn>;
   abstract signOut(): Promise<void>;
   /** Borra del proveedor la identidad con sesión (solo justo después de iniciarla). */
   abstract deleteCurrentIdentity(): Promise<void>;

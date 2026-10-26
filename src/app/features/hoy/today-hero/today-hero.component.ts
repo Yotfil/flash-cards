@@ -17,6 +17,8 @@ export class TodayHeroComponent {
   readonly settled = input(false);
   /** Prepara la sesión de Hoy, la entrega y dice cuántas tarjetas tiene. */
   readonly prepare = input.required<() => Promise<number>>();
+  /** Vacía la bandeja si la sesión terminó de prepararse cuando ya no estás en Hoy. */
+  readonly discard = input.required<() => void>();
   readonly disabled = input(false);
 
   protected readonly copy = HOY_COPY;

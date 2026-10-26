@@ -8,9 +8,41 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="manifest" href="manifest.webmanifest" />
 
-    <!-- Color de la barra del navegador, coherente con los tokens (claro/oscuro). -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef1f8" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0c22" />
+    <!-- Color de la barra del navegador, coherente con los tokens (claro/oscuro). Con un tema
+         elegido en Ajustes, el script de abajo y la app cambian su `media` para que mande ese. -->
+    <meta
+      name="theme-color"
+      data-scheme="light"
+      media="(prefers-color-scheme: light)"
+      content="#eef1f8"
+    />
+    <meta
+      name="theme-color"
+      data-scheme="dark"
+      media="(prefers-color-scheme: dark)"
+      content="#0b0c22"
+    />
+
+    <!-- Antes de la primera pintura: el tema que el usuario eligió en este dispositivo (lo recuerda
+         la app en `cadence.theme`), para no pasar por el del sistema mientras carga el JavaScript.
+         Al arrancar, la app vuelve a aplicarlo y registra si el almacenamiento no se deja leer. -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem('cadence.theme');
+        } catch (error) {
+          theme = null;
+        }
+        if (theme !== 'light' && theme !== 'dark') {
+          return;
+        }
+        document.documentElement.dataset.theme = theme;
+        document.querySelectorAll('meta[name="theme-color"][data-scheme]').forEach(function (meta) {
+          meta.media = meta.dataset.scheme === theme ? 'all' : 'not all';
+        });
+      })();
+    </script>
 
     <!-- Instalable en iOS (Safari no usa el manifest para esto). -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

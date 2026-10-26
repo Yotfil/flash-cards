@@ -277,6 +277,63 @@ describe('SessionService · inicio de sesión, Google y acceso retirado', () => 
     expect(users.saved).toEqual([]);
   });
 
+  it('una cuenta de Google que ya existía y salió de la lista queda sin acceso sin borrarse', async () => {
+    // Ana usa Cadence con Google desde hace meses. Sale de la lista, cierra sesión y vuelve a
+    // "Continuar con Google": la ventana devuelve su misma cuenta, no una recién creada.
+    const { session, authPort, users, allowlist } = setup(['ana@ejemplo.com']);
+    const ana = anIdentity({ uid: 'ana-uid', email: 'ana@ejemplo.com' });
+    users.seed(aUser({ id: 'ana-uid', email: 'ana@ejemplo.com' }));
+    authPort.emit(ana);
+    await settle();
+    await session.signOut();
+    allowlist.revoke('ana@ejemplo.com');
+    authPort.googleIdentityIsNew = false;
+
+    await session.signInWithGoogle();
+    authPort.emit(ana);
+    await settle();
+
+    expect(authPort.deletions).toBe(0);
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'ana@ejemplo.com' });
+  });
+
+  it('si otra identidad avisa mientras se espera la ventana de Google, no se borra ninguna', async () => {
+    const { session, authPort } = setup(['ada@ejemplo.com']);
+    authPort.emit(null);
+    await settle();
+    const release = authPort.hold();
+
+    const signingIn = session.signInWithGoogle();
+    authPort.emit(anIdentity({ uid: 'nuevo-uid', email: 'nuevo@ejemplo.com' }));
+    await settle();
+    authPort.emit(anIdentity({ uid: 'u1', email: 'ada@ejemplo.com' }));
+    await settle();
+    release();
+    await signingIn;
+    await settle();
+
+    expect(authPort.deletions).toBe(0);
+    expect(session.state().kind).toBe('active');
+  });
+
+  it('si la ventana de Google falla después de avisar la identidad, no se borra', async () => {
+    const { session, authPort } = setup([]);
+    authPort.emit(null);
+    await settle();
+    const release = authPort.hold();
+
+    const signingIn = session.signInWithGoogle();
+    authPort.emit(anIdentity({ email: 'nuevo@ejemplo.com' }));
+    await settle();
+    authPort.failWith.signInWithGoogle = new Error('auth/internal-error');
+    release();
+    await expect(signingIn).rejects.toThrow('auth/internal-error');
+    await settle();
+
+    expect(authPort.deletions).toBe(0);
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'nuevo@ejemplo.com' });
+  });
+
   it('una sesión guardada cuyo correo salió de la lista queda sin acceso sin borrar nada', async () => {
     const { session, authPort } = setup([]);
 
@@ -396,27 +453,26 @@ describe('SessionService · ajustes', () => {
     return context;
   }
 
-  it('guarda el perfil completo con el ajuste cambiado y los demás intactos', async () => {
+  it('guarda solo el ajuste cambiado y la sesión lo fusiona con los demás intactos', async () => {
     const { session, users } = await activeSession();
 
     await session.updateSettings({ defaultNewCardsPerDay: 5 });
 
-    const expectedSettings = {
+    expect(users.settingsUpdates).toEqual([{ uid: 'u1', changes: { defaultNewCardsPerDay: 5 } }]);
+    expect(users.saved).toEqual([]);
+    expect(session.user()?.settings).toEqual({
       timezone: 'America/Bogota',
       dayStartHour: 4,
       theme: 'dark',
       defaultNewCardsPerDay: 5,
       autoGradeByTime: true,
-    };
-    expect(users.saved).toHaveLength(1);
-    expect(users.saved[0]).toEqual({ ...aUser({ id: 'u1' }), settings: expectedSettings });
-    expect(session.user()?.settings).toEqual(expectedSettings);
+    });
   });
 
   it('si el guardado falla el error sube y la sesión conserva el valor anterior', async () => {
     const { session, users } = await activeSession();
     const cause = new Error('offline');
-    users.failOnSave = cause;
+    users.failOnUpdateSettings = cause;
 
     await expect(session.updateSettings({ defaultNewCardsPerDay: 5 })).rejects.toBe(cause);
 
@@ -431,6 +487,33 @@ describe('SessionService · ajustes', () => {
     await expect(session.updateSettings({ dayStartHour: 2 })).rejects.toThrow(
       'No hay una sesión activa.',
     );
-    expect(users.saved).toEqual([]);
+    expect(users.settingsUpdates).toEqual([]);
+  });
+
+  it('dos ajustes cambiados seguidos se guardan los dos, en el perfil y en la sesión', async () => {
+    const { session, users } = await activeSession();
+
+    // Ada toca "Claro" y, antes de que termine ese guardado, desmarca la sugerencia por tiempo.
+    const theme = session.updateSettings({ theme: 'light' });
+    const suggestion = session.updateSettings({ autoGradeByTime: false });
+    await Promise.all([theme, suggestion]);
+
+    const stored = await users.findById('u1');
+    expect(stored?.settings.theme).toBe('light');
+    expect(stored?.settings.autoGradeByTime).toBe(false);
+    expect(session.user()?.settings.theme).toBe('light');
+    expect(session.user()?.settings.autoGradeByTime).toBe(false);
+  });
+
+  it('si la sesión se cierra mientras se guarda un ajuste, no vuelve a quedar activa', async () => {
+    const { session, users } = await activeSession();
+    const release = users.holdSettingsUpdates();
+
+    const saving = session.updateSettings({ theme: 'light' });
+    await session.signOut();
+    release();
+    await saving;
+
+    expect(session.state()).toEqual({ kind: 'signedOut' });
   });
 });

@@ -97,7 +97,7 @@ describe('textos de la Biblioteca', () => {
   it('los textos de la exportación son los de la spec', () => {
     expect(EXPORT_READ_ERROR).toBe('No pudimos cargar las tarjetas del libro.');
     expect(EXPORT_ERROR).toBe('No se pudo exportar el libro. Inténtalo de nuevo.');
-    expect(EXPORT_COPY_ERROR).toBe('No se pudo copiar. Usa Compartir o Descargar.');
+    expect(EXPORT_COPY_ERROR).toBe('No se pudo copiar. Usa «Descargar .txt».');
     expect(EXPORT_NEEDS_CONNECTION).toBe('Necesitas conexión para exportar.');
     expect(COPIED).toBe('Copiado');
     expect(EXPORT_ACTIONS).toEqual({

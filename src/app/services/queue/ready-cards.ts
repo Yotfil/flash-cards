@@ -1,4 +1,5 @@
 import { CardState, type Card } from '@domain/models/card.model';
+import { compareCardsForDisplay } from '@services/cards/sort-cards-for-display';
 
 // La definición ÚNICA de "tarjeta lista" (puro): no suspendida y con vencimiento hasta el fin del
 // día de estudio (una nueva vence al crearse). La usan la cola de Hoy, "Estudiar este libro",
@@ -16,8 +17,26 @@ export function orderReadyCards(cards: readonly Card[], endOfDay: Date): Card[] 
     .sort((a, b) => a.scheduling.due.getTime() - b.scheduling.due.getTime());
   const fresh = ready
     .filter((card) => card.scheduling.state === CardState.New)
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || compareSameInstant(a, b));
   return [...due, ...fresh];
+}
+
+/**
+ * Desempate de las nuevas creadas en el mismo instante (versiones anteriores creaban así toda una
+ * importación; ahora se escalonan): juntas por capítulo y, dentro, como en el listado. Es el mismo
+ * de una lectura a otra; los capítulos salen en un orden fijo, aunque no sea el del libro.
+ */
+function compareSameInstant(a: Card, b: Card): number {
+  return (
+    compareIds(a.chapterId, b.chapterId) || compareCardsForDisplay(a, b) || compareIds(a.id, b.id)
+  );
+}
+
+function compareIds(a: string, b: string): number {
+  if (a === b) {
+    return 0;
+  }
+  return a < b ? -1 : 1;
 }
 
 /** Cuántas listas tiene cada capítulo; un capítulo sin listas no aparece. */

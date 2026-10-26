@@ -11,6 +11,7 @@ import {
 import type { Chapter } from '@domain/models/chapter.model';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
@@ -24,13 +25,21 @@ export class ChaptersService {
   private readonly session = inject(SessionService);
   private readonly books = inject(BooksService);
   private readonly connectivity = inject(ConnectivityPort);
+  private readonly logger = inject(Logger);
 
   private readonly bookId = signal<string | undefined>(undefined);
 
   readonly chapters = resource({
     params: () => this.bookId(),
-    loader: ({ params }) =>
-      this.repository.listByBook(requireSessionUid(this.session.user()), params),
+    loader: async ({ params }) => {
+      try {
+        return await this.repository.listByBook(requireSessionUid(this.session.user()), params);
+      } catch (error) {
+        // La pantalla pinta el error; aquí queda el detalle (p. ej. qué documento rechazó la frontera).
+        this.logger.error(`No se pudieron leer los capítulos del libro ${params}`, error);
+        throw error;
+      }
+    },
   });
 
   /** El detalle del libro: relee siempre, aunque sea el mismo libro. */

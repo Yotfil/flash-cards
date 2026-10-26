@@ -4,6 +4,7 @@ import type { Book, BookContents, BookDraft, CardStateTotals } from '@domain/mod
 import { DEFAULT_MAX_REVIEWS_PER_DAY } from '@domain/models/study-defaults';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { requireSessionUid, requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 
@@ -25,11 +26,12 @@ export class BooksService {
   private readonly repository = inject(BookRepository);
   private readonly session = inject(SessionService);
   private readonly connectivity = inject(ConnectivityPort);
+  private readonly logger = inject(Logger);
 
   /** El recurso no lee nada hasta que alguien lo pide (`reload` o `ensureLoaded`). */
   private readonly loadRequested = signal(false);
   /** Última lectura en curso o terminada, por usuario: `ensureLoaded` y el recurso la comparten. */
-  private lastLoad: { uid: string; promise: Promise<Book[]> } | null = null;
+  private lastLoad: { uid: string; promise: Promise<Book[]>; failed: boolean } | null = null;
 
   readonly books = resource({
     // Solo el uid (un texto): cambiar ajustes del perfil no relee los libros; cambiar de usuario sí.
@@ -47,10 +49,25 @@ export class BooksService {
     }
   }
 
-  /** Carga la lista solo si todavía no se pidió (navegación directa al detalle) y la entrega. */
+  /**
+   * Vuelve a leer la lista y la entrega recién leída, no la que había en memoria (que no sabe de un
+   * libro creado en otro dispositivo). El recurso comparte esa misma lectura.
+   */
+  loadFresh(): Promise<readonly Book[]> {
+    this.reload();
+    return this.load();
+  }
+
+  /**
+   * Carga la lista solo si todavía no se pidió (navegación directa al detalle) y la entrega. Una
+   * lectura que falló no se reutiliza: vuelve a leer (si no, reintentar nunca serviría).
+   */
   async ensureLoaded(): Promise<readonly Book[]> {
     if (this.books.hasValue()) {
       return this.books.value();
+    }
+    if (this.lastLoad?.failed) {
+      return this.loadFresh();
     }
     this.loadRequested.set(true);
     return this.load();
@@ -155,10 +172,19 @@ export class BooksService {
     return books.length === 0 ? 0 : Math.max(...books.map((book) => book.order)) + 1;
   }
 
+  /**
+   * La lectura en curso o terminada que comparten el recurso y `ensureLoaded`. Si falla, queda
+   * registrada (una vez, aunque la esperen varios) y marcada, para que `ensureLoaded` no la reutilice.
+   */
   private load(): Promise<Book[]> {
     const uid = requireSessionUid(this.session.user());
     if (this.lastLoad?.uid !== uid) {
-      this.lastLoad = { uid, promise: this.repository.listByUser(uid) };
+      const read = { uid, promise: this.repository.listByUser(uid), failed: false };
+      this.lastLoad = read;
+      read.promise.catch((error: unknown) => {
+        read.failed = true;
+        this.logger.error('No se pudo leer la Biblioteca', error);
+      });
     }
     return this.lastLoad.promise;
   }

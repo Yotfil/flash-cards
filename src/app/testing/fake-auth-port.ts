@@ -1,5 +1,10 @@
 import type { AuthIdentity } from '@domain/models/auth-identity.model';
-import { AuthPort, type EmailCredentials, type Registration } from '@domain/ports/auth.port';
+import {
+  AuthPort,
+  type EmailCredentials,
+  type GoogleSignIn,
+  type Registration,
+} from '@domain/ports/auth.port';
 
 type FailableMethod =
   | 'registerWithEmail'
@@ -8,15 +13,17 @@ type FailableMethod =
   | 'signOut'
   | 'deleteCurrentIdentity';
 
-// Fake del proveedor de identidad: la prueba decide qué identidad avisa el observador (`emit`) y
-// qué método falla (`failWith`). Como el proveedor real, cerrar sesión y borrar la identidad
-// actual avisan `null` al observador.
+// Fake del proveedor de identidad: la prueba decide qué identidad avisa el observador (`emit`),
+// qué método falla (`failWith`) y si la ventana de Google dice que la cuenta es nueva
+// (`googleIdentityIsNew`). Como el proveedor real, cerrar sesión y borrar la identidad actual
+// avisan `null` al observador.
 export class FakeAuthPort extends AuthPort {
   readonly registrations: Registration[] = [];
   readonly emailSignIns: EmailCredentials[] = [];
   googleSignIns = 0;
   signOuts = 0;
   deletions = 0;
+  googleIdentityIsNew = true;
   readonly failWith: Partial<Record<FailableMethod, unknown>> = {};
 
   private listener: ((identity: AuthIdentity | null) => void) | null = null;
@@ -56,10 +63,11 @@ export class FakeAuthPort extends AuthPort {
     this.throwIfFailing('signInWithEmail');
   }
 
-  async signInWithGoogle(): Promise<void> {
+  async signInWithGoogle(): Promise<GoogleSignIn> {
     this.googleSignIns++;
     await this.gate;
     this.throwIfFailing('signInWithGoogle');
+    return { isNewIdentity: this.googleIdentityIsNew };
   }
 
   async signOut(): Promise<void> {

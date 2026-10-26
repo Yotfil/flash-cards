@@ -31,7 +31,7 @@
       </app-empty-state>
     }
     @case ('settled') {
-      <app-today-hero [count]="0" [settled]="true" [prepare]="prepare" />
+      <app-today-hero [count]="0" [settled]="true" [prepare]="prepare" [discard]="discard" />
       <a
         routerLink="/biblioteca"
         class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
@@ -40,7 +40,12 @@
       </a>
     }
     @case ('queue') {
-      <app-today-hero [count]="count()" [prepare]="prepare" [disabled]="count() === 0" />
+      <app-today-hero
+        [count]="count()"
+        [prepare]="prepare"
+        [discard]="discard"
+        [disabled]="count() === 0"
+      />
 
       @if (queue.sessionQueue().perBook.length > 0) {
         <section aria-labelledby="per-book-heading" class="flex flex-col gap-3">

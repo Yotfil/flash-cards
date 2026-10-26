@@ -1,11 +1,14 @@
-import { ApplicationRef } from '@angular/core';
+import { ApplicationRef, ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+
+import { GlobalErrorHandler } from '@core/global-error-handler';
 
 import type { Book } from '@domain/models/book.model';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
+import { UnexpectedErrorNotice } from '@services/notices/unexpected-error-notice.service';
 import { SessionService } from '@services/session/session.service';
 import { DialogService } from '@shared/dialog/dialog.service';
 import {
@@ -45,6 +48,8 @@ async function setup(data: BookFormDialogData, online = true) {
       },
       { provide: ConnectivityPort, useValue: connectivity },
       { provide: Logger, useValue: new FakeLogger() },
+      // El de la app: así se ve si un fallo se escapa de la pantalla hasta el aviso global.
+      { provide: ErrorHandler, useClass: GlobalErrorHandler },
     ],
   });
   const update = async () => {
@@ -181,6 +186,8 @@ describe('BookFormDialogComponent', () => {
       'No se pudo guardar el libro. Inténtalo de nuevo.',
     );
     expect(openDialog().querySelector<HTMLInputElement>('#book-name')?.value).toBe('Francés');
+    // El diálogo ya lo explica: el aviso global de fallo no previsto no aparece además.
+    expect(TestBed.inject(UnexpectedErrorNotice).visible()).toBe(false);
 
     delete repository.failWith.create;
     submit();

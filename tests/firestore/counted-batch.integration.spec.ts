@@ -1,5 +1,5 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, increment, setDoc, type Firestore } from 'firebase/firestore';
 
 import { BatchCommitError } from '@infrastructure/firestore/batch-writer';
 import {
@@ -132,6 +132,43 @@ describe('writeInCountedBatches', () => {
 
     expect(failure).toBeInstanceOf(BatchCommitError);
     expect(await cardCount()).toBe(1000 - 448);
+  });
+
+  it('la operación de cada lote va en todos, y cada lote lleva una tarjeta menos (447) para no pasar de 450 escrituras', async () => {
+    const chapter = doc(db, 'users', OWNER_UID, 'chapters', 'ch1');
+    await setDoc(chapter, { bookId: 'b1', name: 'Uno', order: 0, touches: 0 });
+
+    const result = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: sets(896),
+      everyBatch: {
+        apply: (writer) => writer.update(chapter, { touches: increment(1) }),
+        delta: 0,
+      },
+    });
+
+    expect(result.batches).toBe(3);
+    expect((await getDoc(chapter)).data()?.['touches']).toBe(3);
+    expect(await cardCount()).toBe(1896);
+  });
+
+  it('si la operación de cada lote falla, ese lote entero se rechaza', async () => {
+    const missingChapter = doc(db, 'users', OWNER_UID, 'chapters', 'borrado');
+
+    const failure = await writeInCountedBatches({
+      firestore: db,
+      bookRef: bookRef(),
+      operations: sets(2),
+      everyBatch: {
+        apply: (writer) => writer.update(missingChapter, { touches: increment(1) }),
+        delta: 0,
+      },
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(BatchCommitError);
+    expect((await getDoc(cardRef(OWNER_UID, 0))).exists()).toBe(false);
+    expect(await cardCount()).toBe(1000);
   });
 
   it('cada operación lleva su delta: 2 bajas y 3 altas van en un lote y suman 1', async () => {

@@ -3,6 +3,7 @@ import {
   doc,
   getCountFromServer,
   getDocs,
+  getDocsFromServer,
   query,
   setDoc,
   updateDoc,
@@ -53,10 +54,11 @@ export class FirestoreChapterRepository extends ChapterRepository {
   /**
    * Borra las tarjetas en lotes, cada uno con su descuento en el contador del libro, y el capítulo
    * en el último: si un lote falla a mitad, el contador sigue cuadrando con lo que queda, el
-   * capítulo sigue existiendo y reintentar termina.
+   * capítulo sigue existiendo y reintentar termina. Lo que hay que borrar se lee del servidor: la
+   * caché puede tener solo parte de las tarjetas y las demás quedarían sueltas (sin red, falla).
    */
   async deleteWithCards(uid: string, bookId: string, chapterId: string): Promise<number> {
-    const cards = (await getDocs(this.cardsOfChapter(uid, chapterId))).docs;
+    const cards = (await getDocsFromServer(this.cardsOfChapter(uid, chapterId))).docs;
     await writeInCountedBatches({
       firestore: this.firestore,
       bookRef: doc(this.firestore, 'users', uid, 'books', bookId),
