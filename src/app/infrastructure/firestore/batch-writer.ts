@@ -96,7 +96,8 @@ export class BatchWriter {
   }
 }
 
-function chunksOf<T>(items: readonly T[], size: number): T[][] {
+/** Parte una lista en trozos de `size` (el último, con lo que quede). */
+export function chunksOf<T>(items: readonly T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let start = 0; start < items.length; start += size) {
     chunks.push(items.slice(start, start + size));

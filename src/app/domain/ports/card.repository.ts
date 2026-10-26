@@ -1,5 +1,11 @@
 import type { Card, CardContentChanges, NewCard } from '../models/card.model';
 
+/** Lo que dejó un reemplazo: las tarjetas creadas y cuántas había (y se borraron). */
+export interface ChapterReplacement {
+  readonly created: Card[];
+  readonly deletedCount: number;
+}
+
 // Tarjetas del usuario en el almacén. Crear y borrar ajustan el contador de tarjetas del libro EN
 // EL MISMO LOTE que las tarjetas, para que nunca quede desfasado (ni tras un fallo a mitad).
 export abstract class CardRepository {
@@ -32,22 +38,26 @@ export abstract class CardRepository {
   abstract updateContent(uid: string, cardId: string, changes: CardContentChanges): Promise<void>;
   abstract setSuspended(uid: string, cardId: string, suspended: boolean): Promise<void>;
   /**
-   * Borra las tarjetas indicadas del capítulo y crea las nuevas, ajustando el contador del libro en
-   * la diferencia. Si todo cabe en un lote es una sola operación: o se reemplaza todo o nada.
-   * Devuelve las creadas.
+   * Borra las tarjetas que el capítulo tiene en el servidor (no las de una lista cargada, que pudo
+   * quedarse vieja: otro dispositivo añadió una, o un intento anterior dejó parte hecha) y crea las
+   * nuevas, ajustando el contador del libro en la diferencia. Si todo cabe en un lote es una sola
+   * operación: o se reemplaza todo o nada. Sin red, falla.
    */
   abstract replaceInChapter(
     uid: string,
     bookId: string,
     chapterId: string,
-    cardIdsToDelete: readonly string[],
     cards: readonly NewCard[],
-  ): Promise<Card[]>;
-  /** Borra una tarjeta y resta 1 al libro. El historial de repasos se conserva. */
+  ): Promise<ChapterReplacement>;
+  /**
+   * Borra una tarjeta y resta 1 al libro, solo si todavía existe (otra pestaña pudo borrarla ya).
+   * El historial de repasos se conserva.
+   */
   abstract deleteWithCount(uid: string, bookId: string, cardId: string): Promise<void>;
   /**
-   * Borra varias en lotes, cada uno con su resta; devuelve cuántas borró. Si un lote falla tras
-   * confirmarse otros, lanza `PartialDeletionError` con las ya borradas.
+   * Borra varias por tramos atómicos, cada uno con su resta, y devuelve cuántas borró: las que ya
+   * no existían no descuentan. Si un tramo falla tras confirmarse otros, lanza
+   * `PartialDeletionError` con las de los tramos confirmados.
    */
   abstract deleteManyWithCount(
     uid: string,

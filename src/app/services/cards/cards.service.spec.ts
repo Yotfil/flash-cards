@@ -271,15 +271,20 @@ describe('CardsService · reemplazar las del capítulo', () => {
   }
   const drafts = ['a', 'b', 'c'].map((front) => ({ cardType: 'basic' as const, front, back: 'x' }));
 
-  it('borra las cargadas, crea las nuevas, deja el recurso con ellas y suma la diferencia', async () => {
+  it('borra las del capítulo en el almacén (también las que la lista no tenía), crea las nuevas y suma la diferencia', async () => {
     const { service, repository, changeCardCount } = await opened();
-    const replace = vi.spyOn(repository, 'replaceInChapter');
+    // Otro dispositivo añadió una después de cargar la lista.
+    repository.seed(aCard({ id: 'k3', chapterId: 'c1' }));
 
     await service.replaceAll('b1', 'c1', drafts);
 
-    expect(replace.mock.calls[0]?.[3]).toEqual(['k1', 'k2']);
+    expect([...repository.cards.values()].map((card) => card.front).sort()).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
     expect(service.cards.value()?.map((card) => card.front)).toEqual(['a', 'b', 'c']);
-    expect(changeCardCount).toHaveBeenCalledWith('b1', 1);
+    expect(changeCardCount).toHaveBeenCalledWith('b1', 0);
   });
 
   it('si el almacén falla, nada cambia', async () => {

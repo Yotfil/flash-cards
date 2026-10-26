@@ -87,9 +87,9 @@ export class CardsService {
   }
 
   /**
-   * Reemplaza todas las tarjetas cargadas del capítulo por nuevas (importar en modo "reemplazar").
-   * El almacén lo hace en una sola operación si cabe en un lote; la lista y el contador del libro
-   * solo cambian tras el éxito.
+   * Reemplaza todas las tarjetas del capítulo por nuevas (importar en modo "reemplazar"): las que
+   * tiene en el almacén, no solo las de la lista cargada. El almacén lo hace en una sola operación
+   * si cabe en un lote; la lista y el contador del libro solo cambian tras el éxito.
    */
   async replaceAll(
     bookId: string,
@@ -97,17 +97,15 @@ export class CardsService {
     drafts: readonly CardContentDraft[],
   ): Promise<Card[]> {
     const uid = requireSessionUid(this.session.user());
-    const current = this.cards.hasValue() ? this.cards.value() : [];
     const now = new Date();
-    const created = await this.repository.replaceInChapter(
+    const { created, deletedCount } = await this.repository.replaceInChapter(
       uid,
       bookId,
       chapterId,
-      current.map((card) => card.id),
       drafts.map((draft) => toNewCard(bookId, chapterId, draft, now)),
     );
     this.cards.set(created);
-    this.books.changeCardCount(bookId, created.length - current.length);
+    this.books.changeCardCount(bookId, created.length - deletedCount);
     return created;
   }
 

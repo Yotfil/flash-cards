@@ -4,6 +4,7 @@ import {
   BatchCommitError,
   BatchWriter,
   MAX_BATCH_SIZE,
+  chunksOf,
   type BatchCommitResult,
 } from './batch-writer';
 
@@ -76,12 +77,4 @@ export async function writeInCountedBatches(
     batches++;
   }
   return { batches, written };
-}
-
-function chunksOf<T>(items: readonly T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < items.length; start += size) {
-    chunks.push(items.slice(start, start + size));
-  }
-  return chunks;
 }

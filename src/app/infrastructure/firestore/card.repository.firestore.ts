@@ -4,7 +4,9 @@ import {
   doc,
   getDocs,
   getDocsFromServer,
+  increment,
   query,
+  runTransaction,
   Timestamp,
   updateDoc,
   where,
@@ -14,10 +16,10 @@ import {
 
 import type { Card, CardContentChanges, NewCard } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
-import { CardRepository } from '@domain/ports/card.repository';
+import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
 
-import { BatchCommitError, type BatchWriter } from './batch-writer';
-import { writeInCountedBatches } from './counted-batch';
+import { chunksOf, type BatchWriter } from './batch-writer';
+import { COUNTED_GROUP_SIZE, writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
@@ -83,13 +85,18 @@ export class FirestoreCardRepository extends CardRepository {
     uid: string,
     bookId: string,
     chapterId: string,
-    cardIdsToDelete: readonly string[],
     cards: readonly NewCard[],
-  ): Promise<Card[]> {
+  ): Promise<ChapterReplacement> {
     if (cards.some((card) => card.chapterId !== chapterId)) {
       throw new Error('Las tarjetas nuevas de un reemplazo deben ser del mismo capítulo.');
     }
-    return this.replaceCards(uid, bookId, cardIdsToDelete, cards);
+    // Lo que el capítulo tiene de verdad, del servidor: la lista cargada pudo quedarse vieja.
+    const current = await getDocsFromServer(
+      query(this.cardsOf(uid), where('chapterId', '==', chapterId)),
+    );
+    const idsToDelete = current.docs.map((card) => card.id);
+    const created = await this.replaceCards(uid, bookId, idsToDelete, cards);
+    return { created, deletedCount: idsToDelete.length };
   }
 
   /**
@@ -175,25 +182,37 @@ export class FirestoreCardRepository extends CardRepository {
     bookId: string,
     cardIds: readonly string[],
   ): Promise<number> {
-    const refs = cardIds.map((cardId) => this.cardRef(uid, cardId));
-    try {
-      await writeInCountedBatches({
-        firestore: this.firestore,
-        bookRef: this.bookRef(uid, bookId),
-        operations: refs.map((ref) => ({ apply: (writer) => writer.delete(ref), delta: -1 })),
-      });
-    } catch (error) {
-      if (error instanceof BatchCommitError) {
-        // Los lotes confirmados ya descontaron lo suyo: se informa qué tarjetas se fueron.
-        const committed = new Set(error.committed.map((ref) => ref.path));
-        const deletedIds = cardIds.filter((cardId) =>
-          committed.has(this.cardRef(uid, cardId).path),
-        );
-        throw new PartialDeletionError(deletedIds, error.cause);
+    const goneIds: string[] = [];
+    let deleted = 0;
+    for (const chunk of chunksOf(cardIds, COUNTED_GROUP_SIZE)) {
+      try {
+        deleted += await this.deleteExisting(uid, bookId, chunk);
+      } catch (error) {
+        // Los tramos confirmados ya descontaron lo suyo: se informa qué tarjetas ya no están.
+        throw new PartialDeletionError(goneIds, error);
       }
-      throw error;
+      goneIds.push(...chunk);
     }
-    return cardIds.length;
+    return deleted;
+  }
+
+  /**
+   * Un tramo en una transacción: lee las tarjetas, borra las que existen y descuenta exactamente
+   * esas. Una que otra pestaña ya borró no descuenta otra vez (el contador guardado no se
+   * descuadra). Devuelve cuántas borró.
+   */
+  private deleteExisting(uid: string, bookId: string, cardIds: readonly string[]): Promise<number> {
+    return runTransaction(this.firestore, async (transaction) => {
+      const snapshots = await Promise.all(
+        cardIds.map((cardId) => transaction.get(this.cardRef(uid, cardId))),
+      );
+      const existing = snapshots.filter((snapshot) => snapshot.exists());
+      existing.forEach((snapshot) => transaction.delete(snapshot.ref));
+      if (existing.length > 0) {
+        transaction.update(this.bookRef(uid, bookId), { cardCount: increment(-existing.length) });
+      }
+      return existing.length;
+    });
   }
 
   private cardsOf(uid: string) {
