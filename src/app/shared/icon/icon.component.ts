@@ -1,26 +1,46 @@
 import { Component, computed, input } from '@angular/core';
 
-export type IconName =
-  | 'calendar'
-  | 'books'
-  | 'chart'
-  | 'sliders'
-  | 'alert'
-  | 'brain'
-  | 'check'
-  | 'x';
-export type IconSize = 'sm' | 'md';
+/** Catálogo de iconos. Ampliarlo = añadir el nombre aquí y su trazo en la plantilla. */
+export const ICON_NAMES = [
+  'calendar',
+  'books',
+  'chart',
+  'sliders',
+  'alert',
+  'brain',
+  'check',
+  'x',
+  'spark',
+  'offline',
+  'trash',
+  'edit',
+  'back',
+  'more',
+  'quote',
+  'pause',
+  'play',
+  'flame',
+  'share',
+] as const;
 
-/** Icono SVG de trazo, presentacional. Toma el color del texto (currentColor), por lo que
- *  respeta los tokens del contenedor. Decorativo: el significado lo da el texto vecino. */
+export type IconName = (typeof ICON_NAMES)[number];
+
+// `lg` (los cerebros de la calificación): cuatro deben caber en fila en un cuarto de pantalla de
+// móvil, así que crece desde `sm`.
+const SIZE_CLASSES = { sm: 'size-4', md: 'size-5', lg: 'size-[1.125rem] sm:size-6' } as const;
+
+// Icono de trazo: toma el color del texto que lo rodea (`currentColor`) y es decorativo (el
+// significado lo da el texto vecino), así que se oculta a tecnologías de asistencia.
 @Component({
   selector: 'app-icon',
   templateUrl: './icon.component.html',
   styleUrl: './icon.component.scss',
+  // `data-icon` deja ver qué icono es en el DOM (pruebas y depuración) sin depender del trazo.
+  host: { class: 'inline-flex shrink-0', '[attr.data-icon]': 'name()' },
 })
 export class IconComponent {
   readonly name = input.required<IconName>();
-  readonly size = input<IconSize>('md');
+  readonly size = input<keyof typeof SIZE_CLASSES>('md');
 
-  protected readonly sizeClass = computed(() => (this.size() === 'sm' ? 'h-4 w-4' : 'h-6 w-6'));
+  protected readonly sizeClass = computed(() => SIZE_CLASSES[this.size()]);
 }

@@ -1,42 +1,47 @@
-<app-modal [label]="heading()" [pending]="pending()" (dismissed)="cancelled.emit()">
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <h2 class="text-lg font-semibold text-text-primary">{{ heading() }}</h2>
+<h2 class="text-lg font-bold tracking-tight text-text">
+  {{ isRename ? copy.renameTitle : copy.createTitle }}
+</h2>
 
-    <div class="mt-5 flex flex-col gap-1.5">
-      <label for="chapter-name" class="text-sm font-medium text-text-secondary">Nombre</label>
-      <input
-        id="chapter-name"
-        type="text"
-        formControlName="name"
-        autocomplete="off"
-        placeholder="Ej. Phrasal Verbs - Básicos"
-        class="rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-      />
-      @if (showNameError()) {
-        <p class="text-sm text-text-muted">El nombre es obligatorio.</p>
-      }
-    </div>
+<form class="mt-5 flex flex-col gap-4" novalidate (submit)="submitForm($event)">
+  <div class="flex flex-col gap-1.5">
+    <label for="chapter-name" class="text-sm font-semibold text-text">{{ copy.nameLabel }}</label>
+    <input
+      id="chapter-name"
+      type="text"
+      autocomplete="off"
+      class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text placeholder:text-text-faint"
+      [placeholder]="copy.namePlaceholder"
+      [formField]="chapterForm.name"
+      [attr.aria-invalid]="nameError() !== null"
+      [attr.aria-describedby]="nameError() ? 'chapter-name-error' : null"
+    />
+    @if (nameError(); as error) {
+      <p id="chapter-name-error" class="text-xs text-danger">{{ error }}</p>
+    }
+  </div>
 
-    <div class="mt-6 flex justify-end gap-3">
-      <button
-        type="button"
-        [disabled]="pending()"
-        (click)="cancelled.emit()"
-        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
-      >
-        Cancelar
-      </button>
-      <button
-        type="submit"
-        [disabled]="form.invalid || pending()"
-        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        @if (pending()) {
-          Guardando…
-        } @else {
-          {{ submitLabel() }}
-        }
-      </button>
-    </div>
-  </form>
-</app-modal>
+  @if (!online()) {
+    <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+  @if (failed()) {
+    <p role="alert" class="text-sm text-danger">{{ copy.saveError }}</p>
+  }
+
+  <div class="mt-2 flex justify-end gap-2">
+    <button
+      type="button"
+      class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+      [disabled]="saving()"
+      (click)="cancel()"
+    >
+      {{ copy.cancel }}
+    </button>
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+      [disabled]="!canSubmit()"
+    >
+      {{ saving() ? copy.saving : isRename ? copy.save : copy.create }}
+    </button>
+  </div>
+</form>

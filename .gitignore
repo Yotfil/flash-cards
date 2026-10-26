@@ -46,8 +46,9 @@ Thumbs.db
 # Bitácora local de trabajo (registro de avance; no se versiona)
 /MEMORY.md
 
-# Documentación local (no se versiona)
-/docs
+# Documentación local (no se versiona), salvo la guía de diseño Cadence y su prototipo
+/docs/*
+!/docs/design/
 
 # READMEs internos de carpetas (guías de arquitectura); solo se versiona el del root
 /src/**/README.md
@@ -63,8 +64,13 @@ Thumbs.db
 # Caché local de npm (creada para evitar la caché global del sistema)
 /.npm-cache
 
-# Firebase (emuladores y artefactos locales; se añaden en la fase de datos)
+# Firebase (emuladores y artefactos locales). Los datos persistentes del emulador viven en
+# .emulator-data/ (scripts/emulators.mjs) y nunca se versionan.
 /.firebase
+.emulator-data/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Datos del build (generado por scripts/generate-build-info.mjs; cambia en cada build)
+/src/app/core/build-info.ts

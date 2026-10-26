@@ -1,8 +1,5 @@
-// Puerto de la lista de acceso (early access): consulta si un email está autorizado a usar la
-// app, SIN saber que detrás está Firestore. La implementación vive en `infrastructure/firestore`.
-// La lista se administra a mano desde la consola de Firebase; aquí solo se consulta.
-
+// Lista de acceso anticipado: un correo entra solo si su entrada existe. La comparación es literal
+// (mayúsculas incluidas). Se puede consultar con o sin sesión; nunca se escribe desde la app.
 export abstract class AllowlistRepository {
-  /** True si el email está en la lista de acceso autorizada. */
   abstract isAllowed(email: string): Promise<boolean>;
 }

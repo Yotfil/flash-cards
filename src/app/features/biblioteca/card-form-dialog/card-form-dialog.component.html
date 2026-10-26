@@ -1,109 +1,130 @@
-<app-modal [label]="heading()" [pending]="pending()" (dismissed)="cancelled.emit()">
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <h2 class="text-lg font-semibold text-text-primary">{{ heading() }}</h2>
+<h2 class="text-lg font-bold tracking-tight text-text">
+  {{ isEdit ? copy.editTitle : copy.createTitle }}
+</h2>
 
-    <div class="mt-5 flex flex-col gap-4">
-      <!-- Tipo: sólo al crear; al editar el tipo queda fijo (cambiarlo perdería contenido). -->
-      @if (!isEditing()) {
-        <fieldset class="flex flex-col gap-1.5">
-          <legend class="text-sm font-medium text-text-secondary">Tipo</legend>
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 text-sm text-text-primary">
-              <input
-                type="radio"
-                name="cardType"
-                [checked]="cardType() === 'basic'"
-                (change)="setCardType('basic')"
-              />
-              Básica
-            </label>
-            <label class="flex items-center gap-2 text-sm text-text-primary">
-              <input
-                type="radio"
-                name="cardType"
-                [checked]="cardType() === 'cloze'"
-                (change)="setCardType('cloze')"
-              />
-              Cloze (rellenar el hueco)
-            </label>
-          </div>
-        </fieldset>
-      }
+<form class="mt-5 flex flex-col gap-4" novalidate (submit)="submitForm($event)">
+  @if (!isEdit) {
+    <fieldset class="flex flex-col gap-2">
+      <legend class="mb-1.5 text-sm font-semibold text-text">{{ copy.typeLabel }}</legend>
+      <div class="flex flex-wrap gap-x-5 gap-y-2">
+        <label class="flex items-center gap-2 text-sm text-text">
+          <input
+            type="radio"
+            name="card-type"
+            class="accent-accent"
+            [checked]="!isCloze()"
+            (change)="chooseType('basic')"
+          />
+          {{ copy.basic }}
+        </label>
+        <label class="flex items-center gap-2 text-sm text-text">
+          <input
+            type="radio"
+            name="card-type"
+            class="accent-accent"
+            [checked]="isCloze()"
+            (change)="chooseType('cloze')"
+          />
+          {{ copy.cloze }}
+        </label>
+      </div>
+    </fieldset>
+  }
 
-      @if (cardType() === 'cloze') {
-        <div class="flex flex-col gap-1.5">
-          <label for="card-front" class="text-sm font-medium text-text-secondary">
-            Texto con huecos
-          </label>
-          <textarea
-            id="card-front"
-            formControlName="front"
-            rows="3"
-            [placeholder]="clozePlaceholder"
-            class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-          ></textarea>
-          <p class="text-xs text-text-muted">
-            Marca lo que quieras ocultar entre llaves dobles
-            <code class="rounded bg-surface-sunken px-1">{{ clozeMarker }}</code>
-            . Puedes ocultar varias palabras.
-          </p>
-          @if (showError('front')) {
-            <p class="text-sm text-text-muted">
-              Escribe un texto con al menos un hueco marcado con {{ clozeMarker }}.
-            </p>
-          }
-        </div>
-      } @else {
-        <div class="flex flex-col gap-1.5">
-          <label for="card-front" class="text-sm font-medium text-text-secondary">Anverso</label>
-          <textarea
-            id="card-front"
-            formControlName="front"
-            rows="2"
-            placeholder="Ej. to give up"
-            class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-          ></textarea>
-          @if (showError('front')) {
-            <p class="text-sm text-text-muted">El anverso es obligatorio.</p>
-          }
-        </div>
+  <div class="flex flex-col gap-1.5">
+    <label for="card-front" class="text-sm font-semibold text-text">
+      {{ isCloze() ? copy.clozeLabel : copy.frontLabel }}
+    </label>
+    <textarea
+      id="card-front"
+      rows="2"
+      class="resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+      [formField]="cardForm.front"
+      [attr.aria-invalid]="frontError() !== null"
+      [attr.aria-describedby]="
+        frontError() ? 'card-front-error' : isCloze() ? 'card-front-hint' : null
+      "
+    ></textarea>
+    @if (isCloze()) {
+      <p id="card-front-hint" class="text-xs text-text-faint">{{ copy.clozeHint }}</p>
+    }
+    @if (frontError(); as error) {
+      <p id="card-front-error" class="text-xs text-danger">{{ error }}</p>
+    }
+  </div>
 
-        <div class="flex flex-col gap-1.5">
-          <label for="card-back" class="text-sm font-medium text-text-secondary">Reverso</label>
-          <textarea
-            id="card-back"
-            formControlName="back"
-            rows="2"
-            placeholder="Ej. rendirse"
-            class="resize-y rounded-lg border border-border bg-surface px-3 py-2 text-text-primary outline-none focus:border-accent focus:ring-2 focus:ring-focus-ring"
-          ></textarea>
-          @if (showError('back')) {
-            <p class="text-sm text-text-muted">El reverso es obligatorio.</p>
-          }
-        </div>
+  @if (!isCloze()) {
+    <div class="flex flex-col gap-1.5">
+      <label for="card-back" class="text-sm font-semibold text-text">{{ copy.backLabel }}</label>
+      <textarea
+        id="card-back"
+        rows="2"
+        class="resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+        [formField]="cardForm.back"
+        [attr.aria-invalid]="backError() !== null"
+        [attr.aria-describedby]="backError() ? 'card-back-error' : null"
+      ></textarea>
+      @if (backError(); as error) {
+        <p id="card-back-error" class="text-xs text-danger">{{ error }}</p>
       }
     </div>
+  }
 
-    <div class="mt-6 flex justify-end gap-3">
-      <button
-        type="button"
-        [disabled]="pending()"
-        (click)="cancelled.emit()"
-        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-sunken disabled:opacity-50"
-      >
-        Cancelar
-      </button>
-      <button
-        type="submit"
-        [disabled]="form.invalid || pending()"
-        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        @if (pending()) {
-          Guardando…
-        } @else {
-          {{ submitLabel() }}
+  <div class="flex flex-col gap-3">
+    <button
+      type="button"
+      class="press self-start text-sm font-semibold text-accent-text"
+      aria-controls="card-more"
+      [attr.aria-expanded]="showMore()"
+      (click)="toggleMore()"
+    >
+      {{ copy.moreOptions }}
+    </button>
+    @if (showMore()) {
+      <div id="card-more" class="flex flex-col gap-1.5">
+        <label for="card-example" class="text-sm font-semibold text-text">
+          {{ copy.exampleLabel }}
+        </label>
+        <textarea
+          id="card-example"
+          rows="2"
+          class="resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+          [formField]="cardForm.example"
+          [attr.aria-invalid]="exampleError() !== null"
+          [attr.aria-describedby]="exampleError() ? 'card-example-error' : null"
+        ></textarea>
+        @if (exampleError(); as error) {
+          <p id="card-example-error" class="text-xs text-danger">{{ error }}</p>
         }
-      </button>
-    </div>
-  </form>
-</app-modal>
+      </div>
+    }
+  </div>
+
+  @if (isDuplicate()) {
+    <p role="status" class="text-sm text-text-dim">{{ copy.duplicate }}</p>
+  }
+  @if (!online()) {
+    <p class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+  @if (failed()) {
+    <p role="alert" class="text-sm text-danger">{{ copy.saveError }}</p>
+  }
+
+  <div class="mt-2 flex justify-end gap-2">
+    <button
+      type="button"
+      class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+      [disabled]="saving()"
+      (click)="cancel()"
+    >
+      {{ copy.cancel }}
+    </button>
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+      [disabled]="!canSubmit()"
+    >
+      {{ saving() ? copy.saving : isEdit ? copy.save : copy.create }}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,28 @@
+<section
+  class="glass-soft flex flex-col gap-4 rounded-2xl px-5 py-4"
+  aria-labelledby="ratings-title"
+>
+  <h2 id="ratings-title" class="text-sm font-bold text-text">{{ copy.ratingsTitle }}</h2>
+  @if (total() === 0) {
+    <p class="text-sm text-text-dim">{{ copy.noRatingsToday }}</p>
+  } @else {
+    <ol class="flex flex-col gap-3">
+      @for (bar of bars(); track bar.rating) {
+        <li class="flex flex-col gap-1.5">
+          <div class="flex items-baseline justify-between gap-3 text-sm">
+            <span data-rating-label class="text-text-dim">{{ bar.label }}</span>
+            <span data-rating-count class="font-bold text-text">{{ bar.count }}</span>
+          </div>
+          <div aria-hidden="true" class="h-2 overflow-hidden rounded-full bg-track">
+            <div
+              data-rating-bar
+              class="h-full rounded-full transition-[width] duration-(--duration-fill) ease-out-soft"
+              [class]="bar.barClass"
+              [style.width]="bar.width"
+            ></div>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+</section>

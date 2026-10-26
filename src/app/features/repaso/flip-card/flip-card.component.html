@@ -1,0 +1,61 @@
+<div class="flex w-full flex-col items-center gap-5">
+  <div class="scene w-full">
+    <!-- Tocar la tarjeta es un atajo para el dedo. Por teclado se revela con "Mostrar respuesta"
+         (en el orden de tabulación) o con Espacio, así que la tarjeta no es otra parada. -->
+    <div
+      data-card
+      tabindex="-1"
+      class="card-inner relative w-full cursor-pointer"
+      [class.flipped]="revealed()"
+      (click)="tapCard()"
+      (keydown.enter)="tapCard()"
+    >
+      <div
+        class="face front flex min-h-64 items-center justify-center rounded-3xl border border-glass-border bg-surface p-6 text-center shadow-card"
+        [attr.aria-hidden]="revealed()"
+      >
+        <p data-front class="text-2xl font-extrabold tracking-tight text-text sm:text-3xl">
+          {{ question() }}
+        </p>
+      </div>
+      <div
+        data-back
+        aria-live="polite"
+        class="face back absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-3xl border border-glass-border bg-surface p-6 text-center shadow-card"
+      >
+        @if (revealed()) {
+          @if (isCloze()) {
+            <p class="text-2xl font-extrabold tracking-tight text-text sm:text-3xl">
+              @for (segment of segments(); track $index) {
+                @if (segment.kind === 'hidden') {
+                  <span class="text-accent-text">{{ segment.text }}</span>
+                } @else {
+                  <span>{{ segment.text }}</span>
+                }
+              }
+            </p>
+          } @else {
+            <p class="text-lg font-semibold text-text-dim">{{ card().front }}</p>
+            <div class="h-px w-16 bg-glass-border" aria-hidden="true"></div>
+            <p class="text-2xl font-extrabold tracking-tight text-text sm:text-3xl">
+              {{ card().back }}
+            </p>
+          }
+          @if (card().example; as example) {
+            <p data-example class="max-w-md text-sm text-text-dim italic">{{ example }}</p>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (!revealed()) {
+    <button
+      type="button"
+      class="press rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-ink shadow-btn"
+      (click)="revealRequested.emit()"
+    >
+      {{ copy.showAnswer }}
+    </button>
+  }
+</div>

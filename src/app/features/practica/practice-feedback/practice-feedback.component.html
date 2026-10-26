@@ -1,0 +1,15 @@
+<div role="status" class="min-h-6 text-sm font-semibold">
+  @if (result(); as result) {
+    @if (result.correct) {
+      <p class="flex items-center justify-center gap-2 text-accent-text">
+        <app-icon name="check" size="sm" />
+        {{ copy.correct }}
+      </p>
+    } @else {
+      <p class="flex items-center justify-center gap-2 text-text">
+        <app-icon name="x" size="sm" class="text-text-dim" />
+        {{ wrongAnswer(result.answer) }}
+      </p>
+    }
+  }
+</div>

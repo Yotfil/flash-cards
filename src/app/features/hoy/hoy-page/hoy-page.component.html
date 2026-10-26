@@ -1,0 +1,71 @@
+<div class="flex flex-col gap-6">
+  <header class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-3xl font-extrabold tracking-tight text-text">{{ copy.title }}</h1>
+      <p class="mt-1 text-sm text-text-dim">{{ dateLabel() }}</p>
+    </div>
+    @if (showStreak()) {
+      <app-streak-badge [days]="streakDays()" />
+    }
+  </header>
+
+  @switch (view()) {
+    @case ('loading') {
+      <app-skeleton variant="card" [lines]="3" />
+    }
+    @case ('error') {
+      <app-error-state
+        [title]="copy.loadError"
+        [message]="copy.loadErrorMessage"
+        (retry)="queue.refresh()"
+      />
+    }
+    @case ('welcome') {
+      <app-empty-state [title]="copy.welcomeTitle" [message]="copy.welcomeMessage">
+        <a
+          routerLink="/biblioteca"
+          class="press inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink shadow-btn"
+        >
+          {{ copy.goToLibrary }}
+        </a>
+      </app-empty-state>
+    }
+    @case ('settled') {
+      <app-today-hero [count]="0" [settled]="true" [prepare]="prepare" [discard]="discard" />
+      <a
+        routerLink="/biblioteca"
+        class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+      >
+        {{ copy.createOrImport }}
+      </a>
+    }
+    @case ('queue') {
+      <app-today-hero
+        [count]="count()"
+        [prepare]="prepare"
+        [discard]="discard"
+        [disabled]="count() === 0"
+      />
+
+      @if (queue.sessionQueue().perBook.length > 0) {
+        <section aria-labelledby="per-book-heading" class="flex flex-col gap-3">
+          <h2 id="per-book-heading" class="text-base font-bold text-text">{{ copy.perBook }}</h2>
+          <ul class="flex flex-col gap-2">
+            @for (pending of queue.sessionQueue().perBook; track pending.bookId) {
+              <li><app-book-pending-row [pending]="pending" /></li>
+            }
+          </ul>
+        </section>
+      }
+
+      <app-new-cards-adjuster [books]="queue.newCardsChoices()" (changed)="adjust($event)" />
+
+      <a
+        routerLink="/biblioteca"
+        class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+      >
+        {{ copy.createOrImport }}
+      </a>
+    }
+  }
+</div>

@@ -1,19 +1,11 @@
-// El capítulo (`/users/{uid}/chapters/{chapterId}`). Especificación §6.5.
-
+// Un capítulo (`/users/{uid}/chapters/{chapterId}`): agrupa las tarjetas de un libro.
 export interface Chapter {
   id: string;
   bookId: string;
+  /** Puede venir vacío en capítulos de versiones anteriores ("Capítulo sin nombre" al pintar). */
   name: string;
-  /** Orden dentro del libro (orden de aparición en el import). */
+  /** Posición dentro del libro; puede tener huecos tras borrar. */
   order: number;
   createdAt: Date;
   updatedAt: Date;
-}
-
-/**
- * Campos que el usuario controla al crear o renombrar un capítulo. El `id`, `bookId`, `order` y los
- * timestamps los gestiona el sistema (repositorio/servicio), no el formulario.
- */
-export interface ChapterDraft {
-  name: string;
 }

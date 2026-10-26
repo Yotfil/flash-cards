@@ -1,65 +1,60 @@
-// Adaptador Firestore del puerto DailyStatsRepository. Actualiza el contador del día
-// `users/{uid}/dailyStats/{YYYY-MM-DD}` con incrementos atómicos (setDoc + merge), creándolo si no
-// existe. Los conteos se acumulan de forma dispersa (sólo las claves tocadas); el lector de
-// estadísticas (futuro) debe tratar las ausentes como 0.
+import {
+  collection,
+  getDocs,
+  increment,
+  limit,
+  orderBy,
+  query,
+  where,
+  type Firestore,
+} from 'firebase/firestore';
 
-import { Injectable, inject } from '@angular/core';
-import { doc, getDoc, increment, setDoc } from 'firebase/firestore';
+import { ratingCountKey, type DailyStats } from '@domain/models/daily-stats.model';
+import type { GradeRecord } from '@domain/models/grade-record';
+import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 
-import { DailyStatsRepository, type ReviewStatInput } from '@domain/ports';
-import type { DailyStats, Rating } from '@domain/models';
-import { FIRESTORE } from '@infrastructure/firebase';
+import { parseDocuments } from './document-boundary';
 import { dailyStatsDocumentSchema } from './schemas/daily-stats.schema';
 
-const USERS_COLLECTION = 'users';
-const DAILY_STATS_COLLECTION = 'dailyStats';
-
-const RATING_NAME: Record<Rating, 'again' | 'hard' | 'good' | 'easy'> = {
-  1: 'again',
-  2: 'hard',
-  3: 'good',
-  4: 'easy',
-};
-
-/** Incrementos del contador del día para un repaso (siempre con setDoc + merge). Compartido con el
- *  adaptador de calificación atómica. */
-export function reviewStatToFirestoreUpdate(
-  dateId: string,
-  input: ReviewStatInput,
-): Record<string, unknown> {
-  const data: Record<string, unknown> = {
-    date: dateId,
-    reviewsCompleted: increment(1),
-    ratingCounts: { [RATING_NAME[input.rating]]: increment(1) },
-  };
-  if (input.wasNew) {
-    // Introducción de una nueva: cuenta para el tope de nuevas, no para el de repasos.
-    data['newCardsIntroduced'] = { [input.bookId]: increment(1) };
-  } else {
-    // Repaso real (la tarjeta no estaba en New): cuenta para el tope de repasos/día.
-    data['reviewsCompletedByBook'] = { [input.bookId]: increment(1) };
+// Indicadores diarios en `users/{uid}/dailyStats/{YYYY-MM-DD}`, lado de lectura. Los recientes se
+// ordenan por `date` (un solo campo: Firestore lo indexa solo), que siempre vale lo mismo que el id.
+export class FirestoreDailyStatsRepository extends DailyStatsRepository {
+  constructor(private readonly firestore: Firestore) {
+    super();
   }
-  return data;
+
+  // Una consulta y no `getDoc`: sin red, `getDoc` de un documento que nunca pasó por la caché (el
+  // de un día nuevo, sin actividad todavía) lanza "client is offline", y Hoy caería en error justo
+  // al empezar el día. La consulta responde con lo que haya en la caché: vacío = sin actividad.
+  async getByDay(uid: string, dayId: string): Promise<DailyStats | null> {
+    const snapshot = await getDocs(query(this.daysOf(uid), where('date', '==', dayId), limit(1)));
+    return parseDocuments(dailyStatsDocumentSchema, snapshot.docs)[0] ?? null;
+  }
+
+  async listRecent(uid: string, count: number): Promise<DailyStats[]> {
+    const snapshot = await getDocs(query(this.daysOf(uid), orderBy('date', 'desc'), limit(count)));
+    return parseDocuments(dailyStatsDocumentSchema, snapshot.docs);
+  }
+
+  private daysOf(uid: string) {
+    return collection(this.firestore, 'users', uid, 'dailyStats');
+  }
 }
 
-@Injectable()
-export class FirestoreDailyStatsRepository extends DailyStatsRepository {
-  private readonly firestore = inject(FIRESTORE);
-
-  override async recordReview(uid: string, dateId: string, input: ReviewStatInput): Promise<void> {
-    const reference = doc(this.firestore, USERS_COLLECTION, uid, DAILY_STATS_COLLECTION, dateId);
-    await setDoc(reference, reviewStatToFirestoreUpdate(dateId, input), { merge: true });
-  }
-
-  override async getToday(uid: string, dateId: string): Promise<DailyStats | null> {
-    const snapshot = await getDoc(
-      doc(this.firestore, USERS_COLLECTION, uid, DAILY_STATS_COLLECTION, dateId),
-    );
-    if (!snapshot.exists()) {
-      return null;
-    }
-    // Frontera: dato externo; los conteos dispersos se completan a 0 (schema con defaults).
-    const data = dailyStatsDocumentSchema.parse(snapshot.data());
-    return { id: dateId, ...data };
-  }
+/**
+ * Lo que una calificación suma al documento de su día (para `set(..., { merge: true })`): ÚNICA
+ * definición de esos incrementos. Una nueva introducida cuenta para la tanda de nuevas del libro;
+ * una que no lo era, para su tope de repasos. Nadie escribe indicadores fuera del lote atómico de
+ * la calificación.
+ */
+export function dailyStatsIncrements(
+  record: Pick<GradeRecord, 'dayId' | 'bookId' | 'stat'>,
+): Record<string, unknown> {
+  const perBook = { [record.bookId]: increment(1) };
+  return {
+    date: record.dayId,
+    reviewsCompleted: increment(1),
+    ratingCounts: { [ratingCountKey(record.stat.rating)]: increment(1) },
+    ...(record.stat.wasNew ? { newCardsIntroduced: perBook } : { reviewsCompletedByBook: perBook }),
+  };
 }

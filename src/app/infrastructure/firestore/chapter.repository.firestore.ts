@@ -1,99 +1,87 @@
-// Adaptador Firestore del puerto ChapterRepository. ÚNICA pieza (junto a otros repos) que habla con
-// Firestore para los capítulos. Valida con Zod al leer (frontera) y traduce documento ↔ modelo del
-// dominio. Los capítulos viven en la colección plana `users/{uid}/chapters` con un campo `bookId`.
-
-import { Injectable, inject } from '@angular/core';
 import {
-  Timestamp,
   collection,
-  deleteDoc,
   doc,
+  getCountFromServer,
   getDocs,
+  getDocsFromServer,
   query,
   setDoc,
   updateDoc,
   where,
+  type Firestore,
 } from 'firebase/firestore';
 
-import { ChapterRepository, type ChapterCreateInput } from '@domain/ports';
-import type { Chapter, ChapterDraft } from '@domain/models';
-import { FIRESTORE } from '@infrastructure/firebase';
-import { chapterDocumentSchema, type ChapterDocument } from './schemas/chapter.schema';
+import type { Chapter } from '@domain/models/chapter.model';
+import { ChapterRepository } from '@domain/ports/chapter.repository';
 
-const USERS_COLLECTION = 'users';
-const CHAPTERS_COLLECTION = 'chapters';
+import { writeInCountedBatches } from './counted-batch';
+import { parseDocuments } from './document-boundary';
+import { chapterDocumentSchema } from './schemas/chapter.schema';
 
-@Injectable()
+// Capítulos del usuario en `users/{uid}/chapters`. Se filtran por libro y se ordenan en memoria:
+// son pocos por libro y así no hace falta un índice compuesto `bookId + order`.
 export class FirestoreChapterRepository extends ChapterRepository {
-  private readonly firestore = inject(FIRESTORE);
-
-  override async listByBook(uid: string, bookId: string): Promise<Chapter[]> {
-    // Sólo filtro por igualdad (auto-indexado): el orden se aplica en memoria para no exigir un
-    // índice compuesto bookId+order; los capítulos por libro son pocos.
-    const chaptersQuery = query(this.chaptersCollection(uid), where('bookId', '==', bookId));
-    const snapshot = await getDocs(chaptersQuery);
-
-    return snapshot.docs
-      .map((document) => {
-        // Frontera: cada documento es externo, se valida antes de tocarlo. `parse` lanza si no cumple.
-        const data = chapterDocumentSchema.parse(document.data());
-        return this.toChapter(document.id, data);
-      })
-      .sort((a, b) => a.order - b.order);
+  constructor(private readonly firestore: Firestore) {
+    super();
   }
 
-  override async create(uid: string, input: ChapterCreateInput): Promise<Chapter> {
-    const reference = doc(this.chaptersCollection(uid));
-    const now = new Date();
-
-    const document = {
-      bookId: input.bookId,
-      name: input.name,
-      order: input.order,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-    };
-    await setDoc(reference, document);
-
-    return {
-      id: reference.id,
-      bookId: input.bookId,
-      name: input.name,
-      order: input.order,
-      createdAt: now,
-      updatedAt: now,
-    };
+  async listByBook(uid: string, bookId: string): Promise<Chapter[]> {
+    const snapshot = await getDocs(query(this.chaptersOf(uid), where('bookId', '==', bookId)));
+    return parseDocuments(chapterDocumentSchema, snapshot.docs).sort((a, b) => a.order - b.order);
   }
 
-  override async update(
+  async create(
     uid: string,
-    chapterId: string,
-    changes: Partial<ChapterDraft>,
-  ): Promise<void> {
-    // Sólo se escriben los campos presentes; `updatedAt` se refresca siempre.
-    const data: Record<string, unknown> = { updatedAt: Timestamp.fromDate(new Date()) };
-    if (changes.name !== undefined) {
-      data['name'] = changes.name;
-    }
-    await updateDoc(doc(this.chaptersCollection(uid), chapterId), data);
+    chapter: { bookId: string; name: string; order: number },
+  ): Promise<Chapter> {
+    const ref = doc(this.chaptersOf(uid));
+    const now = new Date();
+    const document = { ...chapter, createdAt: now, updatedAt: now };
+    await setDoc(ref, document);
+    return { id: ref.id, ...document };
   }
 
-  override async delete(uid: string, chapterId: string): Promise<void> {
-    await deleteDoc(doc(this.chaptersCollection(uid), chapterId));
+  async rename(uid: string, chapterId: string, name: string): Promise<void> {
+    await updateDoc(doc(this.chaptersOf(uid), chapterId), { name, updatedAt: new Date() });
   }
 
-  private chaptersCollection(uid: string) {
-    return collection(this.firestore, USERS_COLLECTION, uid, CHAPTERS_COLLECTION);
+  /** Agregación en el servidor: no descarga las tarjetas. */
+  async countCards(uid: string, chapterId: string): Promise<number> {
+    const snapshot = await getCountFromServer(this.cardsOfChapter(uid, chapterId));
+    return snapshot.data().count;
   }
 
-  private toChapter(id: string, data: ChapterDocument): Chapter {
-    return {
-      id,
-      bookId: data.bookId,
-      name: data.name,
-      order: data.order,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    };
+  /**
+   * Borra las tarjetas en lotes, cada uno con su descuento en el contador del libro, y el capítulo
+   * en el último: si un lote falla a mitad, el contador sigue cuadrando con lo que queda, el
+   * capítulo sigue existiendo y reintentar termina. Lo que hay que borrar se lee del servidor: la
+   * caché puede tener solo parte de las tarjetas y las demás quedarían sueltas (sin red, falla).
+   */
+  async deleteWithCards(uid: string, bookId: string, chapterId: string): Promise<number> {
+    const cards = (await getDocsFromServer(this.cardsOfChapter(uid, chapterId))).docs;
+    await writeInCountedBatches({
+      firestore: this.firestore,
+      bookRef: doc(this.firestore, 'users', uid, 'books', bookId),
+      operations: cards.map((card) => ({
+        apply: (writer) => writer.delete(card.ref),
+        delta: -1,
+      })),
+      trailing: {
+        apply: (writer) => writer.delete(doc(this.chaptersOf(uid), chapterId)),
+        delta: 0,
+      },
+    });
+    return cards.length;
+  }
+
+  private cardsOfChapter(uid: string, chapterId: string) {
+    return query(
+      collection(this.firestore, 'users', uid, 'cards'),
+      where('chapterId', '==', chapterId),
+    );
+  }
+
+  private chaptersOf(uid: string) {
+    return collection(this.firestore, 'users', uid, 'chapters');
   }
 }

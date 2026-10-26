@@ -1,14 +1,8 @@
-// Puerto de programación (scheduling): la frontera ÚNICA tras la que vive el algoritmo de
-// repetición espaciada. El dominio pide estado inicial y resultados de calificación sin saber que
-// detrás está ts-fsrs. La implementación vive en `infrastructure/scheduling`.
+import type { CardScheduling, CardState } from '../models/card.model';
+import type { Rating } from '../models/rating';
 
-import type { CardScheduling, CardState, Rating } from '../models';
-
-/**
- * Datos del repaso tal como los calcula el algoritmo, para guardarlos en `reviewLogs`. Reflejan el
- * estado/valores en el momento de calificar (espejo del log de ts-fsrs).
- */
-export interface SchedulingLog {
+/** Valores previos del repaso que se guardan en el historial junto al grado elegido. */
+export interface SchedulingLogValues {
   state: CardState;
   due: Date;
   stability: number;
@@ -18,20 +12,21 @@ export interface SchedulingLog {
   scheduledDays: number;
 }
 
-/** Resultado de calificar con un grado concreto: nuevo estado, log y el intervalo (días) al próximo due. */
-export interface RatingOutcome {
+/** Lo que pasaría si la tarjeta se califica con un grado en un instante dado. */
+export interface SchedulingPreview {
+  /** El nuevo bloque de programación completo, con último repaso igual al instante recibido. */
   scheduling: CardScheduling;
-  log: SchedulingLog;
+  /** Días enteros programados: 0 mientras la tarjeta vence en minutos (aprendizaje). */
   intervalDays: number;
+  /** Vencimiento exacto, para mostrar minutos y horas. */
+  due: Date;
+  log: SchedulingLogValues;
 }
 
+// Frontera única con el algoritmo de programación (ts-fsrs entra como adaptador). Una sola
+// operación pura: los cuatro resultados posibles. `now` es obligatorio para que quien llama decida
+// el instante: al mostrar la tarjeta (previsualización informativa) o al calificar (lo que se
+// guarda). El estado inicial no está aquí: vive en el dominio (`initialCardScheduling`).
 export abstract class SchedulingPort {
-  /** Estado de programación de una tarjeta recién creada (estado New, vencimiento inmediato). */
-  abstract createInitialScheduling(now?: Date): CardScheduling;
-
-  /**
-   * Calcula, para los cuatro grados (1=Again … 4=Easy), el resultado de calificar la tarjeta. La UI
-   * usa los intervalos para la previsualización y, al elegir un grado, persiste su `scheduling`/`log`.
-   */
-  abstract schedule(scheduling: CardScheduling, now?: Date): Record<Rating, RatingOutcome>;
+  abstract preview(scheduling: CardScheduling, now: Date): Record<Rating, SchedulingPreview>;
 }

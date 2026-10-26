@@ -1,65 +1,68 @@
-// Adaptador Firestore del puerto UserRepository. ÚNICA pieza (junto a otros repos) que habla
-// con Firestore para los usuarios. Valida con Zod al leer (frontera) y traduce documento ↔
-// modelo del dominio. El `id` del modelo es la clave del documento (`users/{uid}`).
+import { doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
-import { Injectable, inject } from '@angular/core';
-import { Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import type { User, UserSettings } from '@domain/models/user.model';
+import { UserRepository } from '@domain/ports/user.repository';
 
-import { UserRepository } from '@domain/ports';
-import type { User } from '@domain/models';
-import { FIRESTORE } from '@infrastructure/firebase';
-import { userDocumentSchema } from './schemas/user.schema';
+import { parseDocument } from './document-boundary';
+import { userDocumentSchema, type UserDocument } from './schemas/user.schema';
 
-const USERS_COLLECTION = 'users';
-
-@Injectable()
+// Perfil del usuario en `users/{uid}`. Lee a través de la frontera (Zod + error con ruta), que
+// recorta lo que esta versión no conoce: por eso el documento completo solo se escribe al crearlo,
+// y un ajuste se guarda por su ruta (`settings.theme`), sin reescribir lo demás.
 export class FirestoreUserRepository extends UserRepository {
-  private readonly firestore = inject(FIRESTORE);
+  constructor(private readonly firestore: Firestore) {
+    super();
+  }
 
-  override async findById(uid: string): Promise<User | null> {
-    const snapshot = await getDoc(doc(this.firestore, USERS_COLLECTION, uid));
+  async findById(uid: string): Promise<User | null> {
+    const snapshot = await getDoc(this.profileRef(uid));
     if (!snapshot.exists()) {
       return null;
     }
-
-    // Frontera: el dato es externo, se valida antes de tocarlo. `parse` lanza si no cumple.
-    const data = userDocumentSchema.parse(snapshot.data());
-
-    // Se construye explícitamente: con exactOptionalPropertyTypes los opcionales solo se
-    // asignan cuando están presentes (no como `undefined`).
-    const user: User = {
-      id: uid,
-      displayName: data.displayName,
-      email: data.email,
-      createdAt: data.createdAt,
-      settings: data.settings,
-      isSearchable: data.isSearchable,
-    };
-    if (data.handle !== undefined) {
-      user.handle = data.handle;
-    }
-    if (data.photoURL !== undefined) {
-      user.photoURL = data.photoURL;
-    }
-    return user;
+    return toUser(uid, parseDocument(userDocumentSchema, snapshot.ref.path, snapshot.data()));
   }
 
-  override async save(user: User): Promise<void> {
-    const data: Record<string, unknown> = {
-      displayName: user.displayName,
-      email: user.email,
-      createdAt: Timestamp.fromDate(user.createdAt),
-      settings: user.settings,
-      isSearchable: user.isSearchable,
-    };
-    // Firestore rechaza `undefined`: solo se incluyen los opcionales presentes.
-    if (user.handle !== undefined) {
-      data['handle'] = user.handle;
-    }
-    if (user.photoURL !== undefined) {
-      data['photoURL'] = user.photoURL;
-    }
-
-    await setDoc(doc(this.firestore, USERS_COLLECTION, user.id), data);
+  async save(user: User): Promise<void> {
+    await setDoc(this.profileRef(user.id), toUserDocument(user));
   }
+
+  async updateSettings(uid: string, changes: Partial<UserSettings>): Promise<void> {
+    const paths = Object.entries(changes)
+      .filter(([, value]) => value !== undefined)
+      .map(([name, value]) => [`settings.${name}`, value]);
+    if (paths.length === 0) {
+      return;
+    }
+    await updateDoc(this.profileRef(uid), Object.fromEntries(paths));
+  }
+
+  private profileRef(uid: string) {
+    return doc(this.firestore, 'users', uid);
+  }
+}
+
+// Los opcionales ausentes no se escriben ni se devuelven como `undefined`.
+function toUser(id: string, document: UserDocument): User {
+  return {
+    id,
+    displayName: document.displayName,
+    email: document.email,
+    createdAt: document.createdAt,
+    settings: document.settings,
+    isSearchable: document.isSearchable,
+    ...(document.handle !== undefined ? { handle: document.handle } : {}),
+    ...(document.photoURL !== undefined ? { photoURL: document.photoURL } : {}),
+  };
+}
+
+function toUserDocument(user: User): Record<string, unknown> {
+  return {
+    displayName: user.displayName,
+    email: user.email,
+    createdAt: user.createdAt,
+    settings: user.settings,
+    isSearchable: user.isSearchable,
+    ...(user.handle !== undefined ? { handle: user.handle } : {}),
+    ...(user.photoURL !== undefined ? { photoURL: user.photoURL } : {}),
+  };
 }

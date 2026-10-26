@@ -1,22 +1,10 @@
-// Puerto de los contadores del día (`/users/{uid}/dailyStats/{YYYY-MM-DD}`). Doble función:
-// alimenta las estadísticas y, vía `newCardsIntroduced`, hace cumplir el tope de nuevas/día (la cola
-// de F1.6 lo leerá). El id del documento ES la fecha del día de estudio.
+import type { DailyStats } from '../models/daily-stats.model';
 
-import type { DailyStats, Rating } from '../models';
-
-export interface ReviewStatInput {
-  rating: Rating;
-  /** Libro de la tarjeta repasada (para `newCardsIntroduced` por libro). */
-  bookId: string;
-  /** True si la tarjeta estaba en estado New antes de este repaso (cuenta como nueva introducida). */
-  wasNew: boolean;
-}
-
+// Indicadores diarios del usuario, lado de lectura. La escritura (acreditar un repaso) la añade la
+// sesión de repaso a este mismo puerto.
 export abstract class DailyStatsRepository {
-  /** Registra un repaso del día: incrementa `reviewsCompleted`, `ratingCounts` y, si es nueva,
-   *  `newCardsIntroduced[bookId]`. */
-  abstract recordReview(uid: string, dateId: string, input: ReviewStatInput): Promise<void>;
-
-  /** Lee el contador del día indicado, o null si aún no existe. */
-  abstract getToday(uid: string, dateId: string): Promise<DailyStats | null>;
+  /** Los indicadores de un día de estudio, o `null` si ese día no hubo actividad. */
+  abstract getByDay(uid: string, dayId: string): Promise<DailyStats | null>;
+  /** Los `limit` días más recientes con indicadores, del más nuevo al más viejo. */
+  abstract listRecent(uid: string, limit: number): Promise<DailyStats[]>;
 }

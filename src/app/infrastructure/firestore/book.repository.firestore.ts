@@ -1,120 +1,124 @@
-// Adaptador Firestore del puerto BookRepository. ÚNICA pieza (junto a otros repos) que habla con
-// Firestore para los libros. Valida con Zod al leer (frontera) y traduce documento ↔ modelo del
-// dominio. Los libros viven en la subcolección `users/{uid}/books`; el `id` del modelo es la clave
-// del documento.
-
-import { Injectable, inject } from '@angular/core';
 import {
-  Timestamp,
   collection,
-  deleteDoc,
   doc,
+  getCountFromServer,
   getDocs,
+  getDocsFromServer,
   increment,
   orderBy,
   query,
   setDoc,
   updateDoc,
+  where,
+  type Firestore,
+  type Query,
 } from 'firebase/firestore';
 
-import { BookRepository, type BookCreateInput } from '@domain/ports';
-import type { Book, BookDraft } from '@domain/models';
-import { FIRESTORE } from '@infrastructure/firebase';
+import type { Book, BookContents, BookDraft, CardStateTotals } from '@domain/models/book.model';
+import { BookRepository } from '@domain/ports/book.repository';
+
+import { BatchWriter } from './batch-writer';
+import { parseDocuments } from './document-boundary';
 import { bookDocumentSchema, type BookDocument } from './schemas/book.schema';
 
-const USERS_COLLECTION = 'users';
-const BOOKS_COLLECTION = 'books';
-
-@Injectable()
+// Libros del usuario en `users/{uid}/books`. Lee a través de la frontera (Zod + error con ruta).
 export class FirestoreBookRepository extends BookRepository {
-  private readonly firestore = inject(FIRESTORE);
-
-  override async listByUser(uid: string): Promise<Book[]> {
-    const booksQuery = query(this.booksCollection(uid), orderBy('order'));
-    const snapshot = await getDocs(booksQuery);
-
-    return snapshot.docs.map((document) => {
-      // Frontera: cada documento es externo, se valida antes de tocarlo. `parse` lanza si no cumple.
-      const data = bookDocumentSchema.parse(document.data());
-      return this.toBook(document.id, data);
-    });
+  constructor(private readonly firestore: Firestore) {
+    super();
   }
 
-  override async create(uid: string, input: BookCreateInput): Promise<Book> {
-    const reference = doc(this.booksCollection(uid));
+  async listByUser(uid: string): Promise<Book[]> {
+    const snapshot = await getDocs(query(this.booksOf(uid), orderBy('order')));
+    return parseDocuments(bookDocumentSchema, snapshot.docs).map(toBook);
+  }
+
+  async create(uid: string, draft: BookDraft & { order: number }): Promise<Book> {
+    const ref = doc(this.booksOf(uid));
     const now = new Date();
-
-    const document = {
-      name: input.name,
-      subject: input.subject,
-      studyDirection: input.studyDirection,
-      newCardsPerDay: input.newCardsPerDay,
-      maxReviewsPerDay: input.maxReviewsPerDay,
-      order: input.order,
-      cardCount: 0,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-    };
-    await setDoc(reference, document);
-
-    return {
-      id: reference.id,
-      name: input.name,
-      subject: input.subject,
-      studyDirection: input.studyDirection,
-      newCardsPerDay: input.newCardsPerDay,
-      maxReviewsPerDay: input.maxReviewsPerDay,
-      order: input.order,
-      cardCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const document = { ...draft, cardCount: 0, createdAt: now, updatedAt: now };
+    await setDoc(ref, document);
+    return { id: ref.id, ...document };
   }
 
-  override async update(uid: string, bookId: string, changes: Partial<BookDraft>): Promise<void> {
-    // Sólo se escriben los campos presentes; `updatedAt` se refresca siempre.
-    const data: Record<string, unknown> = { updatedAt: Timestamp.fromDate(new Date()) };
-    for (const [key, value] of Object.entries(changes)) {
-      if (value !== undefined) {
-        data[key] = value;
-      }
-    }
-    await updateDoc(doc(this.booksCollection(uid), bookId), data);
+  async update(uid: string, bookId: string, changes: Partial<BookDraft>): Promise<void> {
+    await updateDoc(this.bookRef(uid, bookId), { ...changes, updatedAt: new Date() });
   }
 
-  override async delete(uid: string, bookId: string): Promise<void> {
-    await deleteDoc(doc(this.booksCollection(uid), bookId));
+  async incrementCardCount(uid: string, bookId: string, delta: number): Promise<void> {
+    await updateDoc(this.bookRef(uid, bookId), { cardCount: increment(delta) });
   }
 
-  override async incrementCardCount(uid: string, bookId: string, delta: number): Promise<void> {
-    // `increment` es atómico en el servidor: dos escrituras concurrentes no se pisan.
-    await updateDoc(doc(this.booksCollection(uid), bookId), {
-      cardCount: increment(delta),
-      updatedAt: Timestamp.fromDate(new Date()),
-    });
+  /** Agregaciones en el servidor: no descarga capítulos ni tarjetas. */
+  async countContents(uid: string, bookId: string): Promise<BookContents> {
+    const [chapters, cards] = await Promise.all([
+      getCountFromServer(this.ofBook(uid, 'chapters', bookId)),
+      getCountFromServer(this.ofBook(uid, 'cards', bookId)),
+    ]);
+    return { chapters: chapters.data().count, cards: cards.data().count };
   }
 
-  private booksCollection(uid: string) {
-    return collection(this.firestore, USERS_COLLECTION, uid, BOOKS_COLLECTION);
+  /**
+   * Borra tarjetas, capítulos y, en el último lote, el libro. Si un lote falla, el libro sigue
+   * existiendo (con menos contenido) y reintentar borra lo que quede. El historial de repasos y las
+   * estadísticas diarias no se tocan. Lo que hay que borrar se lee del servidor: la caché puede
+   * tener solo parte y lo demás quedaría suelto, sin libro (sin red, falla).
+   */
+  async deleteWithContents(uid: string, bookId: string): Promise<void> {
+    const [cards, chapters] = await Promise.all([
+      getDocsFromServer(this.ofBook(uid, 'cards', bookId)),
+      getDocsFromServer(this.ofBook(uid, 'chapters', bookId)),
+    ]);
+    const writer = new BatchWriter(this.firestore);
+    cards.docs.forEach((card) => writer.delete(card.ref));
+    chapters.docs.forEach((chapter) => writer.delete(chapter.ref));
+    writer.delete(this.bookRef(uid, bookId));
+    await writer.commit();
   }
 
-  /** Construye el modelo del dominio. Con `exactOptionalPropertyTypes`, los opcionales se asignan
-   *  sólo cuando están presentes (no como `undefined`). */
-  private toBook(id: string, data: BookDocument): Book {
-    const book: Book = {
-      id,
-      name: data.name,
-      subject: data.subject,
-      studyDirection: data.studyDirection,
-      newCardsPerDay: data.newCardsPerDay,
-      maxReviewsPerDay: data.maxReviewsPerDay,
-      order: data.order,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    };
-    if (data.cardCount !== undefined) {
-      book.cardCount = data.cardCount;
-    }
-    return book;
+  /**
+   * Totales por estado de FSRS con agregaciones en el servidor: nuevas (0), en aprendizaje
+   * (aprendiendo 1 y reaprendiendo 3) y dominadas (en repaso, 2). No descarga las tarjetas.
+   */
+  countCardsByState(uid: string, bookId: string): Promise<CardStateTotals> {
+    return countByState(this.ofBook(uid, 'cards', bookId));
   }
+
+  // Sin filtro de libro: `scheduling.state` usa el índice automático de un solo campo.
+  countCollectionByState(uid: string): Promise<CardStateTotals> {
+    return countByState(query(collection(this.firestore, 'users', uid, 'cards')));
+  }
+
+  private booksOf(uid: string) {
+    return collection(this.firestore, 'users', uid, 'books');
+  }
+
+  private ofBook(uid: string, collectionName: 'chapters' | 'cards', bookId: string) {
+    return query(
+      collection(this.firestore, 'users', uid, collectionName),
+      where('bookId', '==', bookId),
+    );
+  }
+
+  private bookRef(uid: string, bookId: string) {
+    return doc(this.firestore, 'users', uid, 'books', bookId);
+  }
+}
+
+function toBook(document: BookDocument & { readonly id: string }): Book {
+  const { cardCount, ...rest } = document;
+  return { ...rest, ...(cardCount !== undefined ? { cardCount } : {}) };
+}
+
+/** Tres agregaciones en el servidor (nunca se leen las tarjetas): aprendiendo y reaprendiendo suman. */
+async function countByState(cards: Query): Promise<CardStateTotals> {
+  const [newCards, learning, review] = await Promise.all([
+    getCountFromServer(query(cards, where('scheduling.state', '==', 0))),
+    getCountFromServer(query(cards, where('scheduling.state', 'in', [1, 3]))),
+    getCountFromServer(query(cards, where('scheduling.state', '==', 2))),
+  ]);
+  return {
+    newCards: newCards.data().count,
+    learning: learning.data().count,
+    review: review.data().count,
+  };
 }

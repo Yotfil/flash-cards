@@ -1,87 +1,109 @@
-import { Routes } from '@angular/router';
+import type { Routes } from '@angular/router';
 
-import { authGuard, guestGuard } from '@core/auth.guard';
+import { guestOnlyGuard, requireSessionGuard } from '@core/session.guards';
+import { practiceHandoffGuard } from '@features/practica/practice-handoff.guard';
+import { studyHandoffGuard } from '@features/repaso/study-handoff.guard';
+
+// Mapa de rutas completo. Cada pantalla carga bajo demanda. Todo exige sesión activa salvo
+// `/login` (solo invitados) y `/sin-acceso` (abierta: su pantalla redirige sola según el estado de
+// la sesión). Repaso y práctica, a pantalla completa, solo se abren con lo que se les entregó.
 
 export const routes: Routes = [
+  { path: '', pathMatch: 'full', redirectTo: 'hoy' },
+
+  // Pantallas completas, fuera del caparazón (sin navegación).
   {
     path: 'login',
-    canActivate: [guestGuard],
+    canActivate: [guestOnlyGuard],
     loadComponent: () =>
-      import('@features/auth-page/auth-page.component').then((m) => m.AuthPageComponent),
+      import('@features/auth/login-page/login-page.component').then(
+        (module) => module.LoginPageComponent,
+      ),
   },
   {
+    path: 'sin-acceso',
+    loadComponent: () =>
+      import('@features/auth/no-access-page/no-access-page.component').then(
+        (module) => module.NoAccessPageComponent,
+      ),
+  },
+  {
+    path: 'repaso',
+    canActivate: [requireSessionGuard, studyHandoffGuard],
+    loadComponent: () =>
+      import('@features/repaso/repaso-page/repaso-page.component').then(
+        (module) => module.RepasoPageComponent,
+      ),
+  },
+  {
+    path: 'practicar',
+    canActivate: [requireSessionGuard, practiceHandoffGuard],
+    loadComponent: () =>
+      import('@features/practica/practica-page/practica-page.component').then(
+        (module) => module.PracticaPageComponent,
+      ),
+  },
+
+  // Las cuatro secciones y sus rutas hijas, dentro del caparazón.
+  {
     path: '',
-    canActivate: [authGuard],
-    loadComponent: () => import('@features/shell/shell.component').then((m) => m.ShellComponent),
+    canActivate: [requireSessionGuard],
+    loadComponent: () =>
+      import('@features/shell/shell/shell.component').then((module) => module.ShellComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'hoy' },
       {
         path: 'hoy',
-        loadComponent: () => import('@features/hoy/hoy.component').then((m) => m.HoyComponent),
+        loadComponent: () =>
+          import('@features/hoy/hoy-page/hoy-page.component').then(
+            (module) => module.HoyPageComponent,
+          ),
       },
       {
         path: 'biblioteca',
         loadComponent: () =>
-          import('@features/biblioteca/biblioteca/biblioteca.component').then(
-            (m) => m.BibliotecaComponent,
-          ),
-      },
-      {
-        path: 'importar',
-        loadComponent: () =>
-          import('@features/biblioteca/importar-libro/importar-libro.component').then(
-            (m) => m.ImportarLibroComponent,
+          import('@features/biblioteca/biblioteca-page/biblioteca-page.component').then(
+            (module) => module.BibliotecaPageComponent,
           ),
       },
       {
         path: 'biblioteca/:bookId',
         loadComponent: () =>
-          import('@features/biblioteca/libro-detail/libro-detail.component').then(
-            (m) => m.LibroDetailComponent,
+          import('@features/biblioteca/libro-detail-page/libro-detail-page.component').then(
+            (module) => module.LibroDetailPageComponent,
           ),
       },
       {
         path: 'biblioteca/:bookId/:chapterId',
         loadComponent: () =>
-          import('@features/biblioteca/capitulo-detail/capitulo-detail.component').then(
-            (m) => m.CapituloDetailComponent,
+          import('@features/biblioteca/capitulo-detail-page/capitulo-detail-page.component').then(
+            (module) => module.CapituloDetailPageComponent,
+          ),
+      },
+      {
+        path: 'importar',
+        loadComponent: () =>
+          import('@features/importacion/importar-libro-page/importar-libro-page.component').then(
+            (module) => module.ImportarLibroPageComponent,
           ),
       },
       {
         path: 'progreso',
         loadComponent: () =>
-          import('@features/progreso/progreso.component').then((m) => m.ProgresoComponent),
+          import('@features/progreso/progreso-page/progreso-page.component').then(
+            (module) => module.ProgresoPageComponent,
+          ),
       },
       {
         path: 'ajustes',
         loadComponent: () =>
-          import('@features/ajustes/ajustes.component').then((m) => m.AjustesComponent),
+          import('@features/ajustes/ajustes-page/ajustes-page.component').then(
+            (module) => module.AjustesPageComponent,
+          ),
       },
     ],
   },
-  {
-    // Pantalla completa, fuera del shell: sesión autenticada pero sin acceso (early access).
-    path: 'sin-acceso',
-    loadComponent: () =>
-      import('@features/sin-acceso/sin-acceso.component').then((m) => m.SinAccesoComponent),
-  },
-  {
-    // Pantalla completa, fuera del shell (sin la navegación): la sesión de repaso (§8.6).
-    path: 'repaso',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('@features/review/review-session/review-session.component').then(
-        (m) => m.ReviewSessionComponent,
-      ),
-  },
-  {
-    // Pantalla completa, fuera del shell: el modo Practicar (mini-quiz, Fase 2).
-    path: 'practicar',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('@features/quiz/practice-session/practice-session.component').then(
-        (m) => m.PracticeSessionComponent,
-      ),
-  },
-  { path: '**', redirectTo: '' },
+
+  // A Hoy directamente: redirigir a '' no basta, porque la URL vacía casa con el padre del
+  // caparazón (también '') y la redirección de la raíz ya no se vuelve a aplicar.
+  { path: '**', redirectTo: 'hoy' },
 ];

@@ -1,63 +1,84 @@
-// Adaptador del puerto AuthPort sobre Firebase Auth. ÚNICA pieza que importa 'firebase/auth'.
-// Traduce el usuario de Firebase a la `AuthIdentity` del dominio; nada de Firebase escapa de
-// esta capa.
-
-import { Injectable, inject } from '@angular/core';
+import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  deleteUser,
+  getAdditionalUserInfo,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signOut as firebaseSignOut,
+  signOut,
   updateProfile,
+  type Auth,
   type User as FirebaseUser,
 } from 'firebase/auth';
 
-import { AuthPort, type RegisterWithEmailInput, type SignInWithEmailInput } from '@domain/ports';
-import type { AuthIdentity } from '@domain/models';
-import { FIREBASE_AUTH } from '@infrastructure/firebase';
+import type { AuthIdentity } from '@domain/models/auth-identity.model';
+import {
+  AuthPort,
+  type EmailCredentials,
+  type GoogleSignIn,
+  type Registration,
+} from '@domain/ports/auth.port';
 
-function toAuthIdentity(user: FirebaseUser): AuthIdentity {
+import { toAuthError } from './auth-error.mapper';
+
+// Adaptador del proveedor de identidad sobre Firebase Auth. Traduce el `User` de Firebase a una
+// identidad propia y cada fallo a un `AuthError` clasificado. Google va por ventana emergente (la
+// redirección se rompe con el particionado de almacenamiento de los navegadores); la cabecera
+// COOP `same-origin-allow-popups` permite que la ventana devuelva el resultado.
+export class FirebaseAuthAdapter extends AuthPort {
+  constructor(private readonly auth: Auth) {
+    super();
+  }
+
+  observeAuthState(onChange: (identity: AuthIdentity | null) => void): () => void {
+    return onAuthStateChanged(this.auth, (user) => onChange(user ? toIdentity(user) : null));
+  }
+
+  async registerWithEmail({ email, password, displayName }: Registration): Promise<void> {
+    await this.translateErrors(async () => {
+      const credential = await createUserWithEmailAndPassword(this.auth, email, password);
+      await updateProfile(credential.user, { displayName });
+    });
+  }
+
+  async signInWithEmail({ email, password }: EmailCredentials): Promise<void> {
+    await this.translateErrors(() => signInWithEmailAndPassword(this.auth, email, password));
+  }
+
+  async signInWithGoogle(): Promise<GoogleSignIn> {
+    const credential = await this.translateErrors(() =>
+      signInWithPopup(this.auth, new GoogleAuthProvider()),
+    );
+    return { isNewIdentity: getAdditionalUserInfo(credential)?.isNewUser ?? false };
+  }
+
+  async signOut(): Promise<void> {
+    await this.translateErrors(() => signOut(this.auth));
+  }
+
+  async deleteCurrentIdentity(): Promise<void> {
+    const user = this.auth.currentUser;
+    if (user) {
+      await this.translateErrors(() => deleteUser(user));
+    }
+  }
+
+  private async translateErrors<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      throw toAuthError(error instanceof FirebaseError ? error.code : '', error);
+    }
+  }
+}
+
+function toIdentity(user: FirebaseUser): AuthIdentity {
   return {
     uid: user.uid,
     email: user.email,
     displayName: user.displayName,
     photoURL: user.photoURL,
   };
-}
-
-@Injectable()
-export class FirebaseAuthAdapter extends AuthPort {
-  private readonly auth = inject(FIREBASE_AUTH);
-
-  override observeAuthState(onChange: (identity: AuthIdentity | null) => void): () => void {
-    return onAuthStateChanged(this.auth, (user) => {
-      onChange(user ? toAuthIdentity(user) : null);
-    });
-  }
-
-  override async registerWithEmail(input: RegisterWithEmailInput): Promise<AuthIdentity> {
-    const credential = await createUserWithEmailAndPassword(this.auth, input.email, input.password);
-    // Firebase no fija el nombre al registrar por email: lo establecemos explícitamente.
-    await updateProfile(credential.user, { displayName: input.displayName });
-    return toAuthIdentity(credential.user);
-  }
-
-  override async signInWithEmail(input: SignInWithEmailInput): Promise<AuthIdentity> {
-    const credential = await signInWithEmailAndPassword(this.auth, input.email, input.password);
-    return toAuthIdentity(credential.user);
-  }
-
-  override async signInWithGoogle(): Promise<void> {
-    // Popup (no redirección: esta rompe en navegadores con particionado de almacenamiento).
-    // El warning de Cross-Origin-Opener-Policy sobre `window.closed` se resuelve con la
-    // cabecera del dev-server `same-origin-allow-popups` (ver angular.json). La sesión llega
-    // por onAuthStateChanged y el observer carga el perfil.
-    await signInWithPopup(this.auth, new GoogleAuthProvider());
-  }
-
-  override async signOut(): Promise<void> {
-    await firebaseSignOut(this.auth);
-  }
 }

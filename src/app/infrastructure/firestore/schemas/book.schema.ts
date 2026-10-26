@@ -1,17 +1,9 @@
-// Validación en la frontera (contrato CLAUDE.md): un documento de libro que llega de Firestore es
-// EXTERNO y se valida con Zod ANTES de convertirlo en un modelo del dominio. Si no cumple, `parse`
-// lanza y el repositorio falla de forma explícita (nunca devolvemos un `Book` a medio formar).
-
-import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
-/** Un Timestamp de Firestore que se transforma a `Date` del dominio. */
-const firestoreTimestamp = z.instanceof(Timestamp).transform((value) => value.toDate());
+import { firestoreTimestamp } from '../document-boundary';
 
-/**
- * Forma del documento `users/{uid}/books/{bookId}` tal como vive en Firestore (sin `id`: ese es la
- * clave del documento). Tras validar, el repositorio le añade el `id`.
- */
+// Forma del documento `users/{uid}/books/{bookId}` (sin `id`: es la clave). `both` sigue siendo
+// válido al leer: existe en libros de versiones anteriores. `cardCount` falta en libros antiguos.
 export const bookDocumentSchema = z.object({
   name: z.string(),
   subject: z.string(),
@@ -24,4 +16,4 @@ export const bookDocumentSchema = z.object({
   updatedAt: firestoreTimestamp,
 });
 
-export type BookDocument = z.infer<typeof bookDocumentSchema>;
+export type BookDocument = z.output<typeof bookDocumentSchema>;

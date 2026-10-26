@@ -1,0 +1,39 @@
+<section class="mx-auto flex w-full max-w-xl flex-col gap-3" aria-labelledby="rating-question">
+  <p id="rating-question" class="text-center text-sm font-semibold text-text-dim">
+    {{ copy.question }}
+  </p>
+  <div class="grid grid-cols-4 gap-2">
+    @for (option of options(); track option.rating) {
+      <button
+        type="button"
+        class="rating-option press relative flex flex-col items-center gap-1 rounded-2xl border border-glass-border bg-surface px-1 pt-3 pb-2"
+        [class]="option.colorClass"
+        [class.suggested]="option.suggested"
+        [attr.aria-label]="option.ariaLabel"
+        (click)="graded.emit(option.rating)"
+      >
+        @if (option.suggested) {
+          <span
+            class="absolute -top-2 rounded-full bg-accent px-1.5 text-[0.625rem] font-bold text-accent-ink"
+          >
+            {{ copy.suggested }}
+          </span>
+        }
+        <span class="flex" aria-hidden="true">
+          @for (slot of brainSlots; track slot) {
+            <app-icon
+              name="brain"
+              size="lg"
+              [class]="slot <= option.rating ? option.colorClass : 'text-off'"
+            />
+          }
+        </span>
+        <span data-label class="text-xs font-bold text-text">{{ option.label }}</span>
+        <span data-interval class="text-xs text-text-faint">{{ option.interval }}</span>
+        @if (showKeyHints()) {
+          <kbd class="text-[0.625rem] text-text-faint">{{ option.rating }}</kbd>
+        }
+      </button>
+    }
+  </div>
+</section>

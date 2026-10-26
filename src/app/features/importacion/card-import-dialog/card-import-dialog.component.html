@@ -1,0 +1,67 @@
+<h2 class="text-lg font-bold tracking-tight text-text">{{ copy.cardsTitle }}</h2>
+
+<form class="mt-5 flex flex-col gap-4" novalidate (submit)="confirm($event)">
+  <fieldset class="flex flex-col gap-2">
+    <legend class="mb-1.5 text-sm font-semibold text-text">{{ copy.modeQuestion }}</legend>
+    <label class="flex items-center gap-2 text-sm text-text">
+      <input
+        type="radio"
+        name="import-mode"
+        class="accent-accent"
+        [checked]="mode() === 'append'"
+        (change)="mode.set('append')"
+      />
+      {{ copy.modeAppend }}
+    </label>
+    <label class="flex items-center gap-2 text-sm text-text">
+      <input
+        type="radio"
+        name="import-mode"
+        class="accent-accent"
+        [checked]="mode() === 'replace'"
+        (change)="mode.set('replace')"
+      />
+      {{ copy.modeReplace }}
+    </label>
+  </fieldset>
+
+  <div class="flex justify-end">
+    <app-text-file-picker (loaded)="loadFile($event)" />
+  </div>
+
+  <textarea
+    rows="8"
+    class="resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 font-mono text-sm text-text placeholder:text-text-faint"
+    [attr.aria-label]="copy.textLabel"
+    [placeholder]="copy.cardsPlaceholder"
+    [value]="text()"
+    (input)="typeText($event)"
+  ></textarea>
+
+  <app-import-preview [preview]="preview()" [showChapters]="false" />
+
+  @if (!online()) {
+    <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
+  }
+  @if (failed()) {
+    <p role="alert" class="text-sm text-danger">{{ copy.cardsError }}</p>
+  }
+
+  <div class="mt-2 flex justify-end gap-2">
+    <button
+      type="button"
+      class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
+      [disabled]="importing()"
+      (click)="cancel()"
+    >
+      {{ copy.cancel }}
+    </button>
+    <button
+      type="submit"
+      class="press rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+      [disabled]="!canImport()"
+    >
+      {{ importText() }}
+    </button>
+  </div>
+</form>

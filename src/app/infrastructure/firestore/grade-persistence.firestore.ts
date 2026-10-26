@@ -1,48 +1,35 @@
-// Adaptador Firestore del puerto GradePersistencePort. Escribe los tres documentos de una
-// calificación (scheduling de la tarjeta, registro de reviewLogs y contadores de dailyStats) en UN
-// solo writeBatch: o quedan los tres o no queda ninguno. Reusa los mapeos de los repositorios para
-// que el formato de cada documento siga teniendo una única definición.
+import { collection, doc, writeBatch, type Firestore } from 'firebase/firestore';
 
-import { Injectable, inject } from '@angular/core';
-import { Timestamp, collection, doc, writeBatch } from 'firebase/firestore';
+import type { GradeRecord } from '@domain/models/grade-record';
+import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 
-import { GradePersistencePort, type GradePersistenceInput } from '@domain/ports';
-import { FIRESTORE } from '@infrastructure/firebase';
-import { schedulingToFirestore } from './card-document.mapper';
-import { reviewStatToFirestoreUpdate } from './daily-stats.repository.firestore';
-import { reviewLogToFirestoreDocument } from './review-log.repository.firestore';
+import { dailyStatsIncrements } from './daily-stats.repository.firestore';
+import { reviewLogToDocument } from './schemas/review-log.schema';
 
-const USERS_COLLECTION = 'users';
-const CARDS_COLLECTION = 'cards';
-const REVIEW_LOGS_COLLECTION = 'reviewLogs';
-const DAILY_STATS_COLLECTION = 'dailyStats';
-
-@Injectable()
+// Una calificación en UN lote: la programación nueva de la tarjeta, el registro del historial y
+// los incrementos del día. El SDK lo aplica a la caché local al instante y lo encola en el
+// dispositivo (sobrevive a cerrar la app); `commit` se cumple cuando el servidor confirma. Si el
+// servidor lo niega, no queda nada a medias: el SDK deshace el cambio local.
 export class FirestoreGradePersistence extends GradePersistencePort {
-  private readonly firestore = inject(FIRESTORE);
+  constructor(private readonly firestore: Firestore) {
+    super();
+  }
 
-  override async persistGrade(uid: string, input: GradePersistenceInput): Promise<void> {
+  async persistGrade(uid: string, record: GradeRecord): Promise<void> {
     const batch = writeBatch(this.firestore);
-
-    const cardRef = doc(this.firestore, USERS_COLLECTION, uid, CARDS_COLLECTION, input.cardId);
-    batch.update(cardRef, {
-      scheduling: schedulingToFirestore(input.scheduling),
-      updatedAt: Timestamp.fromDate(new Date()),
+    batch.update(doc(this.firestore, 'users', uid, 'cards', record.cardId), {
+      scheduling: record.scheduling,
+      updatedAt: new Date(),
     });
-
-    // Documento nuevo con id generado por el cliente (equivalente a addDoc, pero dentro del batch).
-    const logRef = doc(collection(this.firestore, USERS_COLLECTION, uid, REVIEW_LOGS_COLLECTION));
-    batch.set(logRef, reviewLogToFirestoreDocument(input.log));
-
-    const statsRef = doc(
-      this.firestore,
-      USERS_COLLECTION,
-      uid,
-      DAILY_STATS_COLLECTION,
-      input.dateId,
+    batch.set(
+      doc(collection(this.firestore, 'users', uid, 'reviewLogs')),
+      reviewLogToDocument(record.log),
     );
-    batch.set(statsRef, reviewStatToFirestoreUpdate(input.dateId, input.stat), { merge: true });
-
+    batch.set(
+      doc(this.firestore, 'users', uid, 'dailyStats', record.dayId),
+      dailyStatsIncrements(record),
+      { merge: true },
+    );
     await batch.commit();
   }
 }

@@ -1,198 +1,260 @@
-// Adaptador Firestore del puerto CardRepository. ÚNICA pieza (junto a otros repos) que habla con
-// Firestore para las tarjetas. Valida con Zod al leer (frontera) y traduce documento ↔ modelo del
-// dominio, incluido el bloque `scheduling` (Date ↔ Timestamp). Las tarjetas viven en la colección
-// plana `users/{uid}/cards` con campos `bookId`/`chapterId`.
-
-import { Injectable, inject } from '@angular/core';
 import {
-  Timestamp,
   collection,
-  deleteDoc,
   deleteField,
   doc,
-  getCountFromServer,
   getDocs,
+  getDocsFromServer,
+  increment,
   query,
-  setDoc,
+  runTransaction,
+  Timestamp,
   updateDoc,
   where,
-  writeBatch,
+  type DocumentReference,
+  type Firestore,
 } from 'firebase/firestore';
 
-import { CardRepository, type CardCreateInput, type CardStateCounts } from '@domain/ports';
-import { type Card, type CardContentDraft, type CardScheduling, CardState } from '@domain/models';
-import { FIRESTORE } from '@infrastructure/firebase';
-import { cardToFirestoreDocument, schedulingToFirestore } from './card-document.mapper';
-import { MAX_BATCH_SIZE } from './firestore-limits';
+import type { Card, CardContentChanges, NewCard } from '@domain/models/card.model';
+import { PartialDeletionError } from '@domain/models/partial-deletion-error';
+import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
+
+import { chunksOf, type BatchWriter } from './batch-writer';
+import { COUNTED_GROUP_SIZE, writeInCountedBatches } from './counted-batch';
+import { parseDocuments } from './document-boundary';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
-const USERS_COLLECTION = 'users';
-const CARDS_COLLECTION = 'cards';
-
-@Injectable()
+// Tarjetas del usuario en `users/{uid}/cards` (colección plana, filtrada por capítulo). Crear y
+// borrar ajustan el contador del libro en el mismo lote que las tarjetas.
 export class FirestoreCardRepository extends CardRepository {
-  private readonly firestore = inject(FIRESTORE);
-
-  override async listByChapter(uid: string, chapterId: string): Promise<Card[]> {
-    // Filtro por igualdad (auto-indexado); orden por creación en memoria para no exigir índice
-    // compuesto. Las tarjetas por capítulo del MVP son una cantidad manejable.
-    const cardsQuery = query(this.cardsCollection(uid), where('chapterId', '==', chapterId));
-    const snapshot = await getDocs(cardsQuery);
-
-    return snapshot.docs
-      .map((document) => {
-        // Frontera: cada documento es externo, se valida antes de tocarlo. `parse` lanza si no cumple.
-        const data = cardDocumentSchema.parse(document.data());
-        return this.toCard(document.id, data);
-      })
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  constructor(private readonly firestore: Firestore) {
+    super();
   }
 
-  override async listByBook(uid: string, bookId: string): Promise<Card[]> {
-    // Mismo criterio que listByChapter: filtro por igualdad + orden en memoria (sin índice compuesto).
-    const cardsQuery = query(this.cardsCollection(uid), where('bookId', '==', bookId));
-    const snapshot = await getDocs(cardsQuery);
-
-    return snapshot.docs
-      .map((document) => {
-        const data = cardDocumentSchema.parse(document.data());
-        return this.toCard(document.id, data);
-      })
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  async listByChapter(uid: string, chapterId: string): Promise<Card[]> {
+    const snapshot = await getDocs(query(this.cardsOf(uid), where('chapterId', '==', chapterId)));
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
-  override async listDue(uid: string, endOfDay: Date): Promise<Card[]> {
-    // Rango sobre un solo campo (`scheduling.due`): auto-indexado, sin índice compuesto.
-    const cardsQuery = query(
-      this.cardsCollection(uid),
-      where('scheduling.due', '<=', Timestamp.fromDate(endOfDay)),
+  // Las dos lecturas de "listas" solo acotan por vencimiento: ni filtran suspendidas (exigiría otro
+  // índice y dejaría fuera documentos viejos sin el campo) ni ordenan; eso lo hace la cola.
+  async listReady(uid: string, before: Date): Promise<Card[]> {
+    const snapshot = await getDocs(query(this.cardsOf(uid), dueUpTo(before)));
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
+  }
+
+  async listReadyByBook(uid: string, bookId: string, before: Date): Promise<Card[]> {
+    // Usa el índice compuesto `bookId + scheduling.due` declarado en firestore.indexes.json.
+    const snapshot = await getDocs(
+      query(this.cardsOf(uid), where('bookId', '==', bookId), dueUpTo(before)),
     );
-    const snapshot = await getDocs(cardsQuery);
-
-    return snapshot.docs.map((document) => {
-      const data = cardDocumentSchema.parse(document.data());
-      return this.toCard(document.id, data);
-    });
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
-  override async countByState(uid: string): Promise<CardStateCounts> {
-    const cards = this.cardsCollection(uid);
-    // Conteo agregado en el servidor (no se leen los documentos). Estados: 0=New, 1=Learning,
-    // 2=Review, 3=Relearning. "En aprendizaje" agrupa Learning + Relearning.
-    const [newCards, learning, review] = await Promise.all([
-      getCountFromServer(query(cards, where('scheduling.state', '==', 0))),
-      getCountFromServer(query(cards, where('scheduling.state', 'in', [1, 3]))),
-      getCountFromServer(query(cards, where('scheduling.state', '==', 2))),
-    ]);
-    return {
-      newCards: newCards.data().count,
-      learning: learning.data().count,
-      review: review.data().count,
-    };
+  // Del servidor, nunca de la caché: la caché puede tener solo parte del libro y un archivo
+  // exportado incompleto que parece completo es peor que ninguno. Sin red, falla.
+  async listByBookFromServer(uid: string, bookId: string): Promise<Card[]> {
+    const snapshot = await getDocsFromServer(
+      query(this.cardsOf(uid), where('bookId', '==', bookId)),
+    );
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
-  override async create(uid: string, input: CardCreateInput): Promise<Card> {
-    const reference = doc(this.cardsCollection(uid));
-    const now = new Date();
-    await setDoc(reference, cardToFirestoreDocument(input, now));
-    return { ...input, id: reference.id, createdAt: now, updatedAt: now };
+  // La lectura normal (caché primero sin red): para practicar, lo que el dispositivo tenga basta.
+  async listByBook(uid: string, bookId: string): Promise<Card[]> {
+    const snapshot = await getDocs(query(this.cardsOf(uid), where('bookId', '==', bookId)));
+    return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
-  override async createMany(uid: string, inputs: CardCreateInput[]): Promise<Card[]> {
-    const now = new Date();
-    const created: Card[] = [];
-
-    // Firestore limita cada batch a 500 operaciones; se trocea por si la importación es grande.
-    for (const chunk of this.chunk(inputs, MAX_BATCH_SIZE)) {
-      const batch = writeBatch(this.firestore);
-      for (const input of chunk) {
-        const reference = doc(this.cardsCollection(uid));
-        batch.set(reference, cardToFirestoreDocument(input, now));
-        created.push({ ...input, id: reference.id, createdAt: now, updatedAt: now });
-      }
-      await batch.commit();
+  async create(uid: string, card: NewCard): Promise<Card> {
+    const [created] = await this.createMany(uid, [card]);
+    if (!created) {
+      throw new Error('La tarjeta no se creó.');
     }
     return created;
   }
 
-  override async update(
-    uid: string,
-    cardId: string,
-    changes: Partial<CardContentDraft>,
-  ): Promise<void> {
-    const data: Record<string, unknown> = { updatedAt: Timestamp.fromDate(new Date()) };
-    if (changes.front !== undefined) {
-      data['front'] = changes.front;
+  async createMany(uid: string, cards: readonly NewCard[]): Promise<Card[]> {
+    const bookId = cards[0]?.bookId;
+    if (bookId === undefined) {
+      return [];
     }
-    if (changes.back !== undefined) {
-      data['back'] = changes.back;
-    }
-    if (changes.cardType !== undefined) {
-      // Básica = sin campo (deleteField evita dejar un 'basic' residual si alguna vez se convirtiera).
-      data['cardType'] = changes.cardType === 'basic' ? deleteField() : changes.cardType;
-    }
-    await updateDoc(doc(this.cardsCollection(uid), cardId), data);
+    return this.replaceCards(uid, bookId, [], cards);
   }
 
-  override async updateScheduling(
+  async replaceInChapter(
     uid: string,
-    cardId: string,
-    scheduling: CardScheduling,
-  ): Promise<void> {
-    await updateDoc(doc(this.cardsCollection(uid), cardId), {
-      scheduling: schedulingToFirestore(scheduling),
-      updatedAt: Timestamp.fromDate(new Date()),
+    bookId: string,
+    chapterId: string,
+    cards: readonly NewCard[],
+  ): Promise<ChapterReplacement> {
+    if (cards.some((card) => card.chapterId !== chapterId)) {
+      throw new Error('Las tarjetas nuevas de un reemplazo deben ser del mismo capítulo.');
+    }
+    // Lo que el capítulo tiene de verdad, del servidor: la lista cargada pudo quedarse vieja.
+    const current = await getDocsFromServer(
+      query(this.cardsOf(uid), where('chapterId', '==', chapterId)),
+    );
+    const idsToDelete = current.docs.map((card) => card.id);
+    const created = await this.replaceCards(uid, bookId, idsToDelete, cards);
+    return { created, deletedCount: idsToDelete.length };
+  }
+
+  /**
+   * Bajas (−1) seguidas de altas (+1) en lotes con su ajuste del contador. Con 447 operaciones o
+   * menos es un único lote: o se escribe todo o nada. Cada lote que crea toca también el capítulo
+   * (`updatedAt`): si otro dispositivo lo borró, el lote falla entero (no existe el documento) y no
+   * quedan tarjetas sin capítulo, que nadie podría ver ni borrar.
+   */
+  private async replaceCards(
+    uid: string,
+    bookId: string,
+    cardIdsToDelete: readonly string[],
+    cards: readonly NewCard[],
+  ): Promise<Card[]> {
+    if (cards.some((card) => card.bookId !== bookId)) {
+      throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo libro.');
+    }
+    const chapterId = cards[0]?.chapterId;
+    if (cards.some((card) => card.chapterId !== chapterId)) {
+      throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo capítulo.');
+    }
+    const now = new Date();
+    const created = cards.map((card, position) => ({
+      ref: doc(this.cardsOf(uid)),
+      card: toStoredCard(card),
+      // Escalonadas por posición: la cola desempata las nuevas por fecha de creación, así entran
+      // en el orden recibido (el del archivo al importar).
+      createdAt: new Date(now.getTime() + position),
+    }));
+    await writeInCountedBatches({
+      firestore: this.firestore,
+      bookRef: this.bookRef(uid, bookId),
+      ...(chapterId !== undefined
+        ? {
+            everyBatch: {
+              apply: (writer: BatchWriter) =>
+                writer.update(this.chapterRef(uid, chapterId), { updatedAt: now }),
+              delta: 0 as const,
+            },
+          }
+        : {}),
+      operations: [
+        ...cardIdsToDelete.map((cardId) => ({
+          apply: (writer: BatchWriter) => writer.delete(this.cardRef(uid, cardId)),
+          delta: -1 as const,
+        })),
+        ...created.map(({ ref, card, createdAt }) => ({
+          apply: (writer: BatchWriter) =>
+            writer.set(ref, { ...card, createdAt, updatedAt: createdAt }),
+          delta: 1 as const,
+        })),
+      ],
+    });
+    return created.map(({ ref, card, createdAt }) => ({
+      id: ref.id,
+      ...card,
+      createdAt,
+      updatedAt: createdAt,
+    }));
+  }
+
+  /** `example: null` elimina el campo; un ejemplo se guarda recortado; ausente no se toca. */
+  async updateContent(uid: string, cardId: string, changes: CardContentChanges): Promise<void> {
+    const { example, ...content } = changes;
+    await updateDoc(this.cardRef(uid, cardId), {
+      ...content,
+      ...(example === null ? { example: deleteField() } : {}),
+      ...(typeof example === 'string' ? { example: example.trim() } : {}),
+      updatedAt: new Date(),
     });
   }
 
-  override async delete(uid: string, cardId: string): Promise<void> {
-    await deleteDoc(doc(this.cardsCollection(uid), cardId));
+  async setSuspended(uid: string, cardId: string, suspended: boolean): Promise<void> {
+    await updateDoc(this.cardRef(uid, cardId), { suspended, updatedAt: new Date() });
   }
 
-  private cardsCollection(uid: string) {
-    return collection(this.firestore, USERS_COLLECTION, uid, CARDS_COLLECTION);
+  async deleteWithCount(uid: string, bookId: string, cardId: string): Promise<void> {
+    await this.deleteManyWithCount(uid, bookId, [cardId]);
   }
 
-  /** Trocea un arreglo en lotes de tamaño máximo `size`. */
-  private chunk<T>(items: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let start = 0; start < items.length; start += size) {
-      chunks.push(items.slice(start, start + size));
+  async deleteManyWithCount(
+    uid: string,
+    bookId: string,
+    cardIds: readonly string[],
+  ): Promise<number> {
+    const goneIds: string[] = [];
+    let deleted = 0;
+    for (const chunk of chunksOf(cardIds, COUNTED_GROUP_SIZE)) {
+      try {
+        deleted += await this.deleteExisting(uid, bookId, chunk);
+      } catch (error) {
+        // Los tramos confirmados ya descontaron lo suyo: se informa qué tarjetas ya no están.
+        throw new PartialDeletionError(goneIds, error);
+      }
+      goneIds.push(...chunk);
     }
-    return chunks;
+    return deleted;
   }
 
-  /** Construye el modelo del dominio. Con `exactOptionalPropertyTypes`, los opcionales se asignan
-   *  sólo cuando están presentes (no como `undefined`). */
-  private toCard(id: string, data: CardDocument): Card {
-    const card: Card = {
-      id,
-      bookId: data.bookId,
-      chapterId: data.chapterId,
-      noteId: data.noteId,
-      direction: data.direction,
-      front: data.front,
-      back: data.back,
-      scheduling: { ...data.scheduling, state: data.scheduling.state as CardState },
-      suspended: data.suspended,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    };
-    if (data.pronunciation !== undefined) {
-      card.pronunciation = data.pronunciation;
-    }
-    if (data.example !== undefined) {
-      card.example = data.example;
-    }
-    if (data.audioUrl !== undefined) {
-      card.audioUrl = data.audioUrl;
-    }
-    if (data.notes !== undefined) {
-      card.notes = data.notes;
-    }
-    if (data.tags !== undefined) {
-      card.tags = data.tags;
-    }
-    return card;
+  /**
+   * Un tramo en una transacción: lee las tarjetas, borra las que existen y descuenta exactamente
+   * esas. Una que otra pestaña ya borró no descuenta otra vez (el contador guardado no se
+   * descuadra). Devuelve cuántas borró.
+   */
+  private deleteExisting(uid: string, bookId: string, cardIds: readonly string[]): Promise<number> {
+    return runTransaction(this.firestore, async (transaction) => {
+      const snapshots = await Promise.all(
+        cardIds.map((cardId) => transaction.get(this.cardRef(uid, cardId))),
+      );
+      const existing = snapshots.filter((snapshot) => snapshot.exists());
+      existing.forEach((snapshot) => transaction.delete(snapshot.ref));
+      if (existing.length > 0) {
+        transaction.update(this.bookRef(uid, bookId), { cardCount: increment(-existing.length) });
+      }
+      return existing.length;
+    });
   }
+
+  private cardsOf(uid: string) {
+    return collection(this.firestore, 'users', uid, 'cards');
+  }
+
+  private cardRef(uid: string, cardId: string): DocumentReference {
+    return doc(this.cardsOf(uid), cardId);
+  }
+
+  private bookRef(uid: string, bookId: string): DocumentReference {
+    return doc(this.firestore, 'users', uid, 'books', bookId);
+  }
+
+  private chapterRef(uid: string, chapterId: string): DocumentReference {
+    return doc(this.firestore, 'users', uid, 'chapters', chapterId);
+  }
+}
+
+/**
+ * Lo que se escribe de una tarjeta nueva: los opcionales ausentes no se envían (Firestore rechaza
+ * `undefined`), `cardType` solo en las cloze y el ejemplo recortado (vacío = sin ejemplo).
+ */
+function dueUpTo(before: Date) {
+  return where('scheduling.due', '<=', Timestamp.fromDate(before));
+}
+
+function toStoredCard(card: NewCard): NewCard {
+  const { cardType, example, ...rest } = card;
+  const trimmedExample = example?.trim();
+  return {
+    ...withoutUndefined(rest),
+    ...(cardType === 'cloze' ? { cardType } : {}),
+    ...(trimmedExample ? { example: trimmedExample } : {}),
+  };
+}
+
+function withoutUndefined<T extends object>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, field]) => field !== undefined)) as T;
+}
+
+/** El modelo de dominio a partir del documento validado, sin propiedades `undefined`. */
+function toCard(document: CardDocument & { readonly id: string }): Card {
+  return withoutUndefined(document) as Card;
 }

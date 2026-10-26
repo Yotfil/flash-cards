@@ -1,0 +1,16 @@
+@for (block of blocks(); track block.index) {
+  @if (variant() === 'card') {
+    <div
+      data-skeleton-block="card"
+      aria-hidden="true"
+      class="skeleton-block h-20 rounded-2xl"
+    ></div>
+  } @else {
+    <div
+      data-skeleton-block="text"
+      aria-hidden="true"
+      class="skeleton-block h-3.5 rounded-md"
+      [class.w-2/3]="block.isLast"
+    ></div>
+  }
+}

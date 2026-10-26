@@ -1,0 +1,45 @@
+<main class="safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4 pt-4">
+  @if (session.finished()) {
+    <app-practice-summary
+      [score]="session.score()"
+      [total]="session.total()"
+      [originKind]="originKind()"
+      (back)="leave()"
+    />
+  } @else if (session.current(); as question) {
+    <app-session-top-bar
+      [progress]="session.progress()"
+      [label]="positionText()"
+      (exit)="leave()"
+    />
+
+    @if (question.type === 'multiple-choice') {
+      <app-multiple-choice-question
+        [prompt]="question.prompt"
+        [options]="question.options ?? []"
+        [answered]="answered()"
+        (choose)="session.answer($event)"
+      />
+    } @else {
+      <app-written-question
+        [questionId]="question.id"
+        [prompt]="question.prompt"
+        [answered]="answered() !== null"
+        (submitted)="session.answer($event)"
+      />
+    }
+
+    <app-practice-feedback [result]="session.feedback()" />
+
+    @if (session.feedback()) {
+      <button
+        #advanceButton
+        type="button"
+        class="press self-center rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink shadow-btn"
+        (click)="session.advance()"
+      >
+        {{ advanceText() }}
+      </button>
+    }
+  }
+</main>

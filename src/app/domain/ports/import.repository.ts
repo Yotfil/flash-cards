@@ -1,34 +1,35 @@
-// Puerto de importación: escribe de una vez un libro completo (libro + capítulos + tarjetas) de
-// forma consistente. Es una operación de escritura multi-colección que debe quedar atómica, por eso
-// tiene su propio puerto en vez de encadenar los repos sueltos. La implementación (Firestore) usa un
-// batch. El servicio arma el contenido; el repositorio asigna ids y relaciones.
+import type { Book, BookDraft } from '../models/book.model';
+import type { NewCard } from '../models/card.model';
 
-import type { Book, CardDirection, CardScheduling, CardType } from '../models';
-
-/** Una tarjeta a importar, sin ids ni relaciones (el repositorio les pone `bookId`/`chapterId`). */
-export interface ImportCardInput {
-  noteId: string;
-  direction: CardDirection;
-  cardType: CardType;
-  front: string;
-  back: string;
-  scheduling: CardScheduling;
-  suspended: boolean;
-}
-
-export interface ImportChapterInput {
-  name: string;
-  order: number;
-  cards: ImportCardInput[];
-}
+/** Una tarjeta a crear dentro de un capítulo importado: el libro y el capítulo los pone el almacén. */
+export type ImportedCardInput = Omit<NewCard, 'bookId' | 'chapterId'>;
 
 export interface ImportBookInput {
-  /** Metadatos del libro a crear (sin `id` ni timestamps, que pone el repositorio). */
-  book: Omit<Book, 'id' | 'createdAt' | 'updatedAt'>;
-  chapters: ImportChapterInput[];
+  book: BookDraft & { order: number; cardCount: number };
+  chapters: { name: string; order: number; cards: ImportedCardInput[] }[];
 }
 
+/**
+ * La escritura de un libro importado falló a mitad. `committedCount` dice cuántas escrituras se
+ * habían confirmado y `rolledBack` si el borrado compensatorio las quitó todas.
+ */
+export class ImportBookError extends Error {
+  override readonly name = 'ImportBookError';
+
+  constructor(
+    readonly committedCount: number,
+    readonly rolledBack: boolean,
+    cause: unknown,
+    /** Por qué no se pudo deshacer lo escrito (solo si `rolledBack` es falso). */
+    readonly rollbackFailure?: unknown,
+  ) {
+    super(`La importación se cortó tras ${committedCount} escrituras`, { cause });
+  }
+}
+
+// Crear un libro entero de una vez (libro, capítulos y tarjetas). El libro se escribe en el
+// último lote, así nunca aparece a medias en la Biblioteca; si algo falla, se deshace lo escrito.
 export abstract class ImportRepository {
-  /** Crea el libro con sus capítulos y tarjetas. Devuelve el id del libro creado. */
-  abstract importBook(uid: string, input: ImportBookInput): Promise<string>;
+  /** Devuelve el libro creado. Lanza `ImportBookError` si la escritura se cortó. */
+  abstract importBook(uid: string, input: ImportBookInput): Promise<Book>;
 }

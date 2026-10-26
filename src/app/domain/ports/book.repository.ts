@@ -1,29 +1,18 @@
-// Puerto del repositorio de libros: acceso a la colección `/users/{uid}/books` sin saber que
-// detrás está Firestore. La implementación vive en `infrastructure/firestore`. Todas las
-// operaciones reciben el `uid` del dueño: el aislamiento por usuario es del dominio, no un detalle
-// del adaptador.
+import type { Book, BookContents, BookDraft, CardStateTotals } from '../models/book.model';
 
-import type { Book, BookDraft } from '../models';
-
-/**
- * Datos necesarios para crear un libro: lo que controla el usuario (`BookDraft`) más el `order`
- * que asigna el servicio. El `id`, `cardCount` y los timestamps los pone el repositorio.
- */
-export type BookCreateInput = BookDraft & { order: number };
-
+// Libros del usuario en el almacén. Los conteos son agregaciones en el servidor: no leen tarjetas.
 export abstract class BookRepository {
-  /** Lista los libros del usuario ordenados por `order` ascendente. */
+  /** Los libros del usuario ordenados por `order`. Lanza si un documento no es válido. */
   abstract listByUser(uid: string): Promise<Book[]>;
-
-  /** Crea un libro y devuelve el modelo resultante (con `id` y timestamps ya asignados). */
-  abstract create(uid: string, input: BookCreateInput): Promise<Book>;
-
-  /** Aplica cambios parciales a un libro existente. */
+  abstract create(uid: string, draft: BookDraft & { order: number }): Promise<Book>;
+  /** Cambia solo los campos indicados (y la fecha de actualización). */
   abstract update(uid: string, bookId: string, changes: Partial<BookDraft>): Promise<void>;
-
-  /** Borra un libro. */
-  abstract delete(uid: string, bookId: string): Promise<void>;
-
-  /** Ajusta el conteo denormalizado de tarjetas del libro (+1 al crear, -1 al borrar). */
+  /** Suma o resta al contador de tarjetas de forma atómica. */
   abstract incrementCardCount(uid: string, bookId: string, delta: number): Promise<void>;
+  abstract countContents(uid: string, bookId: string): Promise<BookContents>;
+  /** Borra las tarjetas, los capítulos y por último el libro. El historial de repasos se conserva. */
+  abstract deleteWithContents(uid: string, bookId: string): Promise<void>;
+  abstract countCardsByState(uid: string, bookId: string): Promise<CardStateTotals>;
+  /** Las mismas tres agregaciones sobre todas las tarjetas de la cuenta (incluidas suspendidas). */
+  abstract countCollectionByState(uid: string): Promise<CardStateTotals>;
 }

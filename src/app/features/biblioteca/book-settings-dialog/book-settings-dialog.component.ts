@@ -1,62 +1,94 @@
-import { Component, type OnInit, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-  type NonNullableFormBuilder,
-} from '@angular/forms';
+  FormField,
+  form,
+  submit,
+  validateStandardSchema,
+  type FieldTree,
+} from '@angular/forms/signals';
 
-import type { Book, BookDraft } from '@domain/models';
-import { ModalComponent } from '@shared/modal/modal.component';
+import type { Book } from '@domain/models/book.model';
+import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
+import { BooksService } from '@services/books/books.service';
+import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
+import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
-/** Ajustes propios de un libro, en diálogo. Hoy expone la sección "Tarjetas" (nuevas/día y máx.
- *  repasos/día); está estructurado por secciones para sumar más ajustes en próximas iteraciones sin
- *  reescribirlo. Emite sólo los campos que cambian (`Partial<BookDraft>`) en `saved`; el padre
- *  persiste. El cascarón accesible (role="dialog", aria-modal, Escape) lo pone ModalComponent. */
+import { BIBLIOTECA_COPY } from '../biblioteca.copy';
+import { bookSettingsFormSchema, type BookSettingsFormValue } from '../book-settings-form.schema';
+
+export interface BookSettingsDialogData {
+  readonly book: Book;
+}
+
+// Ajustes de un libro: la tanda de nuevas por día y el tope de repasos (0 = sin tope). Guarda
+// solo esos dos campos y se cierra con el libro actualizado; si falla, el error queda dentro.
 @Component({
   selector: 'app-book-settings-dialog',
-  imports: [ModalComponent, ReactiveFormsModule],
+  imports: [FormField],
   templateUrl: './book-settings-dialog.component.html',
   styleUrl: './book-settings-dialog.component.scss',
 })
-export class BookSettingsDialogComponent implements OnInit {
-  /** Libro cuyos ajustes se editan. Requerido: el diálogo siempre es sobre un libro concreto. */
-  readonly book = input.required<Book>();
-  /** El padre lo pone en true mientras persiste; bloquea botones y reenvíos. */
-  readonly pending = input(false);
-  readonly saved = output<Partial<BookDraft>>();
-  readonly cancelled = output<void>();
+export class BookSettingsDialogComponent {
+  private readonly data = inject<BookSettingsDialogData>(DIALOG_DATA);
+  private readonly dialogRef = inject<AppDialogRef<Book>>(AppDialogRef);
+  private readonly books = inject(BooksService);
+  private readonly logger = inject(Logger);
 
-  private readonly formBuilder: NonNullableFormBuilder = inject(FormBuilder).nonNullable;
+  protected readonly online = inject(ConnectivityPort).online;
+  protected readonly copy = BIBLIOTECA_COPY.bookSettings;
+  protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly title = this.copy.title(this.data.book.name);
 
-  protected readonly heading = computed(() => `Ajustes de «${this.book().name}»`);
-
-  protected readonly form: FormGroup = this.formBuilder.group({
-    newCardsPerDay: [0, [Validators.required, Validators.min(0)]],
-    maxReviewsPerDay: [0, [Validators.required, Validators.min(0)]],
+  private readonly model = signal<BookSettingsFormValue>({
+    newCardsPerDay: this.data.book.newCardsPerDay,
+    maxReviewsPerDay: this.data.book.maxReviewsPerDay,
   });
+  protected readonly settingsForm = form(this.model, (path) =>
+    validateStandardSchema(path, bookSettingsFormSchema),
+  );
+  protected readonly saving = signal(false);
+  protected readonly failed = signal(false);
+  protected readonly canSubmit = computed(
+    () => this.settingsForm().valid() && !this.saving() && this.online(),
+  );
 
-  ngOnInit(): void {
-    const book = this.book();
-    this.form.setValue({
-      newCardsPerDay: book.newCardsPerDay,
-      maxReviewsPerDay: book.maxReviewsPerDay,
+  /** El error de un campo se muestra en cuanto el usuario lo cambia o lo abandona. */
+  protected fieldError(field: FieldTree<number>): string | null {
+    const state = field();
+    return (state.dirty() || state.touched()) && state.invalid()
+      ? (state.errors()[0]?.message ?? null)
+      : null;
+  }
+
+  protected async submitForm(event: Event): Promise<void> {
+    event.preventDefault();
+    if (!this.canSubmit()) {
+      return;
+    }
+    await submit(this.settingsForm, async () => {
+      await this.save();
+      return undefined;
     });
   }
 
-  protected submit(): void {
-    if (this.pending()) {
-      return;
+  protected cancel(): void {
+    this.dialogRef.close();
+  }
+
+  private async save(): Promise<void> {
+    this.saving.set(true);
+    this.failed.set(false);
+    this.dialogRef.setPending(true);
+    try {
+      const { newCardsPerDay, maxReviewsPerDay } = this.model();
+      const book = await this.books.update(this.data.book.id, { newCardsPerDay, maxReviewsPerDay });
+      this.dialogRef.close(book);
+    } catch (error) {
+      this.logger.error(this.copy.saveError, error);
+      this.failed.set(true);
+      this.saving.set(false);
+      this.dialogRef.setPending(false);
     }
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    const value = this.form.getRawValue();
-    this.saved.emit({
-      newCardsPerDay: Number(value.newCardsPerDay),
-      maxReviewsPerDay: Number(value.maxReviewsPerDay),
-    });
   }
 }

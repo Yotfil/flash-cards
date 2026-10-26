@@ -1,8 +1,10 @@
-// Contador del día (`/users/{uid}/dailyStats/{YYYY-MM-DD}`). Especificación §6.8.
-// Doble función: hace cumplir el tope de nuevas por día y alimenta las estadísticas básicas.
-// El id del documento ES la fecha, así que leer/escribir "hoy" es directo.
+import type { Rating } from './rating';
 
-/** Conteo de calificaciones del día, por nombre legible. */
+// Indicadores del día de estudio (`/users/{uid}/dailyStats/{YYYY-MM-DD}`). Hacen cumplir los topes
+// diarios de cada libro, alimentan la racha y las estadísticas. El id del documento ES la fecha
+// del día de estudio, así que leer "hoy" es directo. Mismo modelo que la 0.1.1 (datos compatibles).
+
+/** Calificaciones del día por nombre legible. */
 export interface RatingCounts {
   again: number;
   hard: number;
@@ -11,17 +13,27 @@ export interface RatingCounts {
 }
 
 export interface DailyStats {
-  /** Igual a `date`: "2026-06-21" en la zona horaria del usuario. */
+  /** Igual a `date`. */
   id: string;
+  /** "YYYY-MM-DD" del día de estudio, en la zona horaria del usuario. */
   date: string;
-  /** Nuevas introducidas hoy por libro (clave = bookId), para hacer cumplir newCardsPerDay. */
+  /** Nuevas introducidas hoy por libro (clave = bookId): hace cumplir `newCardsPerDay`. */
   newCardsIntroduced: Record<string, number>;
   reviewsCompleted: number;
   /**
-   * Repasos REALES completados hoy por libro (clave = bookId), para hacer cumplir maxReviewsPerDay.
-   * Cuenta sólo tarjetas que NO estaban en estado New (la introducción de una nueva va en
-   * `newCardsIntroduced`), igual que el tope sólo aplica a las vencidas.
+   * Repasos de tarjetas que no eran nuevas, por libro (clave = bookId): hace cumplir
+   * `maxReviewsPerDay`, que solo aplica a las vencidas.
    */
   reviewsCompletedByBook: Record<string, number>;
   ratingCounts: RatingCounts;
+}
+
+const RATING_COUNT_KEYS = { 1: 'again', 2: 'hard', 3: 'good', 4: 'easy' } as const satisfies Record<
+  Rating,
+  keyof RatingCounts
+>;
+
+/** El contador de `ratingCounts` que suma cada grado. */
+export function ratingCountKey(rating: Rating): keyof RatingCounts {
+  return RATING_COUNT_KEYS[rating];
 }

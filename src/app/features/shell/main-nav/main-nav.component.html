@@ -1,0 +1,38 @@
+<nav
+  [attr.aria-label]="copy.navLabel"
+  [style.--nav-index]="activeIndex()"
+  class="glass-nav m-2.5 rounded-[22px] p-2 md:m-0 md:flex md:h-full md:w-56 md:flex-col md:rounded-none md:border-0 md:border-r md:border-glass-border-soft md:px-3.5 md:py-6"
+>
+  <div
+    data-brand
+    class="hidden items-center gap-2.5 px-2.5 pt-1 pb-6 text-lg font-extrabold tracking-tight text-text md:flex"
+  >
+    <span
+      class="inline-grid size-[26px] place-items-center rounded-lg bg-linear-135 from-accent to-accent-deep text-accent-ink"
+    >
+      <app-icon name="spark" size="sm" />
+    </span>
+    {{ copy.brand }}
+  </div>
+
+  <ul class="relative grid grid-cols-4 text-text-faint md:flex md:flex-col md:gap-0.5">
+    <li
+      aria-hidden="true"
+      class="nav-pill pointer-events-none absolute inset-y-0 left-0 w-1/4 rounded-[15px] bg-accent-tint transition-transform duration-(--duration-base) ease-out-soft md:inset-y-auto md:top-0 md:h-11 md:w-full"
+      [class.opacity-0]="activeIndex() < 0"
+    ></li>
+    @for (destination of destinations; track destination.section) {
+      <li class="relative">
+        <a
+          [routerLink]="'/' + destination.section"
+          routerLinkActive="text-accent-text"
+          ariaCurrentWhenActive="page"
+          class="press flex flex-col items-center gap-1 rounded-[15px] pt-1.5 pb-1 text-[10.5px] font-semibold not-aria-[current=page]:hover:text-text-dim md:h-11 md:flex-row md:justify-start md:gap-3 md:px-3.5 md:py-0 md:text-sm"
+        >
+          <app-icon [name]="destination.icon" />
+          <span>{{ destination.label }}</span>
+        </a>
+      </li>
+    }
+  </ul>
+</nav>

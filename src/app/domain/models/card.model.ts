@@ -1,20 +1,15 @@
-// La tarjeta (`/users/{uid}/cards/{cardId}`): el corazón del modelo. Contenido y
-// programación conviven en un mismo documento, en bloques distintos. Especificación §6.6.
+// La tarjeta (`/users/{uid}/cards/{cardId}`): contenido y programación en un mismo documento.
 
-/**
- * Dirección de una tarjeta concreta. Dos tarjetas hermanas con el mismo `noteId` y distinta
- * dirección dan el estudio bidireccional (§6.10).
- */
+/** Dirección de la tarjeta. Solo `forward` en 1.0.0; `reverse` queda para el estudio bidireccional. */
 export type CardDirection = 'forward' | 'reverse';
 
 /**
- * Tipo de tarjeta. `basic` = anverso/reverso. `cloze` = "rellenar el hueco": `front` guarda el texto
- * plantilla con marcadores `{{...}}` y `back` queda vacío. Ausencia = `basic` (Principio 2: campo
- * nuevo opcional; las tarjetas previas no lo tienen y se tratan como básicas).
+ * `basic` = anverso / reverso. `cloze` = rellenar el hueco: `front` es el texto con `{{…}}` y `back`
+ * queda vacío. Ausente en el documento = `basic` (tarjetas anteriores al tipo).
  */
 export type CardType = 'basic' | 'cloze';
 
-/** Estado FSRS de la tarjeta. Espeja el enum `State` de ts-fsrs. */
+/** Estado de la programación espaciada. Espeja el `State` de ts-fsrs por valor. */
 export enum CardState {
   New = 0,
   Learning = 1,
@@ -22,18 +17,15 @@ export enum CardState {
   Relearning = 3,
 }
 
-/**
- * Bloque de programación: ESPEJA el objeto `Card` de ts-fsrs (§6.6). El adaptador de
- * scheduling lo entrega casi tal cual a la librería y reescribe el resultado del repaso.
- */
+/** Bloque de programación: espeja la `Card` de ts-fsrs. */
 export interface CardScheduling {
-  /** Cuándo vuelve a tocar; mueve toda la cola diaria. */
+  /** Cuándo vuelve a tocar. */
   due: Date;
   stability: number;
   difficulty: number;
   elapsedDays: number;
   scheduledDays: number;
-  /** Pasos de aprendizaje pendientes (ts-fsrs v5). Necesario para el round-trip de calificación. */
+  /** Pasos de aprendizaje pendientes (ts-fsrs v5). */
   learningSteps: number;
   reps: number;
   lapses: number;
@@ -43,46 +35,46 @@ export interface CardScheduling {
 
 export interface Card {
   id: string;
-
-  // --- Relaciones ---
   bookId: string;
   chapterId: string;
-  /** Agrupa tarjetas que comparten contenido (para bidireccional). */
+  /** Agrupa tarjetas hermanas (bidireccional, futuro). Hoy cada tarjeta tiene el suyo. */
   noteId: string;
   direction: CardDirection;
 
-  // --- Contenido (lo que se ve) ---
-  /** Tipo de tarjeta; ausente = `basic` (Principio 2). En `cloze`, `front` es la plantilla `{{...}}`. */
+  /** Ausente = básica. */
   cardType?: CardType;
   front: string;
   back: string;
-  // Opcionales: Principio 2 (esquema listo / UI después). El MVP solo pinta front/back.
-  /** Fonética/IPA (UI futura). */
-  pronunciation?: string;
-  /** Frase de ejemplo (muy útil en vocabulario). */
+  /** Frase de ejemplo: se ve al revelar. Opcional. */
   example?: string;
-  /** Audio, probablemente TTS al vuelo (UI futura). */
+  // Campos futuros (esquema listo, UI después): se leen y se conservan, no se editan.
+  pronunciation?: string;
   audioUrl?: string;
-  /** Mnemónico/notas (UI futura). */
   notes?: string;
-  /** Etiquetas para filtrado futuro. */
   tags?: string[];
 
-  // --- Programación ---
   scheduling: CardScheduling;
-
-  /** Apartada del repaso manualmente. Default false. */
+  /** Apartada del repaso a mano; sigue contando en el libro y el capítulo. */
   suspended: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-/**
- * Contenido que el usuario edita en el formulario del MVP. Principio 2: el modelo tiene más campos
- * (pronunciation, example, …) pero la UI del MVP sólo expone anverso/reverso.
- */
+/** Lo que el formulario decide de una tarjeta. */
 export interface CardContentDraft {
   cardType: CardType;
   front: string;
   back: string;
+  /** Vacío o ausente = sin ejemplo. */
+  example?: string;
 }
+
+/** Cambios de contenido al editar. `example: null` borra el ejemplo; ausente no lo toca. */
+export interface CardContentChanges {
+  front?: string;
+  back?: string;
+  example?: string | null;
+}
+
+/** Lo que se guarda al crear: todo menos lo que pone el almacén (id y fechas). */
+export type NewCard = Omit<Card, 'id' | 'createdAt' | 'updatedAt'>;

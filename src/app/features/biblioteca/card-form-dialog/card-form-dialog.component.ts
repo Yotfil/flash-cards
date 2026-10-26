@@ -1,110 +1,125 @@
-import { Component, type OnInit, computed, inject, input, output, signal } from '@angular/core';
-import {
-  FormGroup,
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-  type AbstractControl,
-  type NonNullableFormBuilder,
-  type ValidationErrors,
-} from '@angular/forms';
+import { Component, computed, inject, signal, type Signal } from '@angular/core';
+import { FormField, form, submit, validateStandardSchema } from '@angular/forms/signals';
 
-import type { Card, CardContentDraft, CardType } from '@domain/models';
-import { hasCloze } from '@services/cloze';
-import { ModalComponent } from '@shared/modal/modal.component';
+import type { Card, CardType } from '@domain/models/card.model';
+import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
+import { isDuplicateDraft } from '@services/cards/card-duplicates';
+import { CardsService } from '@services/cards/cards.service';
+import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
+import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
-/** Valida que un texto cloze tenga al menos un hueco `{{...}}`. */
-function clozeValidator(control: AbstractControl): ValidationErrors | null {
-  return hasCloze((control.value ?? '') as string) ? null : { cloze: true };
-}
+import { BIBLIOTECA_COPY } from '../biblioteca.copy';
+import { cardFormSchema, type CardFormValue } from '@services/cards/card-form.schema';
 
-/** Formulario de tarjeta en diálogo (crear/editar). Soporta dos tipos: básica (anverso/reverso) y
- *  cloze (un texto con huecos `{{...}}`). El tipo se elige al crear; al editar queda fijo. Emite un
- *  `CardContentDraft` válido en `saved`; el padre decide si crea o edita. Accesible: role="dialog",
- *  aria-modal, labels asociadas, cierre con Escape. */
+export type CardFormDialogData =
+  | { mode: 'create'; bookId: string; chapterId: string; chapterCards: Signal<Card[]> }
+  | { mode: 'edit'; card: Card };
+
+// Crear una tarjeta en el capítulo abierto o editar su contenido. Se cierra solo con éxito,
+// devolviendo la tarjeta; si el guardado falla, el error se muestra dentro y el texto se conserva.
 @Component({
   selector: 'app-card-form-dialog',
-  imports: [ModalComponent, ReactiveFormsModule],
+  imports: [FormField],
   templateUrl: './card-form-dialog.component.html',
   styleUrl: './card-form-dialog.component.scss',
 })
-export class CardFormDialogComponent implements OnInit {
-  /** Tarjeta a editar; si no se pasa, el diálogo está en modo "crear". */
-  readonly card = input<Card | null>(null);
-  /** El padre lo pone en true mientras persiste; bloquea botones y reenvíos. */
-  readonly pending = input(false);
-  readonly saved = output<CardContentDraft>();
-  readonly cancelled = output<void>();
+export class CardFormDialogComponent {
+  private readonly data = inject<CardFormDialogData>(DIALOG_DATA);
+  private readonly dialogRef = inject<AppDialogRef<Card>>(AppDialogRef);
+  private readonly cards = inject(CardsService);
+  private readonly logger = inject(Logger);
 
-  private readonly formBuilder: NonNullableFormBuilder = inject(FormBuilder).nonNullable;
+  protected readonly online = inject(ConnectivityPort).online;
+  protected readonly copy = BIBLIOTECA_COPY.cardForm;
+  protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly isEdit = this.data.mode === 'edit';
 
-  /** Tipo actual del formulario. Mode-switch (no es un control): decide qué campos y validadores van. */
-  protected readonly cardType = signal<CardType>('basic');
-
-  // Ejemplos de la sintaxis cloze como texto plano (evita escapar `{{ }}` en la plantilla).
-  protected readonly clozeMarker = '{{…}}';
-  protected readonly clozePlaceholder = 'Ej. El {{gato}} es {{negro}}';
-  protected readonly isEditing = computed(() => this.card() !== null);
-  protected readonly heading = computed(() =>
-    this.isEditing() ? 'Editar tarjeta' : 'Nueva tarjeta',
+  private readonly model = signal<CardFormValue>(initialValue(this.data));
+  protected readonly cardForm = form(this.model, (path) =>
+    validateStandardSchema(path, cardFormSchema),
   );
-  protected readonly submitLabel = computed(() => (this.isEditing() ? 'Guardar' : 'Crear tarjeta'));
-
-  protected readonly form: FormGroup = this.formBuilder.group({
-    front: ['', [Validators.required, Validators.maxLength(2000)]],
-    back: ['', [Validators.required, Validators.maxLength(2000)]],
+  protected readonly isCloze = computed(() => this.model().cardType === 'cloze');
+  // Plegado salvo que la tarjeta ya tenga ejemplo: así no se esconde contenido existente.
+  protected readonly showMore = signal(this.data.mode === 'edit' && !!this.data.card.example);
+  protected readonly saving = signal(false);
+  protected readonly failed = signal(false);
+  protected readonly canSubmit = computed(
+    () => this.cardForm().valid() && !this.saving() && this.online(),
+  );
+  // Solo avisa: repetir una tarjeta es legítimo (p. ej. otra acepción), así que no bloquea.
+  protected readonly isDuplicate = computed(() => {
+    if (this.data.mode !== 'create') {
+      return false;
+    }
+    const { front, back } = this.model();
+    return isDuplicateDraft({ front, back: this.isCloze() ? '' : back }, this.data.chapterCards());
+  });
+  protected readonly frontError = computed(() => {
+    const front = this.cardForm.front();
+    return front.touched() && front.invalid() ? (front.errors()[0]?.message ?? null) : null;
+  });
+  protected readonly backError = computed(() => {
+    const back = this.cardForm.back();
+    return back.touched() && back.invalid() ? (back.errors()[0]?.message ?? null) : null;
+  });
+  protected readonly exampleError = computed(() => {
+    const example = this.cardForm.example();
+    return example.touched() && example.invalid() ? (example.errors()[0]?.message ?? null) : null;
   });
 
-  ngOnInit(): void {
-    const existing = this.card();
-    if (existing) {
-      this.setCardType(existing.cardType ?? 'basic');
-      this.form.setValue({ front: existing.front, back: existing.back });
-    } else {
-      this.setCardType('basic');
-    }
+  protected chooseType(cardType: CardType): void {
+    this.model.update((value) => ({ ...value, cardType }));
   }
 
-  /** Cambia el tipo y ajusta los validadores: cloze valida el patrón `{{...}}` en `front` y libera
-   *  `back`; básica exige ambos. Sólo se invoca al crear (al editar el tipo queda fijo). */
-  protected setCardType(type: CardType): void {
-    this.cardType.set(type);
-    const front = this.form.get('front');
-    const back = this.form.get('back');
-    if (front === null || back === null) {
-      return;
-    }
-    if (type === 'cloze') {
-      front.setValidators([Validators.required, Validators.maxLength(2000), clozeValidator]);
-      back.clearValidators();
-    } else {
-      front.setValidators([Validators.required, Validators.maxLength(2000)]);
-      back.setValidators([Validators.required, Validators.maxLength(2000)]);
-    }
-    front.updateValueAndValidity();
-    back.updateValueAndValidity();
+  protected toggleMore(): void {
+    this.showMore.update((shown) => !shown);
   }
 
-  protected showError(controlName: 'front' | 'back'): boolean {
-    const control = this.form.get(controlName);
-    return control !== null && control.invalid && control.touched;
-  }
-
-  protected submit(): void {
-    if (this.pending()) {
+  protected async submitForm(event: Event): Promise<void> {
+    event.preventDefault();
+    if (!this.canSubmit()) {
       return;
     }
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    const value = this.form.getRawValue();
-    const type = this.cardType();
-    this.saved.emit({
-      cardType: type,
-      front: value.front.trim(),
-      // En cloze el reverso no se usa: la respuesta vive dentro de la plantilla.
-      back: type === 'cloze' ? '' : value.back.trim(),
+    await submit(this.cardForm, async () => {
+      await this.save();
+      return undefined;
     });
   }
+
+  protected cancel(): void {
+    this.dialogRef.close();
+  }
+
+  private async save(): Promise<void> {
+    this.saving.set(true);
+    this.failed.set(false);
+    this.dialogRef.setPending(true);
+    try {
+      const draft = this.model();
+      const card =
+        this.data.mode === 'edit'
+          ? await this.cards.update(this.data.card.id, draft)
+          : await this.cards.create(this.data.bookId, this.data.chapterId, draft);
+      this.dialogRef.close(card);
+    } catch (error) {
+      this.logger.error(this.copy.saveError, error);
+      this.failed.set(true);
+      this.saving.set(false);
+      this.dialogRef.setPending(false);
+    }
+  }
+}
+
+function initialValue(data: CardFormDialogData): CardFormValue {
+  if (data.mode === 'create') {
+    return { cardType: 'basic', front: '', back: '', example: '' };
+  }
+  const { card } = data;
+  return {
+    cardType: card.cardType ?? 'basic',
+    front: card.front,
+    back: card.back,
+    example: card.example ?? '',
+  };
 }

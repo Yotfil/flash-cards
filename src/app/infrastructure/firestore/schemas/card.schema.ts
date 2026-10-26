@@ -1,21 +1,15 @@
-// Validación en la frontera (contrato CLAUDE.md): un documento de tarjeta que llega de Firestore es
-// EXTERNO y se valida con Zod ANTES de convertirlo en un modelo del dominio. Si no cumple, `parse`
-// lanza y el repositorio falla de forma explícita (nunca devolvemos un `Card` a medias).
-
-import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
-/** Un Timestamp de Firestore que se transforma a `Date` del dominio. */
-const firestoreTimestamp = z.instanceof(Timestamp).transform((value) => value.toDate());
+import { firestoreTimestamp } from '../document-boundary';
 
-/** Bloque de programación (espeja ts-fsrs). `lastReview` puede ser null si nunca se ha repasado. */
+// Bloque de programación (espeja ts-fsrs). `learningSteps` falta en tarjetas anteriores al repaso
+// con ts-fsrs v5 y se lee como 0; `lastReview` es `null` si nunca se repasó.
 const cardSchedulingSchema = z.object({
   due: firestoreTimestamp,
   stability: z.number(),
   difficulty: z.number(),
   elapsedDays: z.number(),
   scheduledDays: z.number(),
-  // Compat: las tarjetas creadas antes de F1.5 no tienen `learningSteps`; por defecto 0.
   learningSteps: z.number().default(0),
   reps: z.number(),
   lapses: z.number(),
@@ -23,28 +17,26 @@ const cardSchedulingSchema = z.object({
   lastReview: z.union([firestoreTimestamp, z.null()]),
 });
 
-/**
- * Forma del documento `users/{uid}/cards/{cardId}` tal como vive en Firestore (sin `id`: ese es la
- * clave del documento). Tras validar, el repositorio le añade el `id`.
- */
+// Forma del documento `users/{uid}/cards/{cardId}` (sin `id`: es la clave). Compatible con todas
+// las versiones anteriores: tipo ausente = básica, suspensión ausente = activa, campos futuros
+// (pronunciación, audio, notas, etiquetas) se leen y se conservan aunque la app no los edite.
 export const cardDocumentSchema = z.object({
   bookId: z.string(),
   chapterId: z.string(),
   noteId: z.string(),
   direction: z.enum(['forward', 'reverse']),
-  // Campo nuevo (cloze): las tarjetas previas no lo tienen → ausente, que se trata como 'basic'.
   cardType: z.enum(['basic', 'cloze']).optional(),
   front: z.string(),
   back: z.string(),
-  pronunciation: z.string().optional(),
   example: z.string().optional(),
+  pronunciation: z.string().optional(),
   audioUrl: z.string().optional(),
   notes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   scheduling: cardSchedulingSchema,
-  suspended: z.boolean(),
+  suspended: z.boolean().default(false),
   createdAt: firestoreTimestamp,
   updatedAt: firestoreTimestamp,
 });
 
-export type CardDocument = z.infer<typeof cardDocumentSchema>;
+export type CardDocument = z.output<typeof cardDocumentSchema>;

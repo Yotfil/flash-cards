@@ -1,52 +1,67 @@
-// Puerto del repositorio de tarjetas: acceso a la colección plana `/users/{uid}/cards` sin saber
-// que detrás está Firestore. Las tarjetas son planas (campos `bookId`/`chapterId`) porque la cola
-// diaria necesita consultarlas todas de una vez (spec §4). La implementación vive en
-// `infrastructure/firestore`.
+import type { Card, CardContentChanges, NewCard } from '../models/card.model';
 
-import type { Card, CardContentDraft, CardScheduling } from '../models';
-
-/**
- * Datos necesarios para crear una tarjeta: el documento completo salvo lo que pone el repositorio
- * (`id` y timestamps). El servicio arma el resto (relaciones, `scheduling` inicial, `suspended`).
- */
-export type CardCreateInput = Omit<Card, 'id' | 'createdAt' | 'updatedAt'>;
-
-/** Conteo de tarjetas por estado, para el panel de progreso (§8.7). */
-export interface CardStateCounts {
-  /** Estado New: aún no estudiadas. */
-  newCards: number;
-  /** Estados Learning + Relearning: en aprendizaje. */
-  learning: number;
-  /** Estado Review: dominadas (graduadas del aprendizaje). */
-  review: number;
+/** Lo que dejó un reemplazo: las tarjetas creadas y cuántas había (y se borraron). */
+export interface ChapterReplacement {
+  readonly created: Card[];
+  readonly deletedCount: number;
 }
 
+// Tarjetas del usuario en el almacén. Crear y borrar ajustan el contador de tarjetas del libro EN
+// EL MISMO LOTE que las tarjetas, para que nunca quede desfasado (ni tras un fallo a mitad).
 export abstract class CardRepository {
-  /** Lista las tarjetas de un capítulo ordenadas por antigüedad (orden de creación). */
+  /** Las tarjetas del capítulo (sin orden: lo da el servicio). Lanza si una no es válida. */
   abstract listByChapter(uid: string, chapterId: string): Promise<Card[]>;
-
-  /** Lista todas las tarjetas de un libro (para estudiar el libro completo). */
+  /**
+   * Las tarjetas de la cuenta que vencen hasta `before` (incluidas las nuevas, que vencen al
+   * crearse). No filtra suspendidas ni ordena: eso es de la cola. Lanza si una no es válida.
+   */
+  abstract listReady(uid: string, before: Date): Promise<Card[]>;
+  /** Lo mismo, solo las de un libro. */
+  abstract listReadyByBook(uid: string, bookId: string, before: Date): Promise<Card[]>;
+  /**
+   * TODAS las tarjetas del libro tal como están en el servidor (para exportar). Nunca responde con
+   * la caché local, que puede tener solo parte del libro: sin red, falla.
+   */
+  abstract listByBookFromServer(uid: string, bookId: string): Promise<Card[]>;
+  /**
+   * Las tarjetas del libro con la lectura normal: sin red responde con lo que el dispositivo tenga
+   * guardado (para practicar, una caché parcial basta).
+   */
   abstract listByBook(uid: string, bookId: string): Promise<Card[]>;
-
-  /** Lista las tarjetas con `scheduling.due ≤ endOfDay` (candidatas de la cola diaria: vencidas y
-   *  nuevas, ya que las nuevas tienen `due` en el pasado). */
-  abstract listDue(uid: string, endOfDay: Date): Promise<Card[]>;
-
-  /** Cuenta las tarjetas del usuario por estado (conteo agregado, sin leer cada documento). */
-  abstract countByState(uid: string): Promise<CardStateCounts>;
-
-  /** Crea una tarjeta y devuelve el modelo resultante (con `id` y timestamps ya asignados). */
-  abstract create(uid: string, input: CardCreateInput): Promise<Card>;
-
-  /** Crea muchas tarjetas de una vez (importación). Devuelve las tarjetas creadas. */
-  abstract createMany(uid: string, inputs: CardCreateInput[]): Promise<Card[]>;
-
-  /** Aplica cambios de contenido (anverso/reverso) a una tarjeta existente. */
-  abstract update(uid: string, cardId: string, changes: Partial<CardContentDraft>): Promise<void>;
-
-  /** Reescribe el bloque de programación de una tarjeta (tras calificarla). */
-  abstract updateScheduling(uid: string, cardId: string, scheduling: CardScheduling): Promise<void>;
-
-  /** Borra una tarjeta. */
-  abstract delete(uid: string, cardId: string): Promise<void>;
+  /** Crea una tarjeta y suma 1 al libro. Falla si su capítulo ya no existe. */
+  abstract create(uid: string, card: NewCard): Promise<Card>;
+  /**
+   * Crea varias tarjetas de un mismo capítulo en lotes, cada lote con su suma al libro. Un lote
+   * falla entero si el capítulo ya no existe (otro dispositivo lo borró).
+   */
+  abstract createMany(uid: string, cards: readonly NewCard[]): Promise<Card[]>;
+  abstract updateContent(uid: string, cardId: string, changes: CardContentChanges): Promise<void>;
+  abstract setSuspended(uid: string, cardId: string, suspended: boolean): Promise<void>;
+  /**
+   * Borra las tarjetas que el capítulo tiene en el servidor (no las de una lista cargada, que pudo
+   * quedarse vieja: otro dispositivo añadió una, o un intento anterior dejó parte hecha) y crea las
+   * nuevas, ajustando el contador del libro en la diferencia. Si todo cabe en un lote es una sola
+   * operación: o se reemplaza todo o nada. Sin red, falla.
+   */
+  abstract replaceInChapter(
+    uid: string,
+    bookId: string,
+    chapterId: string,
+    cards: readonly NewCard[],
+  ): Promise<ChapterReplacement>;
+  /**
+   * Borra una tarjeta y resta 1 al libro, solo si todavía existe (otra pestaña pudo borrarla ya).
+   * El historial de repasos se conserva.
+   */
+  abstract deleteWithCount(uid: string, bookId: string, cardId: string): Promise<void>;
+  /**
+   * Borra varias por tramos atómicos, cada uno con su resta, y devuelve cuántas borró: las que ya
+   * no existían no descuentan. Si un tramo falla tras confirmarse otros, lanza
+   * `PartialDeletionError` con las de los tramos confirmados.
+   */
+  abstract deleteManyWithCount(
+    uid: string,
+    bookId: string,
+    cardIds: readonly string[],
+  ): Promise<number>;
 }

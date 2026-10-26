@@ -1,0 +1,32 @@
+<div class="flex flex-col gap-6">
+  <h1 class="text-3xl font-extrabold tracking-tight text-text">{{ copy.title }}</h1>
+
+  @switch (view()) {
+    @case ('loading') {
+      <app-skeleton variant="card" [lines]="2" />
+      <app-skeleton [lines]="4" />
+    }
+    @case ('error') {
+      <app-error-state
+        [title]="copy.errorTitle"
+        [message]="copy.errorMessage"
+        (retry)="progress.refresh()"
+      />
+    }
+    @case ('empty') {
+      <app-empty-state [title]="copy.emptyTitle" [message]="copy.emptyMessage" />
+    }
+    @case ('panels') {
+      <div class="grid grid-cols-2 gap-3">
+        <app-summary-card [label]="copy.pendingToday" [value]="progress.pending()" />
+        <app-summary-card [label]="copy.reviewedToday" [value]="progress.reviewedToday()" />
+      </div>
+      <app-rating-distribution [rows]="progress.ratings()" [total]="progress.reviewedToday()" />
+      <app-collection-overview
+        [status]="progress.collectionStatus()"
+        [shares]="progress.shares()"
+        (retry)="progress.retryCollection()"
+      />
+    }
+  }
+</div>

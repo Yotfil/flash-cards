@@ -1,0 +1,64 @@
+schema: spec-driven
+
+# Contexto del proyecto: se muestra a la IA al generar artefactos (proposal, design, specs, tasks).
+context: |
+  Proyecto: flash-cards — PWA de repetición espaciada, materia-agnóstica (primer caso: vocabulario
+  de inglés), abrible en móvil y escritorio, online y offline. Reescritura desde cero guiada por
+  specs (SDD con OpenSpec) y TDD. Las reglas de ingeniería completas viven en CLAUDE.md (raíz) y la
+  especificación de producto en docs/especificacion-anki-mejorada.md.
+
+  Stack: Angular (standalone, PWA) · TypeScript strict · Tailwind con tokens semánticos · ts-fsrs
+  (no reimplementar algoritmos) · Firebase (Firestore + Auth + Hosting/Netlify) · Zod en la
+  frontera · ESLint + Prettier · Node 24.17 (nvm).
+
+  Arquitectura por capas (Ports & Adapters): UI (solo pinta) → servicios (lógica pura) →
+  repositorios (única capa que habla con el almacén). ts-fsrs y Firestore son adaptadores detrás
+  de interfaces. Todo componente Angular vive en su carpeta con 4 archivos (.ts/.html/.scss/.spec.ts).
+
+  Principios: materia-agnóstico (anverso/reverso genérico, nunca palabra/traducción) · esquema listo,
+  UI después · costo-consciencia (nada de pago por uso en fases tempranas) · diseñar para la
+  extensión (datos privados bajo /users/{uid}) · calidad mantenible (legible por un junior).
+
+  Idioma: todos los artefactos (specs, proposals, designs, tasks, commits) se escriben en español.
+  Las specs describen comportamiento observable: nunca nombres de clases, archivos ni librerías.
+
+  Git: ramas feature/<kebab> sacadas de dev; Claude hace push y entrega el link de comparación;
+  el usuario crea y mergea el PR hacia dev. Commits atómicos sin trailer Co-Authored-By de Claude.
+
+  Reescritura (decisiones 2026-10-21, docs/adr/0002 y 0003): producto "Cadence"; el código nuevo
+  va directo en dev; un change y una rama por spec (feature/<spec-id>), rama borrada tras el merge;
+  datos compatibles (solo campos opcionales y colecciones nuevas); Signal Forms validadas con Zod;
+  Angular CDK; puerto Logger + ErrorHandler global; fakes en memoria en testing/; copy centralizado
+  por feature; emulador de Firestore para integración; CI mínima en GitHub Actions. Dirección visual:
+  docs/design/Cadence - Guia de Rediseno UI-UX.md (acrílico solo en el cromo, tarjeta de estudio
+  sólida, máximo dos capas de vidrio, acento azul eléctrico, escala rojo→verde reservada). Los deltas
+  del rediseño por capacidad están en docs/hallazgos-codigo-actual.md ("Deltas del rediseño Cadence").
+
+rules:
+  proposal:
+    - Escribir en español, breve (menos de 500 palabras), con sección "Fuera de alcance"
+    - Indicar qué spec base de openspec/specs/ se está implementando o modificando
+  design:
+    - Respetar las capas (UI / servicios / repositorios) y nombrar en qué capa cae cada pieza
+    - Justificar cualquier abstracción nueva con el segundo caso de uso real que la pide
+    - Incluir una sección "Plan de pruebas" con cada escenario de la spec mapeado a una prueba concreta y su capa (unitaria pura, integración con emulador, componente); se aprueba antes de codificar
+    - Si la capacidad pinta UI, indicar qué superficies llevan acrílico (máximo dos capas visibles) y cuáles son sólidas, según el ADR 0003
+  specs:
+    - Formato del piloto openspec/specs/cola-diaria/spec.md (SHALL + escenarios WHEN/THEN)
+    - Comportamiento observable, sin nombres de clases, archivos ni librerías
+  tasks:
+    - "Orden TDD: cada tarea de código va precedida por la tarea de escribir su test en rojo"
+    - Empezar por el "cerebro" (servicios puros) y terminar por la UI
+    - Tareas pequeñas (menos de 2 horas), una por commit atómico
+    - Derivar las tareas del "Plan de pruebas" del design; cada prueba planeada es una tarea en rojo antes de su código
+
+operations:
+  apply:
+    guidance:
+      - Usar la skill tdd (rojo → verde → refactor) para cada tarea de código
+      - Ejecutar lint, tsc, test, test:integration y build antes de marcar una tarea como hecha
+  archive:
+    guidance:
+      - Verificar que las specs base en openspec/specs/ quedaron sincronizadas con el delta
+      - Anotar el cierre en MEMORY.md (bitácora del repo)
+      - "Fase B: el archive va dentro del commit de cierre de esa spec en la rama única feature/reescritura-cadence; sin PR por change"

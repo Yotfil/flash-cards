@@ -1,12 +1,14 @@
-// Puerto del repositorio de usuarios: acceso al documento de perfil (`/users/{uid}`) sin
-// saber que detrás está Firestore. La implementación vive en `infrastructure/firestore`.
+import type { User, UserSettings } from '../models/user.model';
 
-import type { User } from '../models';
-
+// Perfil del usuario en el almacén (`/users/{uid}`).
 export abstract class UserRepository {
-  /** Devuelve el perfil del usuario, o null si todavía no existe. */
+  /** El perfil validado, o `null` si todavía no existe. Lanza si el documento no es válido. */
   abstract findById(uid: string): Promise<User | null>;
-
-  /** Crea o reemplaza el documento de perfil. */
+  /** Escribe el perfil completo: solo al crearlo. */
   abstract save(user: User): Promise<void>;
+  /**
+   * Escribe solo los ajustes indicados. El resto del perfil y los ajustes que esta versión no
+   * conoce (los que añada una versión posterior) quedan como estaban.
+   */
+  abstract updateSettings(uid: string, changes: Partial<UserSettings>): Promise<void>;
 }

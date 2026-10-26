@@ -1,10 +1,9 @@
-// Configuración de entorno (producción). Sustituye a `environment.ts` en el build de
-// producción vía `fileReplacements` (angular.json). Reemplazar los placeholders por la
-// config del proyecto Firebase de producción (puede ser el mismo o uno distinto al de dev).
+import type { AppEnvironment } from './app-environment';
 
-import type { FirebaseOptions } from 'firebase/app';
-
-export const environment: { production: boolean; firebase: FirebaseOptions } = {
+// Producción: el proyecto real de Firebase, sin emuladores. Sustituye a `environment.ts` en el
+// build de producción. Para probar contra datos reales en local se sirve este build
+// (`npm run build` + un servidor estático), nunca `ng serve`.
+export const environment: AppEnvironment = {
   production: true,
   firebase: {
     apiKey: 'AIzaSyAT0E3EOdiahojXsc77VcWoU1HCiCDcpBA',
@@ -15,4 +14,5 @@ export const environment: { production: boolean; firebase: FirebaseOptions } = {
     appId: '1:81589294819:web:2ee787fec13933b81f17d6',
     measurementId: 'G-SHWLLCESP7',
   },
+  emulators: null,
 };

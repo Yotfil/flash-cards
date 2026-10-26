@@ -1,0 +1,40 @@
+<!--
+  Icono Cadence, de borde a borde: la fuente de los PNG de la PWA (public/icons, enmascarables) y
+  del icono del iPhone. Se renderiza a 1024 px con Chrome y se reduce a cada tamaño con ImageMagick
+  (RGB, sin alfa). El favicon (public/favicon.svg) es la misma marca en baldosa redondeada.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cadence">
+  <defs>
+    <!-- El lienzo noche de la app (tokens night-1 a night-3) con sus dos brillos, y el acento. -->
+    <linearGradient id="night" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#0b0c22" />
+      <stop offset="0.6" stop-color="#121030" />
+      <stop offset="1" stop-color="#1b1442" />
+    </linearGradient>
+    <radialGradient id="glow-blue" cx="0.12" cy="-0.05" r="0.8">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity="0.24" />
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow-violet" cx="1.05" cy="1.08" r="0.85">
+      <stop offset="0" stop-color="#7c5cff" stop-opacity="0.32" />
+      <stop offset="1" stop-color="#7c5cff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="accent" x1="0.15" y1="0.1" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#38bdf8" />
+      <stop offset="1" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#night)" />
+  <rect width="512" height="512" fill="url(#glow-blue)" />
+  <rect width="512" height="512" fill="url(#glow-violet)" />
+  <!-- La C de Cadence: un anillo casi entero, abierto hacia la derecha. -->
+  <path
+    d="M 349.3 349.3 A 132 132 0 1 1 349.3 162.7"
+    fill="none"
+    stroke="url(#accent)"
+    stroke-width="58"
+    stroke-linecap="round"
+  />
+  <!-- El pulso de la cadencia: la tarjeta que toca ahora, en la abertura. -->
+  <circle cx="388" cy="256" r="30" fill="#38bdf8" />
+</svg>

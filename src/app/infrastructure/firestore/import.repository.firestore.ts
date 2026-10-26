@@ -1,80 +1,88 @@
-// Adaptador Firestore del puerto ImportRepository. Escribe el libro, sus capítulos y sus tarjetas en
-// un writeBatch (atómico para tamaños típicos; troceado a 450 por el límite de 500 ops/batch). El id
-// del libro se conoce antes de escribir (doc()), así los capítulos y tarjetas pueden referenciarlo.
+import { collection, doc, type DocumentReference, type Firestore } from 'firebase/firestore';
 
-import { Injectable, inject } from '@angular/core';
-import { Timestamp, collection, doc, writeBatch } from 'firebase/firestore';
+import type { Book } from '@domain/models/book.model';
+import {
+  ImportBookError,
+  ImportRepository,
+  type ImportBookInput,
+} from '@domain/ports/import.repository';
 
-import { ImportRepository, type ImportBookInput } from '@domain/ports';
-import { FIRESTORE } from '@infrastructure/firebase';
-import { cardToFirestoreDocument } from './card-document.mapper';
-import { MAX_BATCH_SIZE } from './firestore-limits';
+import { BatchCommitError, BatchWriter } from './batch-writer';
 
-const USERS_COLLECTION = 'users';
-const BOOKS_COLLECTION = 'books';
-const CHAPTERS_COLLECTION = 'chapters';
-const CARDS_COLLECTION = 'cards';
+type RollBackResult = { readonly done: true } | { readonly done: false; readonly failure: unknown };
 
-@Injectable()
+// Un libro importado entero en lotes de 450: capítulos y tarjetas primero y el documento del libro
+// en el último, con su `cardCount` ya calculado, así el libro nunca aparece a medias en la
+// Biblioteca. (No usa `writeInCountedBatches`: su `increment` sería un `update` sobre un libro que
+// aún no existe.) Si un lote falla, se intenta borrar lo ya escrito.
 export class FirestoreImportRepository extends ImportRepository {
-  private readonly firestore = inject(FIRESTORE);
+  constructor(private readonly firestore: Firestore) {
+    super();
+  }
 
-  override async importBook(uid: string, input: ImportBookInput): Promise<string> {
+  async importBook(uid: string, input: ImportBookInput): Promise<Book> {
     const now = new Date();
-    const bookRef = doc(this.collection(uid, BOOKS_COLLECTION));
-
-    // Gestor de batch con auto-commit al alcanzar el límite, para no superar 500 ops.
-    let batch = writeBatch(this.firestore);
-    let ops = 0;
-    const commitIfFull = async (): Promise<void> => {
-      if (ops >= MAX_BATCH_SIZE) {
-        await batch.commit();
-        batch = writeBatch(this.firestore);
-        ops = 0;
-      }
-    };
-
-    batch.set(bookRef, {
-      name: input.book.name,
-      subject: input.book.subject,
-      studyDirection: input.book.studyDirection,
-      newCardsPerDay: input.book.newCardsPerDay,
-      maxReviewsPerDay: input.book.maxReviewsPerDay,
-      order: input.book.order,
-      cardCount: input.book.cardCount ?? 0,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-    });
-    ops++;
-
+    const bookRef = doc(this.collectionOf(uid, 'books'));
+    const writer = new BatchWriter(this.firestore);
+    // Las tarjetas nacen escalonadas por su posición en el archivo: la cola desempata las nuevas
+    // por fecha de creación, así entran en Hoy en ese orden.
+    let position = 0;
     for (const chapter of input.chapters) {
-      await commitIfFull();
-      const chapterRef = doc(this.collection(uid, CHAPTERS_COLLECTION));
-      batch.set(chapterRef, {
+      const chapterRef = doc(this.collectionOf(uid, 'chapters'));
+      writer.set(chapterRef, {
         bookId: bookRef.id,
         name: chapter.name,
         order: chapter.order,
-        createdAt: Timestamp.fromDate(now),
-        updatedAt: Timestamp.fromDate(now),
+        createdAt: now,
+        updatedAt: now,
       });
-      ops++;
-
       for (const card of chapter.cards) {
-        await commitIfFull();
-        const cardRef = doc(this.collection(uid, CARDS_COLLECTION));
-        batch.set(
-          cardRef,
-          cardToFirestoreDocument({ ...card, bookId: bookRef.id, chapterId: chapterRef.id }, now),
-        );
-        ops++;
+        const createdAt = new Date(now.getTime() + position++);
+        writer.set(doc(this.collectionOf(uid, 'cards')), {
+          ...card,
+          bookId: bookRef.id,
+          chapterId: chapterRef.id,
+          createdAt,
+          updatedAt: createdAt,
+        });
       }
     }
+    const book = { ...input.book, createdAt: now, updatedAt: now };
+    writer.set(bookRef, book);
 
-    await batch.commit();
-    return bookRef.id;
+    try {
+      await writer.commit();
+    } catch (error) {
+      if (error instanceof BatchCommitError) {
+        const rollBack = await this.rollBack(error.committed);
+        throw new ImportBookError(
+          error.committed.length,
+          rollBack.done,
+          error.cause,
+          rollBack.done ? undefined : rollBack.failure,
+        );
+      }
+      throw error;
+    }
+    return { id: bookRef.id, ...book };
   }
 
-  private collection(uid: string, name: string) {
-    return collection(this.firestore, USERS_COLLECTION, uid, name);
+  /**
+   * Borrado compensatorio de lo ya confirmado. No lanza: si falla, su error viaja en
+   * `ImportBookError` y el servicio de importación lo registra.
+   */
+  private async rollBack(committed: readonly DocumentReference[]): Promise<RollBackResult> {
+    const writer = new BatchWriter(this.firestore);
+    committed.forEach((ref) => writer.delete(ref));
+    try {
+      await writer.commit();
+      return { done: true };
+    } catch (error) {
+      return { done: false, failure: error };
+    }
+  }
+
+  private collectionOf(uid: string, name: string) {
+    return collection(this.firestore, 'users', uid, name);
   }
 }
