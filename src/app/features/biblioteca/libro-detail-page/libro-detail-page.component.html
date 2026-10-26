@@ -97,6 +97,7 @@
                 [label]="copy.study.book"
                 [prepare]="prepareStudy"
                 [destination]="studyDestination"
+                [discard]="discardStudy"
                 [emptyMessage]="copy.study.bookSettled"
                 [errorMessage]="copy.study.error"
               />
@@ -105,6 +106,7 @@
                 [label]="practiceCopy.practice"
                 [prepare]="preparePractice"
                 [destination]="practiceDestination"
+                [discard]="discardPractice"
                 [emptyMessage]="practiceCopy.nothingToPractice"
                 [errorMessage]="practiceCopy.prepareError"
               />

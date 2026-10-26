@@ -32,6 +32,7 @@ async function open(online = true) {
       provideRouter([
         { path: 'importar', component: ImportarLibroPageComponent },
         { path: 'biblioteca/:bookId', component: BlankPageComponent },
+        { path: 'hoy', component: BlankPageComponent },
       ]),
       { provide: ImportRepository, useValue: imports },
       { provide: BookRepository, useValue: new FakeBookRepository() },
@@ -78,7 +79,7 @@ async function open(online = true) {
     await update();
   };
   await update();
-  return { imports, connectivity, page, input, type, update, importButton, loadFile };
+  return { harness, imports, connectivity, page, input, type, update, importButton, loadFile };
 }
 
 describe('ImportarLibroPageComponent', () => {
@@ -141,6 +142,47 @@ describe('ImportarLibroPageComponent', () => {
     expect(importButton()?.disabled).toBe(true);
     expect(imports.calls).toBe(1);
     release();
+  });
+
+  it('si sale de la página mientras importa, al terminar no lo saca de donde esté', async () => {
+    const { harness, imports, type, importButton, update } = await open();
+    let release!: () => void;
+    imports.gate = new Promise<void>((resolve) => (release = resolve));
+    await type('#import-text', VALID);
+    importButton()?.click();
+    await update();
+
+    // Se cansa de esperar y se va a Hoy (en la app real, a repasar).
+    await harness.navigateByUrl('/hoy');
+    release();
+    await update();
+
+    expect(TestBed.inject(Router).url).toBe('/hoy');
+  });
+
+  it('al volver mientras sigue importando, la muestra en curso y no deja empezar otra; al terminar, lleva al libro', async () => {
+    const { harness, imports, input, type, importButton, update } = await open();
+    let release!: () => void;
+    imports.gate = new Promise<void>((resolve) => (release = resolve));
+    await type('#import-name', 'Inglés B2');
+    await type('#import-text', VALID);
+    importButton()?.click();
+    await update();
+
+    await harness.navigateByUrl('/hoy');
+    await harness.navigateByUrl('/importar');
+    await update();
+
+    expect(input('#import-name').value).toBe('Inglés B2');
+    expect(input<HTMLTextAreaElement>('#import-text').value).toBe(VALID);
+    expect(importButton()?.textContent?.trim()).toBe('Importando…');
+    importButton()?.click();
+    await update();
+    expect(imports.calls).toBe(1);
+
+    release();
+    await update();
+    expect(TestBed.inject(Router).url).toBe('/biblioteca/importado-1');
   });
 
   it('si falla, avisa encima de los botones y conserva todo', async () => {

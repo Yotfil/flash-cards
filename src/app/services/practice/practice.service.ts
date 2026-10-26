@@ -40,6 +40,11 @@ export class PracticeService {
     return this.hand(cards, { kind: 'book', bookId });
   }
 
+  /** Vacía la bandeja de la práctica: lo preparado ya no se va a abrir. */
+  discardPrepared(): void {
+    this.handoff.take();
+  }
+
   private hand(cards: readonly Card[], origin: PracticeOrigin): number {
     const questions = generateQuiz(selectEligibleCards(cards));
     if (questions.length > 0) {

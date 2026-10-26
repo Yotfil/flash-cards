@@ -64,11 +64,11 @@ describe('ImportService · libro', () => {
     const { service, imports } = setup();
     const addLocal = vi.spyOn(TestBed.inject(BooksService), 'addLocal');
 
-    const summary = await service.importBook(
-      '  Phrasal Verbs  ',
-      '',
-      parseImportText(TEXT, 'Phrasal Verbs'),
-    );
+    const summary = await service.importBook({
+      name: '  Phrasal Verbs  ',
+      subject: '',
+      text: TEXT,
+    });
 
     const input = imports.lastInput;
     expect(input?.book).toEqual({
@@ -104,7 +104,7 @@ describe('ImportService · libro', () => {
   it('nombre en blanco: "Libro importado"; materia escrita: recortada', async () => {
     const { service, imports } = setup();
 
-    await service.importBook('   ', '  Francés  ', parseImportText('a | b', 'Libro importado'));
+    await service.importBook({ name: '   ', subject: '  Francés  ', text: 'a | b' });
 
     expect(imports.lastInput?.book.name).toBe('Libro importado');
     expect(imports.lastInput?.book.subject).toBe('Francés');
@@ -113,7 +113,7 @@ describe('ImportService · libro', () => {
   it('sin sesión no escribe', async () => {
     const { service, imports } = setup({ kind: 'signedOut' });
 
-    await expect(service.importBook('X', '', parseImportText('a | b', 'X'))).rejects.toThrow(
+    await expect(service.importBook({ name: 'X', subject: '', text: 'a | b' })).rejects.toThrow(
       'No hay una sesión activa.',
     );
     expect(imports.calls).toBe(0);
@@ -125,10 +125,40 @@ describe('ImportService · libro', () => {
     imports.failWith = failure;
     const addLocal = vi.spyOn(TestBed.inject(BooksService), 'addLocal');
 
-    await expect(service.importBook('X', '', parseImportText('a | b', 'X'))).rejects.toBe(failure);
+    await expect(service.importBook({ name: 'X', subject: '', text: 'a | b' })).rejects.toBe(
+      failure,
+    );
 
     expect(addLocal).not.toHaveBeenCalled();
     expect(logger.entries.at(-1)?.cause).toBe(failure);
+  });
+
+  it('mientras importa recuerda qué libro es (para la página que vuelve) y al terminar lo olvida', async () => {
+    const { service, imports } = setup();
+    let release!: () => void;
+    imports.gate = new Promise<void>((resolve) => (release = resolve));
+
+    const done = service.importBook({ name: 'Inglés B2', subject: 'idiomas', text: 'a | b' });
+
+    expect(service.bookImport()).toMatchObject({
+      name: 'Inglés B2',
+      subject: 'idiomas',
+      text: 'a | b',
+    });
+    release();
+    await done;
+    expect(service.bookImport()).toBeNull();
+  });
+
+  it('si la importación falla, también la olvida', async () => {
+    const { service, imports } = setup();
+    imports.failWith = new ImportBookError(0, true, new Error('permiso'));
+
+    await expect(
+      service.importBook({ name: 'X', subject: '', text: 'a | b' }),
+    ).rejects.toBeInstanceOf(ImportBookError);
+
+    expect(service.bookImport()).toBeNull();
   });
 });
 

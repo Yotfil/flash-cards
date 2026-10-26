@@ -62,6 +62,19 @@ describe('PracticeService · capítulo', () => {
     expect(Object.values(cards.calls).every((count) => count === 0)).toBe(true);
   });
 
+  it('vaciar la bandeja quita la práctica preparada (ya no se va a abrir)', async () => {
+    const { service, handoff } = setup();
+    await service.prepareChapterPractice(basics(4), {
+      kind: 'chapter',
+      bookId: 'b1',
+      chapterId: 'c1',
+    });
+
+    service.discardPrepared();
+
+    expect(handoff.prepared()).toBeNull();
+  });
+
   it('solo clozes: 0 y la bandeja sigue vacía', async () => {
     const { service, handoff } = setup();
 

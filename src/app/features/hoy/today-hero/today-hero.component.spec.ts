@@ -15,6 +15,7 @@ function render(inputs: { count?: number; settled?: boolean; disabled?: boolean 
   fixture.componentRef.setInput('settled', inputs.settled ?? false);
   fixture.componentRef.setInput('disabled', inputs.disabled ?? false);
   fixture.componentRef.setInput('prepare', async () => []);
+  fixture.componentRef.setInput('discard', () => undefined);
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
   const startButton = () =>

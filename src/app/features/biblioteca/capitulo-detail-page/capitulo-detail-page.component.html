@@ -55,6 +55,7 @@
             [label]="copy.study.chapter"
             [prepare]="prepareStudy"
             [destination]="studyDestination"
+            [discard]="discardStudy"
             [emptyMessage]="copy.study.chapterSettled"
             [errorMessage]="copy.study.error"
           />
@@ -65,6 +66,7 @@
             [label]="practiceCopy.practice"
             [prepare]="preparePractice"
             [destination]="practiceDestination"
+            [discard]="discardPractice"
             [errorMessage]="practiceCopy.prepareError"
           />
         }
