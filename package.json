@@ -1,6 +1,6 @@
 {
   "name": "flash-cards",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "scripts": {
     "ng": "ng",
     "build-info": "node scripts/generate-build-info.mjs",
