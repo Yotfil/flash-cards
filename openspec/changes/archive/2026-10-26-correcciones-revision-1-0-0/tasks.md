@@ -46,4 +46,4 @@
 
 ## 6. Cierre del change
 
-- [ ] 6.1 `openspec validate correcciones-revision-1-0-0` en verde; `/opsx:archive` (las specs base de `ajustes-de-usuario`, `autenticacion-y-acceso`, `cola-diaria`, `exportacion-de-libros` y `navegacion-y-shell` quedan con el delta) y commit `docs(openspec): …`.
+- [x] 6.1 `openspec validate correcciones-revision-1-0-0` en verde; `/opsx:archive` (las specs base de `ajustes-de-usuario`, `autenticacion-y-acceso`, `cola-diaria`, `exportacion-de-libros` y `navegacion-y-shell` quedan con el delta) y commit `docs(openspec): …`.
