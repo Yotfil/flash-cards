@@ -38,5 +38,5 @@
 
 ## 5. Cierre
 
-- [ ] 5.1 `openspec validate --specs` y `opsx:archive` de este change (sincroniza la spec base `practica-con-ia`). Verificar que `openspec list` queda vacío y la spec base contiene los escenarios nuevos. Commit `docs(openspec): …`.
-- [ ] 5.2 Marcar `arreglado en <hash>` en la columna "Decisión" de IA-01 a IA-04 del README de la revisión y anotar la bitácora de `MEMORY.md`. Verificar que no queda ninguno abierto antes del 1.1.0.
+- [x] 5.1 `openspec validate --specs` y `opsx:archive` de este change (sincroniza la spec base `practica-con-ia`). Verificar que `openspec list` queda vacío y la spec base contiene los escenarios nuevos. Commit `docs(openspec): …`.
+- [x] 5.2 Marcar `arreglado en <hash>` en la columna "Decisión" de IA-01 a IA-04 del README de la revisión y anotar la bitácora de `MEMORY.md`. Verificar que no queda ninguno abierto antes del 1.1.0.
