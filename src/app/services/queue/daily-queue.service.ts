@@ -57,6 +57,8 @@ export class DailyQueueService {
   private readonly logger = inject(Logger);
 
   private readonly studyDay = signal<StudyDay | null>(null);
+  /** La racha solo la muestra Hoy: no se lee hasta que Hoy la pide (Progreso arma la cola sin ella). */
+  private readonly streakRequested = signal(false);
   // Vive en memoria (no se persiste): sobrevive a la navegación y a `refresh`, no a una recarga.
   private readonly sessionNew = signal<SessionNew | null>(null);
 
@@ -83,7 +85,9 @@ export class DailyQueueService {
   readonly streak = resource({
     params: () => {
       const day = this.studyDay();
-      return day ? { uid: this.session.user()?.id ?? '', dayId: day.id } : undefined;
+      return day && this.streakRequested()
+        ? { uid: this.session.user()?.id ?? '', dayId: day.id }
+        : undefined;
     },
     loader: async ({ params }): Promise<number | null> => {
       try {
@@ -126,17 +130,31 @@ export class DailyQueueService {
   });
 
   /**
-   * Vuelve a armar la cola: en cada entrada a Hoy y antes de preparar una sesión. Si el día de
-   * estudio cambió, la lectura sigue al día nuevo; si no, se repite.
+   * Hoy: vuelve a armar la cola y a leer la racha, en cada entrada a Hoy y antes de preparar una
+   * sesión. Si el día de estudio cambió, la lectura sigue al día nuevo; si no, se repite.
    */
   refresh(): void {
+    if (!this.session.user()) {
+      return;
+    }
+    const sameDay = this.studyDay()?.id === this.currentDay().id;
+    this.refreshQueue();
+    if (!this.streakRequested()) {
+      this.streakRequested.set(true);
+    } else if (sameDay) {
+      // Con el día nuevo la racha ya se relee sola: cambió su parámetro.
+      this.streak.reload();
+    }
+  }
+
+  /** Progreso: vuelve a armar solo la cola; no lee la racha, que Progreso no muestra. */
+  refreshQueue(): void {
     if (!this.session.user()) {
       return;
     }
     const day = this.currentDay();
     if (this.studyDay()?.id === day.id) {
       this.data.reload();
-      this.streak.reload();
       return;
     }
     this.studyDay.set(day);

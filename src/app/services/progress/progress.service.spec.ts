@@ -95,13 +95,22 @@ describe('ProgressService · el día', () => {
 
   it('refresh rearma la cola del día (la de Hoy, no otra)', async () => {
     const { service, queue, settle } = setup();
-    const refresh = vi.spyOn(queue, 'refresh');
+    const refreshQueue = vi.spyOn(queue, 'refreshQueue');
 
     service.refresh();
     await settle();
 
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(refreshQueue).toHaveBeenCalledTimes(1);
     expect(service.dayStatus()).toBe('ready');
+  });
+
+  it('una visita no lee la racha ni el historial (Progreso no los muestra)', async () => {
+    const { service, stats, settle } = setup();
+
+    service.refresh();
+    await settle();
+
+    expect(stats.calls.listRecent).toEqual([]);
   });
 
   it('pendientes = la cola base (4 vencidas + 2 nuevas); repasadas = el contador del día', async () => {

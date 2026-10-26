@@ -280,6 +280,32 @@ describe('DailyQueueService · racha', () => {
     expect(service.streak.value()).toBe(6);
   });
 
+  it('refreshQueue (Progreso) arma la cola sin leer la racha, también la primera vez', async () => {
+    const { service, cards, stats, settle } = setup();
+
+    service.refreshQueue();
+    await settle();
+    service.refreshQueue();
+    await settle();
+
+    expect(cards.calls.listReady).toBe(2);
+    expect(stats.calls.listRecent).toEqual([]);
+    expect(service.status()).toBe('ready');
+  });
+
+  it('Hoy después de Progreso sí lee la racha, y cada vuelta a Hoy la relee', async () => {
+    const { service, stats, settle } = setup();
+    service.refreshQueue();
+    await settle();
+
+    service.refresh();
+    await settle();
+    service.refresh();
+    await settle();
+
+    expect(stats.calls.listRecent).toEqual([60, 60]);
+  });
+
   it('si la racha no se puede leer se omite, se registra y la cola sigue', async () => {
     const { service, stats, logger, settle } = setup();
     const failure = new Error('offline');

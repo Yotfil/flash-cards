@@ -64,9 +64,9 @@ export class ProgressService {
     () => this.collectionStatus() === 'ready' && this.shares()?.total === 0,
   );
 
-  /** Cada visita: rearma la cola del día y vuelve a contar la colección. */
+  /** Cada visita: rearma la cola del día (sin la racha) y vuelve a contar la colección. */
   refresh(): void {
-    this.queue.refresh();
+    this.queue.refreshQueue();
     if (this.collectionRequested()) {
       this.collection.reload();
     } else {
