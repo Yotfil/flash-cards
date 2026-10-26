@@ -1,5 +1,6 @@
 import type { DailyStats } from '@domain/models/daily-stats.model';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 type FailableMethod = 'getByDay' | 'listRecent';
 
@@ -16,7 +17,26 @@ export class FakeDailyStatsRepository extends DailyStatsRepository {
     }
   }
 
-  async getByDay(_uid: string, dayId: string): Promise<DailyStats | null> {
+  /** Lo que el dispositivo tiene guardado: aparte de lo del servidor (`seed`). */
+  readonly onDevice = new Map<string, DailyStats>();
+  /** Lecturas del dispositivo (las del servidor las registra `calls`). */
+  readonly deviceCalls: { getByDay: string[] } = { getByDay: [] };
+
+  seedOnDevice(...days: DailyStats[]): void {
+    for (const day of days) {
+      this.onDevice.set(day.id, day);
+    }
+  }
+
+  async getByDay(
+    _uid: string,
+    dayId: string,
+    source: ReadSource = 'server',
+  ): Promise<DailyStats | null> {
+    if (source === 'device') {
+      this.deviceCalls.getByDay.push(dayId);
+      return this.onDevice.get(dayId) ?? null;
+    }
     this.calls.getByDay.push(dayId);
     this.failIfAsked('getByDay');
     return this.days.get(dayId) ?? null;
