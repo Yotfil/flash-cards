@@ -96,6 +96,22 @@ del observador) antes de borrar: borrar la cuenta equivocada sería irreparable.
   identificador del capítulo los grupos salen en un orden fijo pero arbitrario; se acepta porque lo importado desde
   esta rama ya sigue el orden del archivo.
 
+### 5. Condicionales aprobados (paso 12)
+
+- **EX-02:** el diálogo calcula sus acciones una vez (como ya hacía con "puede compartir"): principal "Compartir" o
+  "Descargar .txt"; si la principal es compartir, "Descargar .txt" se suma a las secundarias, junto a "Copiar texto".
+  Mismo servicio de entrega (`deliver(…, 'download')`), sin capas nuevas. El error de copiar pasa a "No se pudo copiar.
+  Usa «Descargar .txt».", que siempre es cierto.
+- **F-01:** un servicio mínimo de aviso (capa de servicios, solo una señal "visible" con `report` y `dismiss`) que el
+  manejador global activa al registrar el error, y un componente que lo pinta, alojado en el componente raíz (no en el
+  caparazón: así también se ve en Repaso y Práctica). Superficie sólida (no acrílico: puede quedar sobre la
+  navegación o sobre algo que anima), `role="alert"`, botón "Cerrar aviso". No se duplica con los avisos de cada
+  pantalla por construcción: lo que una pantalla captura no llega al manejador global.
+  - *Alternativa descartada:* que el aviso se cierre solo a los segundos. Un aviso que desaparece solo puede no leerse
+    (accesibilidad); como no se apila, quedarse hasta cerrarlo no molesta.
+- **P-03:** un SVG con la paleta (acento azul eléctrico sobre el azul noche) del que salen el favicon y los PNG. Se
+  enseña al usuario antes de sustituir los archivos.
+
 ## Risks / Trade-offs
 
 - [Escritura parcial con un ajuste que no existe en el documento] → `updateDoc` crea la ruta: es justo lo que necesita
@@ -130,4 +146,8 @@ Sin migración de datos. Las reglas de seguridad no cambian. El despliegue es el
 | Exportación · "Tarjetas que perdieron su capítulo" (sonda EX-03) | `build-book-package.spec.ts`: capítulo final "Sin capítulo"; nada si no hay huérfanas | unitaria pura |
 | C-01: borrar un capítulo sin red no deja tarjetas (sonda de `capitulos`) | `chapter.repository.integration.spec.ts`: sin red, el borrado falla y no borra nada; con red, borra todo | integración con emulador |
 | C-01: lo mismo al borrar un libro | `book.repository.integration.spec.ts` | integración con emulador |
+| Exportación · "Descargar también donde se puede compartir" (EX-02) | `export-book-dialog.component.spec.ts`: con compartir, "Descargar .txt" secundario descarga y cierra; sin compartir, una sola "Descargar .txt" | componente |
+| Exportación · "Portapapeles no disponible" | `export-book-dialog.component.spec.ts`: el nuevo mensaje | componente |
+| Caparazón · "Fallo no previsto", "Varios fallos seguidos", "Cerrar el aviso" (F-01) | `global-error-handler.spec.ts` (registra y avisa); componente del aviso (uno solo, se cierra); `app.spec.ts` (el aviso vive en la raíz) | unitaria + componente |
+| Caparazón · "Un fallo que la pantalla ya explica" | prueba existente de un diálogo con fallo de guardado, comprobando que el aviso global no aparece | componente |
 | IM-05: crear en un capítulo borrado (sonda 3 de `importacion`) | `card.repository.integration.spec.ts`: el lote falla y no crea tarjetas ni suma al libro; `counted-batch.integration.spec.ts`: la operación en cada lote no pasa de 450 | integración con emulador |

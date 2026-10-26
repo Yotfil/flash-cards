@@ -37,7 +37,13 @@
 - [x] 4.3 Escribir en rojo, en `src/app/services/queue/ready-cards.spec.ts`, el desempate de las nuevas con la misma fecha (capítulo, anverso, reverso; mismo orden con la entrada barajada); verificar que falla; implementarlo y verificar que pasa.
 - [x] 4.4 Puerta completa en verde y commit `fix(cola-diaria): …` del paso.
 
-## 5. Cierre del change
+## 5. Paso 12 · Condicionales aprobados por el usuario (EX-02, F-01, P-03)
 
-- [ ] 5.1 Si el usuario aprueba EX-02 o F-01, añadir aquí sus deltas y tareas antes de implementarlos.
-- [ ] 5.2 `openspec validate correcciones-revision-1-0-0` en verde; `/opsx:archive` (las specs base de `ajustes-de-usuario`, `autenticacion-y-acceso`, `cola-diaria` y `exportacion-de-libros` quedan con el delta) y commit `docs(openspec): …`.
+- [x] 5.1 Añadir los deltas de EX-02 (`exportacion-de-libros`) y F-01 (`navegacion-y-shell`) antes de implementarlos.
+- [ ] 5.2 Escribir en rojo, en `export-book-dialog.component.spec.ts`, "con compartir, «Descargar .txt» también, como secundaria, descarga y cierra", "sin compartir, una sola «Descargar .txt»" y el nuevo mensaje de copiar; implementarlo y verificar que pasan; puerta completa y commit `fix(exportacion-de-libros): …`.
+- [ ] 5.3 Escribir en rojo, en `global-error-handler.spec.ts`, que el manejador avisa además de registrar; en el componente del aviso, que pinta el texto con `role="alert"`, uno solo aunque haya varios fallos, y que "Cerrar aviso" lo quita; en `app.spec.ts`, que la raíz lo aloja; y que un fallo ya explicado por un diálogo no lo muestra. Implementarlo y verificar que pasan; puerta completa y commit `fix(navegacion-y-shell): …`.
+- [ ] 5.4 Enseñar al usuario el borrador del icono Cadence (SVG) y, con su visto bueno, generar el favicon, los 8 PNG de la PWA y el `apple-touch-icon`; verificar con `tests/static/manifest.spec.ts` (tamaños) y un vistazo a los PNG; puerta completa y commit `fix(plataforma-datos-y-offline): …`.
+
+## 6. Cierre del change
+
+- [ ] 6.1 `openspec validate correcciones-revision-1-0-0` en verde; `/opsx:archive` (las specs base de `ajustes-de-usuario`, `autenticacion-y-acceso`, `cola-diaria`, `exportacion-de-libros` y `navegacion-y-shell` quedan con el delta) y commit `docs(openspec): …`.

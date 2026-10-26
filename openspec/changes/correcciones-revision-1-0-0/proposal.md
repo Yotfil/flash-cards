@@ -22,6 +22,12 @@ que la app hace después de la rama.
   así por versiones anteriores), el orden pasa a ser estable: agrupadas por capítulo y, dentro, por anverso.
 - **Exportación (EX-03):** las tarjetas del libro cuyo capítulo ya no existe se exportan al final, bajo un capítulo
   "Sin capítulo", y cuentan en el resumen. Hoy se pierden del respaldo sin aviso.
+- **Exportación (EX-02, aprobado por el usuario):** "Descargar .txt" se ofrece siempre; donde se puede compartir, como
+  acción secundaria (en el escritorio, la hoja de compartir no guarda el archivo en el disco). El error de copiar deja
+  de nombrar una acción que puede no estar.
+- **Caparazón (F-01, aprobado por el usuario):** un fallo que ninguna pantalla prevé, además de registrarse, muestra
+  un aviso discreto "Algo salió mal. Si se repite, recarga la app.", en cualquier pantalla y sin apilarse.
+- **Icono (P-03, aprobado por el usuario):** icono Cadence para la PWA y el favicon. No toca ninguna spec.
 
 El resto del plan de la rama (CD-01, PR-01, C-01, IM-01/02/05/07/08/09, PQ-01, P-02, N-01/02, T-01, IM-04) son
 correcciones contra specs que ya piden lo correcto: llevan su prueba de regresión, pero no delta. Su seguimiento vive en
@@ -43,10 +49,9 @@ el plan de la revisión.
 - `cola-diaria`: "Las vencidas se topan por libro…" (las de un libro que no está en la biblioteca no entran) y "Las
   tarjetas nuevas entran por libro…" (orden de creación = orden de llegada; empate estable).
 - `exportacion-de-libros`: "El texto exportado es el inverso exacto de la convención de importación" (tarjetas sin
-  capítulo al final, bajo "Sin capítulo").
-
-Si el usuario aprueba los condicionales del plan, se añadirán aquí: `exportacion-de-libros` (EX-02, "Descargar .txt"
-siempre como acción secundaria) y `navegacion-y-shell` (F-01, aviso de error global).
+  capítulo al final, bajo "Sin capítulo"), "La entrega principal es compartir…" ("Descargar .txt" también como
+  secundaria) y "«Copiar texto» deja el texto…" (su mensaje de error).
+- `navegacion-y-shell`: requisito nuevo, "Un fallo que ninguna pantalla prevé se avisa de forma discreta".
 
 ## Impact
 
@@ -54,7 +59,9 @@ siempre como acción secundaria) y `navegacion-y-shell` (F-01, aviso de error gl
 - Puerto y adaptador del proveedor de identidad (entrar con Google dice si la cuenta es nueva).
 - Armado de la cola (puro) y el servicio de la cola de Hoy (registro de las huérfanas).
 - Creación de tarjetas en lote (repositorio de tarjetas e importación de un libro): fechas de creación escalonadas.
-- Paquete de exportación (puro).
+- Paquete de exportación (puro) y el diálogo de exportar.
+- El manejador global de errores (raíz de composición), un servicio de aviso y su componente en la raíz de la app.
+- Los iconos de la PWA, el `apple-touch-icon` y el favicon.
 - Datos: compatibles. No se migra nada; las tarjetas ya creadas conservan sus fechas.
 
 ## Fuera de alcance
