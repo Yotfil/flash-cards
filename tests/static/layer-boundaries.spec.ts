@@ -34,4 +34,36 @@ describe('fronteras de capas', () => {
 
     expect(await ruleIdsFor('src/app/zz-frontera.routes.ts', code)).toEqual([]);
   });
+
+  // Los fakes de testing/ implementan puertos de domain/: nunca el adaptador real ni Firebase.
+  it.each([
+    ['Firebase', "import { doc } from 'firebase/firestore';\n\nexport const fake = doc;\n"],
+    [
+      'infrastructure/',
+      "import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';\n\nexport const fake = FirestoreCardRepository;\n",
+    ],
+    [
+      'features/',
+      "import { BIBLIOTECA_COPY } from '@features/biblioteca/biblioteca.copy';\n\nexport const fake = BIBLIOTECA_COPY;\n",
+    ],
+    [
+      'core/',
+      "import { provideCore } from '@core/provide-core';\n\nexport const fake = provideCore;\n",
+    ],
+  ])('testing/ no importa %s', async (_layer, code) => {
+    expect(await ruleIdsFor('src/app/testing/zz-frontera.ts', code)).toContain(
+      '@typescript-eslint/no-restricted-imports',
+    );
+  });
+
+  it('un fake de testing/ sí importa los puertos de domain/', async () => {
+    const code = [
+      "import type { Logger } from '@domain/ports/logger.port';",
+      '',
+      'export type FakeLoggerShape = Logger;',
+      '',
+    ].join('\n');
+
+    expect(await ruleIdsFor('src/app/testing/zz-frontera.ts', code)).toEqual([]);
+  });
 });
