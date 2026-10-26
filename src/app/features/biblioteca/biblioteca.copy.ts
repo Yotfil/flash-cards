@@ -248,6 +248,6 @@ export const EXPORT_ACTIONS = {
 
 export const EXPORT_READ_ERROR = 'No pudimos cargar las tarjetas del libro.';
 export const EXPORT_ERROR = 'No se pudo exportar el libro. Inténtalo de nuevo.';
-export const EXPORT_COPY_ERROR = 'No se pudo copiar. Usa Compartir o Descargar.';
+export const EXPORT_COPY_ERROR = 'No se pudo copiar. Usa «Descargar .txt».';
 export const EXPORT_NEEDS_CONNECTION = 'Necesitas conexión para exportar.';
 export const COPIED = 'Copiado';
