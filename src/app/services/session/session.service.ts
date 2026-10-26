@@ -147,14 +147,21 @@ export class SessionService {
   }
 
   /**
-   * Guarda ajustes del perfil: escribe el perfil completo con los cambios y, solo si el guardado
-   * termina bien, la sesión pasa a reflejarlos. Si falla, el error sube y la sesión no cambia.
+   * Guarda ajustes del perfil: escribe solo los cambiados (así no borra los que añada una versión
+   * posterior) y, solo si el guardado termina bien, la sesión pasa a reflejarlos. Se fusionan sobre
+   * el perfil vigente al terminar, no sobre la copia de antes: si otro ajuste se guardó mientras
+   * tanto, se conservan los dos. Si falla, el error sube y la sesión no cambia.
    */
   async updateSettings(changes: Partial<UserSettings>): Promise<void> {
-    const user = requireSessionUser(this.user());
-    const updated: User = { ...user, settings: { ...user.settings, ...changes } };
-    await this.users.save(updated);
-    this.setState({ kind: 'active', user: updated });
+    const { id } = requireSessionUser(this.user());
+    await this.users.updateSettings(id, changes);
+    const current = this.user();
+    if (current?.id === id) {
+      this.setState({
+        kind: 'active',
+        user: { ...current, settings: { ...current.settings, ...changes } },
+      });
+    }
   }
 
   /** La consulta de la lista sin red se explica como "sin conexión". */

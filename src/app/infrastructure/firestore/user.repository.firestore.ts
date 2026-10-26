@@ -1,13 +1,14 @@
-import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
-import type { User } from '@domain/models/user.model';
+import type { User, UserSettings } from '@domain/models/user.model';
 import { UserRepository } from '@domain/ports/user.repository';
 
 import { parseDocument } from './document-boundary';
 import { userDocumentSchema, type UserDocument } from './schemas/user.schema';
 
-// Perfil del usuario en `users/{uid}`. Lee a través de la frontera (Zod + error con ruta) y
-// escribe el documento completo.
+// Perfil del usuario en `users/{uid}`. Lee a través de la frontera (Zod + error con ruta), que
+// recorta lo que esta versión no conoce: por eso el documento completo solo se escribe al crearlo,
+// y un ajuste se guarda por su ruta (`settings.theme`), sin reescribir lo demás.
 export class FirestoreUserRepository extends UserRepository {
   constructor(private readonly firestore: Firestore) {
     super();
@@ -23,6 +24,16 @@ export class FirestoreUserRepository extends UserRepository {
 
   async save(user: User): Promise<void> {
     await setDoc(this.profileRef(user.id), toUserDocument(user));
+  }
+
+  async updateSettings(uid: string, changes: Partial<UserSettings>): Promise<void> {
+    const paths = Object.entries(changes)
+      .filter(([, value]) => value !== undefined)
+      .map(([name, value]) => [`settings.${name}`, value]);
+    if (paths.length === 0) {
+      return;
+    }
+    await updateDoc(this.profileRef(uid), Object.fromEntries(paths));
   }
 
   private profileRef(uid: string) {

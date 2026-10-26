@@ -8,10 +8,10 @@
 
 ## 1. Paso 1 · Ajustes: guardar solo lo que cambia (AJ-01, AJ-01b)
 
-- [ ] 1.1 Escribir en rojo, en `tests/firestore/user.repository.integration.spec.ts`, "guardar un ajuste no borra los ajustes que esta versión no conoce" (perfil sembrado con `promptTemplate` y `practicePackageCapacity`; guardar el tema; los dos siguen) y "guardar un ajuste solo cambia ese ajuste"; verificar que fallan (el puerto aún no tiene la escritura parcial).
-- [ ] 1.2 Añadir al puerto del perfil la escritura parcial de ajustes, implementarla en el adaptador con rutas `settings.<campo>` y en el fake (registro de escrituras y fallo simulado); verificar que pasan las pruebas de 1.1.
-- [ ] 1.3 Escribir en rojo, en `src/app/services/session/session.service.spec.ts`, "dos ajustes cambiados seguidos se guardan los dos" (sonda AJ-01b) y adaptar las pruebas de `updateSettings` a la escritura parcial; verificar que fallan.
-- [ ] 1.4 Hacer que `SessionService.updateSettings` use la escritura parcial y fusione sobre el usuario vigente al terminar; verificar que pasa la suite de la sesión y la puerta completa; commit `fix(ajustes-de-usuario): …`.
+- [x] 1.1 Escribir en rojo, en `tests/firestore/user.repository.integration.spec.ts`, "guardar un ajuste no borra los ajustes que esta versión no conoce" (perfil sembrado con `promptTemplate` y `practicePackageCapacity`; guardar el tema; los dos siguen) y "guardar un ajuste solo cambia ese ajuste"; verificar que fallan (el puerto aún no tiene la escritura parcial).
+- [x] 1.2 Añadir al puerto del perfil la escritura parcial de ajustes, implementarla en el adaptador con rutas `settings.<campo>` y en el fake (registro de escrituras y fallo simulado); verificar que pasan las pruebas de 1.1.
+- [x] 1.3 Escribir en rojo, en `src/app/services/session/session.service.spec.ts`, "dos ajustes cambiados seguidos se guardan los dos" (sonda AJ-01b) y adaptar las pruebas de `updateSettings` a la escritura parcial; verificar que fallan.
+- [x] 1.4 Hacer que `SessionService.updateSettings` use la escritura parcial y fusione sobre el usuario vigente al terminar; verificar que pasa la suite de la sesión y la puerta completa; commit `fix(ajustes-de-usuario): …`.
 
 ## 2. Paso 5 · Tarjetas huérfanas (C-01, CD-04, IM-05, EX-03)
 

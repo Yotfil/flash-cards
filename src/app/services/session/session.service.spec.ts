@@ -396,27 +396,26 @@ describe('SessionService · ajustes', () => {
     return context;
   }
 
-  it('guarda el perfil completo con el ajuste cambiado y los demás intactos', async () => {
+  it('guarda solo el ajuste cambiado y la sesión lo fusiona con los demás intactos', async () => {
     const { session, users } = await activeSession();
 
     await session.updateSettings({ defaultNewCardsPerDay: 5 });
 
-    const expectedSettings = {
+    expect(users.settingsUpdates).toEqual([{ uid: 'u1', changes: { defaultNewCardsPerDay: 5 } }]);
+    expect(users.saved).toEqual([]);
+    expect(session.user()?.settings).toEqual({
       timezone: 'America/Bogota',
       dayStartHour: 4,
       theme: 'dark',
       defaultNewCardsPerDay: 5,
       autoGradeByTime: true,
-    };
-    expect(users.saved).toHaveLength(1);
-    expect(users.saved[0]).toEqual({ ...aUser({ id: 'u1' }), settings: expectedSettings });
-    expect(session.user()?.settings).toEqual(expectedSettings);
+    });
   });
 
   it('si el guardado falla el error sube y la sesión conserva el valor anterior', async () => {
     const { session, users } = await activeSession();
     const cause = new Error('offline');
-    users.failOnSave = cause;
+    users.failOnUpdateSettings = cause;
 
     await expect(session.updateSettings({ defaultNewCardsPerDay: 5 })).rejects.toBe(cause);
 
@@ -431,6 +430,33 @@ describe('SessionService · ajustes', () => {
     await expect(session.updateSettings({ dayStartHour: 2 })).rejects.toThrow(
       'No hay una sesión activa.',
     );
-    expect(users.saved).toEqual([]);
+    expect(users.settingsUpdates).toEqual([]);
+  });
+
+  it('dos ajustes cambiados seguidos se guardan los dos, en el perfil y en la sesión', async () => {
+    const { session, users } = await activeSession();
+
+    // Ada toca "Claro" y, antes de que termine ese guardado, desmarca la sugerencia por tiempo.
+    const theme = session.updateSettings({ theme: 'light' });
+    const suggestion = session.updateSettings({ autoGradeByTime: false });
+    await Promise.all([theme, suggestion]);
+
+    const stored = await users.findById('u1');
+    expect(stored?.settings.theme).toBe('light');
+    expect(stored?.settings.autoGradeByTime).toBe(false);
+    expect(session.user()?.settings.theme).toBe('light');
+    expect(session.user()?.settings.autoGradeByTime).toBe(false);
+  });
+
+  it('si la sesión se cierra mientras se guarda un ajuste, no vuelve a quedar activa', async () => {
+    const { session, users } = await activeSession();
+    const release = users.holdSettingsUpdates();
+
+    const saving = session.updateSettings({ theme: 'light' });
+    await session.signOut();
+    release();
+    await saving;
+
+    expect(session.state()).toEqual({ kind: 'signedOut' });
   });
 });

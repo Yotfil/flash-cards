@@ -1,5 +1,5 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, doc, setDoc } from 'firebase/firestore';
+import { Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
 
 import type { User } from '@domain/models/user.model';
 import { InvalidDocumentError } from '@infrastructure/firestore/document-boundary';
@@ -102,4 +102,70 @@ describe('FirestoreUserRepository', () => {
   it('un perfil que todavía no existe se lee como null', async () => {
     expect(await repositoryAs('u2', 'luis@ejemplo.com').findById('u2')).toBeNull();
   });
+
+  it('guardar un ajuste solo escribe ese ajuste: el resto del perfil y los ajustes que esta versión no conoce siguen', async () => {
+    // El perfil tal como lo deja una versión posterior (la 1.1.0 añade la plantilla del prompt).
+    await seedProfile(OWNER_UID, {
+      displayName: 'Ada',
+      email: OWNER_EMAIL,
+      createdAt: Timestamp.fromDate(new Date('2026-06-15T10:00:00.000Z')),
+      isSearchable: false,
+      settings: {
+        timezone: 'America/Bogota',
+        dayStartHour: 4,
+        theme: 'system',
+        defaultNewCardsPerDay: 20,
+        autoGradeByTime: true,
+        practicePackageCapacity: 30,
+        promptTemplate: 'Mi plantilla con [[REPASADAS]]',
+      },
+    });
+
+    await repositoryAs(OWNER_UID, OWNER_EMAIL).updateSettings(OWNER_UID, { theme: 'dark' });
+
+    const stored = await readProfile(OWNER_UID);
+    expect(stored['settings']).toEqual({
+      timezone: 'America/Bogota',
+      dayStartHour: 4,
+      theme: 'dark',
+      defaultNewCardsPerDay: 20,
+      autoGradeByTime: true,
+      practicePackageCapacity: 30,
+      promptTemplate: 'Mi plantilla con [[REPASADAS]]',
+    });
+    expect(stored['displayName']).toBe('Ada');
+  });
+
+  it('un ajuste que falta en un perfil antiguo se añade al guardarlo', async () => {
+    await seedProfile(OWNER_UID, {
+      displayName: 'Ada',
+      email: OWNER_EMAIL,
+      createdAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00.000Z')),
+      isSearchable: false,
+      settings: { timezone: 'America/Bogota', dayStartHour: 4, theme: 'dark' },
+    });
+
+    await repositoryAs(OWNER_UID, OWNER_EMAIL).updateSettings(OWNER_UID, {
+      defaultNewCardsPerDay: 5,
+    });
+
+    const read = await repositoryAs(OWNER_UID, OWNER_EMAIL).findById(OWNER_UID);
+    expect(read?.settings).toEqual({
+      timezone: 'America/Bogota',
+      dayStartHour: 4,
+      theme: 'dark',
+      defaultNewCardsPerDay: 5,
+      autoGradeByTime: true,
+    });
+  });
 });
+
+/** El documento tal como quedó en el almacén, sin pasar por la frontera (que recorta lo desconocido). */
+async function readProfile(uid: string): Promise<Record<string, unknown>> {
+  let data: Record<string, unknown> = {};
+  await environment.withSecurityRulesDisabled(async (context) => {
+    const snapshot = await getDoc(doc(modularFirestore(context), 'users', uid));
+    data = snapshot.data() ?? {};
+  });
+  return data;
+}
