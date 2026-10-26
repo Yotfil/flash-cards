@@ -12,6 +12,9 @@ que la app hace después de la rama.
 - **Ajustes (AJ-01, AJ-01b):** guardar un ajuste escribe solo los ajustes cambiados, no el perfil entero. Así un
   cliente 1.0.0 no borra los ajustes que añada una versión posterior (la plantilla de prompt de la 1.1.0), y dos
   ajustes cambiados seguidos se conservan los dos. La spec decía "persistir el perfil completo".
+- **Acceso (A-01):** al entrar con Google fuera de la lista, solo se borra la identidad si el proveedor la acaba de
+  crear; una cuenta que ya existía se conserva (sus datos siguen ligados a ella). Un requisito decía "recién creada"
+  y otro "acaba de entrar por Google": quedan los dos diciendo lo primero.
 - **Cola diaria (CD-04, con C-01):** las tarjetas de un libro que ya no está en la biblioteca (un libro borrado cuyas
   tarjetas quedaron huérfanas) dejan de entrar en Hoy y se registran. La spec decía que "pasan sin tope".
 - **Cola diaria (CD-02):** las nuevas creadas juntas (al importar un libro, importar tarjetas o crear varias) entran
@@ -20,7 +23,7 @@ que la app hace después de la rama.
 - **Exportación (EX-03):** las tarjetas del libro cuyo capítulo ya no existe se exportan al final, bajo un capítulo
   "Sin capítulo", y cuentan en el resumen. Hoy se pierden del respaldo sin aviso.
 
-El resto del plan de la rama (A-01, CD-01, PR-01, C-01, IM-01/02/05/07/08/09, PQ-01, P-02, N-01/02, T-01, IM-04) son
+El resto del plan de la rama (CD-01, PR-01, C-01, IM-01/02/05/07/08/09, PQ-01, P-02, N-01/02, T-01, IM-04) son
 correcciones contra specs que ya piden lo correcto: llevan su prueba de regresión, pero no delta. Su seguimiento vive en
 el plan de la revisión.
 
@@ -35,6 +38,8 @@ el plan de la revisión.
 - `ajustes-de-usuario`: el requisito "Guardar un ajuste fusiona el cambio sobre los ajustes actuales y actualiza la
   sesión" deja de persistir el perfil completo y gana dos escenarios (ajustes desconocidos intactos, dos cambios
   seguidos).
+- `autenticacion-y-acceso`: "El usuario puede continuar con Google" y "Solo entra quien está en la lista de acceso
+  anticipado" (solo se borra la identidad de Google recién creada; una que ya existía se conserva).
 - `cola-diaria`: "Las vencidas se topan por libro…" (las de un libro que no está en la biblioteca no entran) y "Las
   tarjetas nuevas entran por libro…" (orden de creación = orden de llegada; empate estable).
 - `exportacion-de-libros`: "El texto exportado es el inverso exacto de la convención de importación" (tarjetas sin
@@ -46,6 +51,7 @@ siempre como acción secundaria) y `navegacion-y-shell` (F-01, aviso de error gl
 ## Impact
 
 - Puerto y adaptador del perfil (escritura parcial de ajustes) y el servicio de sesión.
+- Puerto y adaptador del proveedor de identidad (entrar con Google dice si la cuenta es nueva).
 - Armado de la cola (puro) y el servicio de la cola de Hoy (registro de las huérfanas).
 - Creación de tarjetas en lote (repositorio de tarjetas e importación de un libro): fechas de creación escalonadas.
 - Paquete de exportación (puro).

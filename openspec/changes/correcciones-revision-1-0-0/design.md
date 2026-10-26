@@ -4,14 +4,16 @@
 
 Ver `proposal.md` (Why). Este change acompaña a la rama `fix/revision-1.0.0`, que implementa el plan de correcciones
 de la revisión adversarial en el orden que aceptó el usuario. Aquí se diseñan solo los pasos que llevan delta de spec:
-el 1 (ajustes), el 5 (huérfanas: borrar, Hoy, crear y exportar) y el 10 (orden de las nuevas). Los demás pasos se
-arreglan contra la spec vigente y no aparecen en este documento.
+el 1 (ajustes), el 2 (acceso con Google), el 5 (huérfanas: borrar, Hoy, crear y exportar) y el 10 (orden de las
+nuevas). Los demás pasos se arreglan contra la spec vigente y no aparecen en este documento.
 
 Estado de partida, leído en el código:
 
 - El perfil se guarda entero (`setDoc` sin `merge`) a partir del modelo que la frontera recorta: lo que el esquema de
   esta versión no conoce se pierde al guardar cualquier ajuste. La sesión fusiona el cambio sobre la copia del usuario
   que tenía **antes** del guardado.
+- Al entrar con Google, la sesión borra del proveedor cualquier identidad que no esté en la lista; el adaptador
+  ignora si la cuenta es nueva, dato que Firebase entrega en el resultado de la ventana emergente.
 - El armado de la cola (puro) deja pasar sin tope las vencidas de un libro que no está en la lista (`!book → true`) y
   ya excluye las nuevas de ese libro.
 - Borrar un capítulo o un libro lee lo que va a borrar con la lectura normal, que sin red (o con la red caída sin
@@ -48,7 +50,21 @@ escribe solo esas rutas (`settings.<campo>`) con `updateDoc`. Crear el perfil si
 - Capas: puerto (dominio) + adaptador (infraestructura) + servicio de sesión. El fake en memoria gana la misma
   operación, con su registro de escrituras y su fallo simulado.
 
-### 2. Huérfanas (paso 5)
+### 2. Google: solo se borra la identidad recién creada (paso 2)
+
+Entrar con Google devuelve, además de abrir la ventana, si el proveedor acaba de crear la cuenta (en Firebase,
+`getAdditionalUserInfo(resultado).isNewUser`; si no lo sabe, "no es nueva"). La sesión guarda la promesa de esa
+ventana y, cuando el observador avisa una identidad fuera de la lista que llegó por esa ventana, espera la respuesta:
+solo si es nueva la borra. Tras esa espera vuelve a comprobar que la identidad sigue siendo la vigente (la generación
+del observador) antes de borrar: borrar la cuenta equivocada sería irreparable.
+
+- *Por qué esperar la promesa:* el observador puede avisar antes de que la ventana resuelva; el dato llega por la
+  ventana, no por la identidad.
+- *Alternativa descartada:* comparar las fechas de creación y del último acceso de la identidad. Es una heurística; el
+  resultado de la ventana lo dice sin adivinar.
+- Si la ventana falla después de que el observador avisara, la identidad se conserva (ante la duda, no se borra).
+
+### 3. Huérfanas (paso 5)
 
 - **Borrar lee del servidor.** El borrado del capítulo y el del libro leen lo que van a borrar con la lectura del
   servidor (la misma que ya usa la exportación). Sin red de verdad, fallan y el diálogo muestra su error de siempre;
@@ -66,7 +82,7 @@ escribe solo esas rutas (`settings.<campo>`) con `updateDoc`. Crear el perfil si
 - **Exportar no pierde las huérfanas.** El paquete añade, al final, un capítulo "Sin capítulo" con las tarjetas cuyo
   capítulo no está en la lista (en el orden del listado). El resumen sale del paquete, así que las cuenta solo.
 
-### 3. Orden de las nuevas (paso 10)
+### 4. Orden de las nuevas (paso 10)
 
 - **Desde ahora:** al crear en lote, la tarjeta `i` lleva como fecha de creación `ahora + i` milisegundos, en el
   orden de la lista recibida (el del archivo). Vale para el repositorio de tarjetas (crear varias y reemplazar) y para
@@ -105,6 +121,9 @@ Sin migración de datos. Las reglas de seguridad no cambian. El despliegue es el
 | Ajustes · "Cambiar un ajuste no toca los otros" | misma suite: guardar `defaultNewCardsPerDay` no toca el resto de ajustes ni del perfil; `session.service.spec.ts`: la sesión fusiona solo ese ajuste | integración + unitaria |
 | Ajustes · "Dos ajustes seguidos se guardan los dos" (sonda AJ-01b) | `session.service.spec.ts`: tema y sugerencia seguidos; el perfil guardado y el de la sesión tienen los dos | unitaria pura (fakes) |
 | Ajustes · "La sesión refleja el cambio al instante" | pruebas existentes de `session.service.spec.ts`, adaptadas a la escritura parcial | unitaria pura |
+| Acceso · "Cuenta de Google que ya existía y salió de la lista" (sonda A-01) | `session.service.spec.ts`: cuenta con perfil, sale de la lista, vuelve con Google (no nueva) → sin acceso y 0 borrados | unitaria pura (fakes) |
+| Acceso · "Google no autorizado" (cuenta nueva) | prueba existente de `session.service.spec.ts`, con la ventana diciendo "nueva" | unitaria pura (fakes) |
+| Acceso · la identidad cambia mientras se espera la ventana | `session.service.spec.ts`: no se borra la identidad que avisó después | unitaria pura (fakes) |
 | Cola · "Tarjetas de un libro que ya no existe" | `build-daily-queue.spec.ts` (vencidas y nueva fuera, sin fila); `daily-queue.service.spec.ts` (aviso con el número) | unitaria pura |
 | Cola · "Las nuevas de un libro importado salen en el orden del archivo" (sonda CD-02) | `card.repository.integration.spec.ts`: 30 creadas juntas, las 20 primeras en orden; `import.repository.integration.spec.ts`: fechas crecientes en el orden de los capítulos y tarjetas | integración con emulador |
 | Cola · "Nuevas creadas en el mismo instante por una versión anterior" | `ready-cards.spec.ts`: empate por capítulo, anverso y reverso, estable | unitaria pura |
