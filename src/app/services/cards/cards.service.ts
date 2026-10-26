@@ -11,6 +11,7 @@ import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { CardRepository } from '@domain/ports/card.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
+import { readDeviceThenServer } from '@services/data-loading/read-device-then-server';
 import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
@@ -31,16 +32,20 @@ export class CardsService {
 
   private readonly chapterId = signal<string | undefined>(undefined);
 
+  /** Pinta primero lo guardado en el dispositivo y lo cambia por la lectura del servidor al llegar. */
   readonly cards = resource({
     params: () => this.chapterId(),
-    loader: async ({ params }) => {
-      try {
-        return await this.repository.listByChapter(requireSessionUid(this.session.user()), params);
-      } catch (error) {
+    stream: async ({ params: chapterId, abortSignal }) => {
+      const uid = requireSessionUid(this.session.user());
+      return readDeviceThenServer({
+        fromDevice: () => this.repository.listByChapter(uid, chapterId, 'device'),
+        fromServer: () => this.repository.listByChapter(uid, chapterId),
+        hasContent: (cards) => cards.length > 0,
+        logger: this.logger,
         // La pantalla pinta el error; aquí queda el detalle (p. ej. qué documento rechazó la frontera).
-        this.logger.error(`No se pudieron leer las tarjetas del capítulo ${params}`, error);
-        throw error;
-      }
+        errorMessage: `No se pudieron leer las tarjetas del capítulo ${chapterId}`,
+        abortSignal,
+      });
     },
   });
 

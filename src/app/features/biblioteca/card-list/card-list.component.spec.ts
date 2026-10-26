@@ -35,9 +35,12 @@ async function render(
   if (options.holdList) {
     const gate = new Promise<void>((resolve) => (releaseList = resolve));
     const list = repository.listByChapter.bind(repository);
-    repository.listByChapter = async (uid, chapterId) => {
-      await gate;
-      return list(uid, chapterId);
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    repository.listByChapter = async (uid, chapterId, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, chapterId, source);
     };
   }
   TestBed.configureTestingModule({

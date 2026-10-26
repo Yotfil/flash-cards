@@ -90,6 +90,59 @@ describe('CardsService · recurso', () => {
   });
 });
 
+/** Deja en espera las lecturas del servidor (las del dispositivo responden al instante). */
+function holdServerReads(repository: FakeCardRepository): () => void {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const list = repository.listByChapter.bind(repository);
+  repository.listByChapter = async (uid, chapterId, source) => {
+    if (source !== 'device') {
+      await gate;
+    }
+    return list(uid, chapterId, source);
+  };
+  return release;
+}
+
+describe('CardsService · lo guardado en el dispositivo primero', () => {
+  it('pinta al instante las tarjetas guardadas y después las del servidor', async () => {
+    const { service, repository, settle } = setup();
+    repository.seedOnDevice(aCard({ id: 'k1', chapterId: 'c1' }));
+    repository.seed(aCard({ id: 'k1', chapterId: 'c1' }), aCard({ id: 'k2', chapterId: 'c1' }));
+    const release = holdServerReads(repository);
+    const ids = () => service.cards.value()?.map((card) => card.id);
+
+    service.openChapter('c1');
+    await settle();
+    expect(ids()).toEqual(['k1']);
+
+    release();
+    await settle();
+    expect(ids()).toEqual(['k1', 'k2']);
+    expect(repository.calls.listByChapter).toBe(1);
+  });
+
+  it('si el servidor falla con lo guardado a la vista, la lista se queda y el fallo se registra', async () => {
+    const { service, repository, logger, settle } = setup();
+    repository.seedOnDevice(aCard({ id: 'k1', chapterId: 'c1' }));
+    const failure = new Error('unavailable');
+    repository.failWith.listByChapter = failure;
+
+    service.openChapter('c1');
+    await settle();
+
+    expect(service.cards.status()).not.toBe('error');
+    expect(service.cards.value()?.map((card) => card.id)).toEqual(['k1']);
+    expect(logger.entries).toEqual([
+      {
+        level: 'error',
+        message: 'No se pudieron leer las tarjetas del capítulo c1',
+        cause: failure,
+      },
+    ]);
+  });
+});
+
 describe('CardsService · crear y editar', () => {
   async function opened(cards = [aCard({ id: 'k1', chapterId: 'c1' })]) {
     const context = setup();
