@@ -16,6 +16,10 @@ import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
 import { ImportPreviewComponent } from '../import-preview/import-preview.component';
 import { IMPORTACION_COPY, importLabel } from '../importacion.copy';
+import {
+  TextFilePickerComponent,
+  type LoadedTextFile,
+} from '../text-file-picker/text-file-picker.component';
 
 /** Lo que se le quita al nombre de un archivo para proponerlo como nombre del libro. */
 const TEXT_FILE_EXTENSION = /\.(txt|md)$/i;
@@ -26,7 +30,7 @@ const TEXT_FILE_EXTENSION = /\.(txt|md)$/i;
 // muestra en curso (no ofrece otra) y, al terminar, solo navega al libro si sigue abierta.
 @Component({
   selector: 'app-importar-libro-page',
-  imports: [FormField, ImportPreviewComponent],
+  imports: [FormField, ImportPreviewComponent, TextFilePickerComponent],
   templateUrl: './importar-libro-page.component.html',
   styleUrl: './importar-libro-page.component.scss',
 })
@@ -79,21 +83,17 @@ export class ImportarLibroPageComponent {
   }
 
   /** El archivo sustituye al texto y, si el nombre no se tocó, propone el del archivo. */
-  protected async loadFile(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) {
-      return;
-    }
-    this.text.set(await file.text());
+  protected loadFile(file: LoadedTextFile): void {
+    this.text.set(file.text);
     if (!this.bookForm.name().dirty()) {
       this.model.update((value) => ({
         ...value,
         name: file.name.replace(TEXT_FILE_EXTENSION, ''),
       }));
+      // Un nombre propuesto que no vale (más de 120 caracteres) se marca para que se vea el motivo
+      // y no quede "Importar" deshabilitado sin explicación.
+      this.bookForm.name().markAsTouched();
     }
-    // Vaciarlo permite volver a cargar el mismo archivo.
-    input.value = '';
   }
 
   protected async importBook(event: Event): Promise<void> {

@@ -15,6 +15,7 @@ export const IMPORTACION_COPY = {
   textPlaceholder:
     '# Capítulo 1\nto give up | rendirse :: I gave up smoking.\nEl {{gato}} es negro',
   loadFile: 'Cargar archivo',
+  readFileError: 'No se pudo leer el archivo.',
   importing: 'Importando…',
   cancel: 'Cancelar',
   bookError: 'No se pudo importar el libro. Inténtalo de nuevo.',

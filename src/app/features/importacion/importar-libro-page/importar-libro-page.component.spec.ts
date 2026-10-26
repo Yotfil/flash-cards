@@ -144,6 +144,15 @@ describe('ImportarLibroPageComponent', () => {
     release();
   });
 
+  it('un archivo con un nombre de más de 120 caracteres dice por qué no se puede importar', async () => {
+    const { page, loadFile, importButton } = await open();
+
+    await loadFile(`${'Vocabulario de inglés '.repeat(6)}.txt`, 'a | b');
+
+    expect(importButton()?.disabled).toBe(true);
+    expect(page().textContent).toContain('Usa como máximo 120 caracteres.');
+  });
+
   it('si sale de la página mientras importa, al terminar no lo saca de donde esté', async () => {
     const { harness, imports, type, importButton, update } = await open();
     let release!: () => void;

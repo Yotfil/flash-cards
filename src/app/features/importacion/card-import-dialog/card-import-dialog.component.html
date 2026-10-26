@@ -25,6 +25,10 @@
     </label>
   </fieldset>
 
+  <div class="flex justify-end">
+    <app-text-file-picker (loaded)="loadFile($event)" />
+  </div>
+
   <textarea
     rows="8"
     class="resize-y rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 font-mono text-sm text-text placeholder:text-text-faint"

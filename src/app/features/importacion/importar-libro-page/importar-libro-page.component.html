@@ -41,17 +41,7 @@
   <div class="flex flex-col gap-1.5">
     <div class="flex items-end justify-between gap-3">
       <label for="import-text" class="text-sm font-semibold text-text">{{ copy.textLabel }}</label>
-      <label
-        class="press cursor-pointer rounded-xl border border-glass-border px-3 py-1.5 text-sm font-semibold text-text"
-      >
-        {{ copy.loadFile }}
-        <input
-          type="file"
-          accept=".txt,.md,text/plain"
-          class="sr-only"
-          (change)="loadFile($event)"
-        />
-      </label>
+      <app-text-file-picker (loaded)="loadFile($event)" />
     </div>
     <textarea
       id="import-text"
