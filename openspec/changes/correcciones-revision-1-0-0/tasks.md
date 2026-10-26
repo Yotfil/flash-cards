@@ -15,9 +15,9 @@
 
 ## 2. Paso 2 · Google: solo se borra la identidad recién creada (A-01)
 
-- [ ] 2.1 Escribir en rojo, en `src/app/services/session/session.service.spec.ts`, "una cuenta de Google que ya existía y salió de la lista queda sin acceso sin borrarse" (sonda A-01) y "si otra identidad avisa mientras se espera la ventana, no se borra"; verificar que fallan.
-- [ ] 2.2 Hacer que entrar con Google diga si la cuenta es nueva (puerto, adaptador con `getAdditionalUserInfo`, fake con la respuesta configurable) y que la sesión solo borre la nueva, comprobando la generación tras la espera; verificar que pasan las pruebas de 2.1 y las existentes de Google.
-- [ ] 2.3 Puerta completa en verde y commit `fix(autenticacion-y-acceso): …` del paso.
+- [x] 2.1 Escribir en rojo, en `src/app/services/session/session.service.spec.ts`, "una cuenta de Google que ya existía y salió de la lista queda sin acceso sin borrarse" (sonda A-01) y "si otra identidad avisa mientras se espera la ventana, no se borra"; verificar que fallan.
+- [x] 2.2 Hacer que entrar con Google diga si la cuenta es nueva (puerto, adaptador con `getAdditionalUserInfo`, fake con la respuesta configurable) y que la sesión solo borre la nueva, comprobando la generación tras la espera; verificar que pasan las pruebas de 2.1 y las existentes de Google.
+- [x] 2.3 Puerta completa en verde y commit `fix(autenticacion-y-acceso): …` del paso.
 
 ## 3. Paso 5 · Tarjetas huérfanas (C-01, CD-04, IM-05, EX-03)
 

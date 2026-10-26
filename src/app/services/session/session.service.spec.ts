@@ -277,6 +277,63 @@ describe('SessionService · inicio de sesión, Google y acceso retirado', () => 
     expect(users.saved).toEqual([]);
   });
 
+  it('una cuenta de Google que ya existía y salió de la lista queda sin acceso sin borrarse', async () => {
+    // Ana usa Cadence con Google desde hace meses. Sale de la lista, cierra sesión y vuelve a
+    // "Continuar con Google": la ventana devuelve su misma cuenta, no una recién creada.
+    const { session, authPort, users, allowlist } = setup(['ana@ejemplo.com']);
+    const ana = anIdentity({ uid: 'ana-uid', email: 'ana@ejemplo.com' });
+    users.seed(aUser({ id: 'ana-uid', email: 'ana@ejemplo.com' }));
+    authPort.emit(ana);
+    await settle();
+    await session.signOut();
+    allowlist.revoke('ana@ejemplo.com');
+    authPort.googleIdentityIsNew = false;
+
+    await session.signInWithGoogle();
+    authPort.emit(ana);
+    await settle();
+
+    expect(authPort.deletions).toBe(0);
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'ana@ejemplo.com' });
+  });
+
+  it('si otra identidad avisa mientras se espera la ventana de Google, no se borra ninguna', async () => {
+    const { session, authPort } = setup(['ada@ejemplo.com']);
+    authPort.emit(null);
+    await settle();
+    const release = authPort.hold();
+
+    const signingIn = session.signInWithGoogle();
+    authPort.emit(anIdentity({ uid: 'nuevo-uid', email: 'nuevo@ejemplo.com' }));
+    await settle();
+    authPort.emit(anIdentity({ uid: 'u1', email: 'ada@ejemplo.com' }));
+    await settle();
+    release();
+    await signingIn;
+    await settle();
+
+    expect(authPort.deletions).toBe(0);
+    expect(session.state().kind).toBe('active');
+  });
+
+  it('si la ventana de Google falla después de avisar la identidad, no se borra', async () => {
+    const { session, authPort } = setup([]);
+    authPort.emit(null);
+    await settle();
+    const release = authPort.hold();
+
+    const signingIn = session.signInWithGoogle();
+    authPort.emit(anIdentity({ email: 'nuevo@ejemplo.com' }));
+    await settle();
+    authPort.failWith.signInWithGoogle = new Error('auth/internal-error');
+    release();
+    await expect(signingIn).rejects.toThrow('auth/internal-error');
+    await settle();
+
+    expect(authPort.deletions).toBe(0);
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'nuevo@ejemplo.com' });
+  });
+
   it('una sesión guardada cuyo correo salió de la lista queda sin acceso sin borrar nada', async () => {
     const { session, authPort } = setup([]);
 
