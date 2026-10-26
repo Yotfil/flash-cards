@@ -5,6 +5,7 @@ import { DEFAULT_MAX_REVIEWS_PER_DAY } from '@domain/models/study-defaults';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { readDeviceThenServer } from '@services/data-loading/read-device-then-server';
 import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { requireSessionUid, requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
@@ -20,7 +21,8 @@ export interface BookIdentity {
 }
 
 // Libros del usuario. La lista es un recurso de Angular (cargando / error / valor) que la
-// Biblioteca relee cada vez que se abre; las mutaciones actualizan la lista local tras el éxito en
+// Biblioteca relee cada vez que se abre: pinta primero lo guardado en el dispositivo y lo cambia
+// por la lectura del servidor al llegar. Las mutaciones actualizan la lista local tras el éxito en
 // el almacén, sin volver a leerla. Los mensajes para el usuario los elige la pantalla.
 @Injectable({ providedIn: 'root' })
 export class BooksService {
@@ -38,7 +40,18 @@ export class BooksService {
   readonly books = resource({
     // Solo el uid (un texto): cambiar ajustes del perfil no relee los libros; cambiar de usuario sí.
     params: () => (this.loadRequested() ? (this.session.user()?.id ?? NO_SESSION) : undefined),
-    loader: () => this.load(),
+    stream: async ({ abortSignal }) => {
+      const uid = requireSessionUid(this.session.user());
+      return readDeviceThenServer({
+        fromDevice: () => this.repository.listByUser(uid, 'device'),
+        // La lectura del servidor es la compartida con `ensureLoaded` y `loadFresh`.
+        fromServer: () => this.load(),
+        hasContent: (books) => books.length > 0,
+        logger: this.logger,
+        errorMessage: 'No se pudo leer la Biblioteca',
+        abortSignal,
+      });
+    },
   });
 
   /** Vuelve a leer la lista (la Biblioteca lo hace cada vez que se abre). */
@@ -175,17 +188,18 @@ export class BooksService {
   }
 
   /**
-   * La lectura en curso o terminada que comparten el recurso y `ensureLoaded`. Si falla, queda
-   * registrada (una vez, aunque la esperen varios) y marcada, para que `ensureLoaded` no la reutilice.
+   * La lectura del servidor en curso o terminada que comparten el recurso, `ensureLoaded` y
+   * `loadFresh`. Si falla, queda marcada para que `ensureLoaded` no la reutilice.
    */
   private load(): Promise<Book[]> {
     const uid = requireSessionUid(this.session.user());
     if (this.lastLoad?.uid !== uid) {
       const read = { uid, promise: this.repository.listByUser(uid), failed: false };
       this.lastLoad = read;
-      read.promise.catch((error: unknown) => {
+      // El fallo lo registra el recurso, por el que pasa toda lectura (también las de
+      // `ensureLoaded` y `loadFresh`, que lo despiertan): aquí solo se marca para no reutilizarlo.
+      read.promise.catch(() => {
         read.failed = true;
-        this.logger.error('No se pudo leer la Biblioteca', error);
       });
     }
     return this.lastLoad.promise;

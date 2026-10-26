@@ -39,7 +39,11 @@ async function render(
   let release: () => void = () => undefined;
   if (options.hold) {
     const list = repository.listByUser.bind(repository);
-    repository.listByUser = (uid) => new Promise((resolve) => (release = () => resolve(list(uid))));
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    repository.listByUser = (uid, source) =>
+      source === 'device'
+        ? list(uid, source)
+        : new Promise((resolve) => (release = () => resolve(list(uid, source))));
   }
   TestBed.configureTestingModule({
     providers: [

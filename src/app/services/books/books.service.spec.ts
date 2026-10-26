@@ -131,6 +131,82 @@ describe('BooksService · recurso', () => {
   });
 });
 
+/** Deja en espera las lecturas del servidor (las del dispositivo responden al instante). */
+function holdServerReads(repository: FakeBookRepository): () => void {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const list = repository.listByUser.bind(repository);
+  repository.listByUser = async (uid, source) => {
+    if (source !== 'device') {
+      await gate;
+    }
+    return list(uid, source);
+  };
+  return release;
+}
+
+describe('BooksService · lo guardado en el dispositivo primero', () => {
+  it('pinta al instante los libros guardados y después los del servidor, con una sola lectura', async () => {
+    const { service, repository, settle } = setup();
+    repository.seedOnDevice(aBook({ id: 'b1', order: 0 }));
+    repository.seed(aBook({ id: 'b1', order: 0 }), aBook({ id: 'b2', order: 1 }));
+    const release = holdServerReads(repository);
+
+    service.reload();
+    await settle();
+    expect(service.books.hasValue()).toBe(true);
+    expect(service.books.value()?.map((book) => book.id)).toEqual(['b1']);
+
+    release();
+    await settle();
+    expect(service.books.value()?.map((book) => book.id)).toEqual(['b1', 'b2']);
+    expect(repository.calls.listByUser).toBe(1);
+  });
+
+  it('sin nada guardado sigue cargando hasta que responde el servidor', async () => {
+    const { service, repository, settle } = setup();
+    repository.seed(aBook({ id: 'b1' }));
+    const release = holdServerReads(repository);
+
+    service.reload();
+    // Sin esperar a que la app quede estable: con el servidor en espera, el recurso no lo está.
+    await new Promise((resolve) => setTimeout(resolve));
+    TestBed.tick();
+    expect(service.books.status()).toBe('loading');
+    expect(service.books.hasValue()).toBe(false);
+
+    release();
+    await settle();
+    expect(service.books.value()?.map((book) => book.id)).toEqual(['b1']);
+  });
+
+  it('si el servidor falla con lo guardado a la vista, la lista se queda y el fallo se registra una vez', async () => {
+    const { service, repository, logger, settle } = setup();
+    repository.seedOnDevice(aBook({ id: 'b1' }));
+    const failure = new Error('unavailable');
+    repository.failWith.listByUser = failure;
+
+    service.reload();
+    await settle();
+
+    expect(service.books.status()).not.toBe('error');
+    expect(service.books.value()?.map((book) => book.id)).toEqual(['b1']);
+    expect(logger.entries).toEqual([
+      { level: 'error', message: 'No se pudo leer la Biblioteca', cause: failure },
+    ]);
+  });
+
+  it('loadFresh y ensureLoaded entregan la lectura del servidor, no lo guardado', async () => {
+    const { service, repository } = setup();
+    repository.seedOnDevice(aBook({ id: 'viejo' }));
+    repository.seed(aBook({ id: 'b1' }));
+
+    expect((await service.loadFresh()).map((book) => book.id)).toEqual(['b1']);
+    expect((await service.ensureLoaded()).map((book) => book.id)).toEqual(['b1']);
+    expect(repository.calls.listByUser).toBe(1);
+  });
+});
+
 describe('BooksService · siguiente posición', () => {
   it('sin libros, el siguiente va en la posición 0; si no, después del último', async () => {
     const empty = setup();

@@ -39,9 +39,12 @@ async function open(
   if (options.holdList) {
     const gate = new Promise<void>((resolve) => (releaseList = resolve));
     const list = repository.listByUser.bind(repository);
-    repository.listByUser = async (uid) => {
-      await gate;
-      return list(uid);
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    repository.listByUser = async (uid, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, source);
     };
   }
   const connectivity = new FakeConnectivity(options.online ?? true);
