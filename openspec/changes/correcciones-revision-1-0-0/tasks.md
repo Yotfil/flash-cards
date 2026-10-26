@@ -42,7 +42,7 @@
 - [x] 5.1 Añadir los deltas de EX-02 (`exportacion-de-libros`) y F-01 (`navegacion-y-shell`) antes de implementarlos.
 - [x] 5.2 Escribir en rojo, en `export-book-dialog.component.spec.ts`, "con compartir, «Descargar .txt» también, como secundaria, descarga y cierra", "sin compartir, una sola «Descargar .txt»" y el nuevo mensaje de copiar; implementarlo y verificar que pasan; puerta completa y commit `fix(exportacion-de-libros): …`.
 - [x] 5.3 Escribir en rojo, en `global-error-handler.spec.ts`, que el manejador avisa además de registrar; en el componente del aviso, que pinta el texto con `role="alert"`, uno solo aunque haya varios fallos, y que "Cerrar aviso" lo quita; en `app.spec.ts`, que la raíz lo aloja; y que un fallo ya explicado por un diálogo no lo muestra. Implementarlo y verificar que pasan; puerta completa y commit `fix(navegacion-y-shell): …`.
-- [ ] 5.4 Enseñar al usuario el borrador del icono Cadence (SVG) y, con su visto bueno, generar el favicon, los 8 PNG de la PWA y el `apple-touch-icon`; verificar con `tests/static/manifest.spec.ts` (tamaños) y un vistazo a los PNG; puerta completa y commit `fix(plataforma-datos-y-offline): …`.
+- [x] 5.4 Enseñar al usuario el borrador del icono Cadence (SVG) y, con su visto bueno, generar el favicon, los 8 PNG de la PWA y el `apple-touch-icon`; verificar con `tests/static/manifest.spec.ts` (tamaños) y un vistazo a los PNG; puerta completa y commit `fix(plataforma-datos-y-offline): …`.
 
 ## 6. Cierre del change
 
