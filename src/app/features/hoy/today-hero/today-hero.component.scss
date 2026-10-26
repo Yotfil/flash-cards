@@ -1,12 +1,19 @@
 // Bloque principal de Hoy: superficie sólida con un tinte radial de acento (todo por tokens). La
-// luz es un pseudo-elemento con un degradado cónico que gira detrás; la capa interior tapa el
-// centro y deja ver solo un filo, que es el borde. Asentado, o con "reducir movimiento", la luz se
-// apaga y el borde queda fijo.
+// luz es un pseudo-elemento del tamaño del bloque con un degradado cónico cuyo ángulo se anima; la
+// capa interior tapa el centro y deja ver solo un filo, que es el borde. No se gira la capa: en un
+// bloque ancho, una capa rectangular que gira deja partes del borde sin cubrir y la luz sale
+// partida. Asentado, o con "reducir movimiento", la luz se apaga y el borde queda fijo en azul.
+
+// Registrar el ángulo deja que el navegador lo interpole; sin registro saltaría de 0 a 1 vuelta.
+@property --hero-light-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
 
 .hero {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
   border-radius: 1.5rem;
   // Lo que se ve en el filo cuando la luz no pasa: el borde sutil de siempre.
   background: var(--color-glass-border);
@@ -15,15 +22,18 @@
 .hero::before {
   content: '';
   position: absolute;
-  inset: -50%;
+  inset: 0;
   z-index: -2;
+  border-radius: inherit;
   background: conic-gradient(
-    from 0deg,
-    transparent 0 72%,
-    var(--color-accent-line) 84%,
-    var(--color-accent) 92%,
-    transparent 100%
+    from var(--hero-light-angle),
+    transparent 0deg 280deg,
+    var(--color-accent-line) 330deg,
+    var(--color-accent) 349deg,
+    transparent 360deg
   );
+  // El halo: la sombra solo asoma por fuera donde la luz toca el borde.
+  filter: drop-shadow(0 0 6px var(--color-accent));
   animation: hero-orbit var(--duration-orbit) linear infinite;
 }
 
@@ -38,17 +48,25 @@
     var(--color-surface);
 }
 
+.hero.settled {
+  background: var(--color-accent-line);
+}
+
 .hero.settled::before {
   display: none;
 }
 
 @keyframes hero-orbit {
   to {
-    transform: rotate(1turn);
+    --hero-light-angle: 1turn;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero {
+    background: var(--color-accent-line);
+  }
+
   .hero::before {
     display: none;
   }
