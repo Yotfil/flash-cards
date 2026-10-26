@@ -17,10 +17,12 @@ import {
 import type { Card, CardContentChanges, NewCard } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 import { chunksOf, type BatchWriter } from './batch-writer';
 import { COUNTED_GROUP_SIZE, writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
+import { readFrom } from './read-from';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
 // Tarjetas del usuario en `users/{uid}/cards` (colección plana, filtrada por capítulo). Crear y
@@ -30,15 +32,22 @@ export class FirestoreCardRepository extends CardRepository {
     super();
   }
 
-  async listByChapter(uid: string, chapterId: string): Promise<Card[]> {
-    const snapshot = await getDocs(query(this.cardsOf(uid), where('chapterId', '==', chapterId)));
+  async listByChapter(
+    uid: string,
+    chapterId: string,
+    source: ReadSource = 'server',
+  ): Promise<Card[]> {
+    const snapshot = await readFrom(
+      query(this.cardsOf(uid), where('chapterId', '==', chapterId)),
+      source,
+    );
     return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 
   // Las dos lecturas de "listas" solo acotan por vencimiento: ni filtran suspendidas (exigiría otro
   // índice y dejaría fuera documentos viejos sin el campo) ni ordenan; eso lo hace la cola.
-  async listReady(uid: string, before: Date): Promise<Card[]> {
-    const snapshot = await getDocs(query(this.cardsOf(uid), dueUpTo(before)));
+  async listReady(uid: string, before: Date, source: ReadSource = 'server'): Promise<Card[]> {
+    const snapshot = await readFrom(query(this.cardsOf(uid), dueUpTo(before)), source);
     return parseDocuments(cardDocumentSchema, snapshot.docs).map(toCard);
   }
 

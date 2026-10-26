@@ -1,5 +1,8 @@
 import { ESLint } from 'eslint';
 
+import { readProjectFile } from './read-project-file';
+import { listFiles } from './source-files';
+
 // Las fronteras de capas (ADR 0001) las exige ESLint desde el ADR 0002. Estas pruebas pasan código
 // de ejemplo por la configuración real del proyecto y miran su veredicto: un cruce que la
 // configuración deje pasar no lo atrapa nadie más. Los archivos no existen; solo cuenta su ruta.
@@ -65,5 +68,18 @@ describe('fronteras de capas', () => {
     ].join('\n');
 
     expect(await ruleIdsFor('src/app/testing/zz-frontera.ts', code)).toEqual([]);
+  });
+});
+
+// Leer "lo guardado en el dispositivo" es un detalle del almacén: las capas de arriba piden un
+// origen (`'device' | 'server'`) y solo el adaptador sabe cómo se lee la caché.
+describe('lectura desde la caché del dispositivo', () => {
+  it('solo la infraestructura llama a la caché de Firestore', () => {
+    const callers = listFiles('src/app')
+      .filter((path) => path.endsWith('.ts'))
+      .filter((path) => /getDocs?FromCache/.test(readProjectFile(path)));
+
+    expect(callers.length).toBeGreaterThan(0);
+    expect(callers.filter((path) => !path.startsWith('src/app/infrastructure/'))).toEqual([]);
   });
 });

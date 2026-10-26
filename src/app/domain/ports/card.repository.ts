@@ -1,4 +1,5 @@
 import type { Card, CardContentChanges, NewCard } from '../models/card.model';
+import type { ReadSource } from './read-source';
 
 /** Lo que dejó un reemplazo: las tarjetas creadas y cuántas había (y se borraron). */
 export interface ChapterReplacement {
@@ -10,12 +11,12 @@ export interface ChapterReplacement {
 // EL MISMO LOTE que las tarjetas, para que nunca quede desfasado (ni tras un fallo a mitad).
 export abstract class CardRepository {
   /** Las tarjetas del capítulo (sin orden: lo da el servicio). Lanza si una no es válida. */
-  abstract listByChapter(uid: string, chapterId: string): Promise<Card[]>;
+  abstract listByChapter(uid: string, chapterId: string, source?: ReadSource): Promise<Card[]>;
   /**
    * Las tarjetas de la cuenta que vencen hasta `before` (incluidas las nuevas, que vencen al
    * crearse). No filtra suspendidas ni ordena: eso es de la cola. Lanza si una no es válida.
    */
-  abstract listReady(uid: string, before: Date): Promise<Card[]>;
+  abstract listReady(uid: string, before: Date, source?: ReadSource): Promise<Card[]>;
   /** Lo mismo, solo las de un libro. */
   abstract listReadyByBook(uid: string, bookId: string, before: Date): Promise<Card[]>;
   /**

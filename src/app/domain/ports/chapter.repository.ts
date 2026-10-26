@@ -1,10 +1,11 @@
 import type { Chapter } from '../models/chapter.model';
+import type { ReadSource } from './read-source';
 
 // Capítulos del usuario en el almacén. El conteo y la cascada de tarjetas son preguntas sobre el
 // capítulo: no leen el contenido de las tarjetas.
 export abstract class ChapterRepository {
   /** Los capítulos del libro ordenados por `order`. Lanza si un documento no es válido. */
-  abstract listByBook(uid: string, bookId: string): Promise<Chapter[]>;
+  abstract listByBook(uid: string, bookId: string, source?: ReadSource): Promise<Chapter[]>;
   abstract create(
     uid: string,
     chapter: { bookId: string; name: string; order: number },
