@@ -7,6 +7,7 @@ import { CardRepository } from '@domain/ports/card.repository';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
+import { readDeviceThenServer } from '@services/data-loading/read-device-then-server';
 import { requireSessionUid, requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 import { studyDayAt, type StudyDay } from '@services/study-day/study-day';
@@ -62,20 +63,30 @@ export class DailyQueueService {
   // Vive en memoria (no se persiste): sobrevive a la navegación y a `refresh`, no a una recarga.
   private readonly sessionNew = signal<SessionNew | null>(null);
 
+  /** La última lectura del servidor (en curso o terminada): la sesión sale de ella, no de lo pintado. */
+  private lastServerRead: { dayId: string; promise: Promise<QueueData>; failed: boolean } | null =
+    null;
+
+  /**
+   * Pinta primero la cola con lo guardado en el dispositivo y la cambia por la del servidor al
+   * llegar. Sin libros o sin tarjetas guardadas no pinta nada hasta el servidor: una caché a medias
+   * no debe dar "Estás al día".
+   */
   private readonly data = resource({
     params: () => {
       const day = this.studyDay();
       return day ? { uid: this.session.user()?.id ?? '', day } : undefined;
     },
-    loader: async ({ params }) => {
-      try {
-        return await this.read(params.day);
-      } catch (error) {
+    stream: ({ params, abortSignal }) =>
+      readDeviceThenServer({
+        fromDevice: () => this.readSaved(params.day),
+        fromServer: () => this.read(params.day),
+        hasContent: (data) => data.books.length > 0 && data.candidates.length > 0,
+        logger: this.logger,
         // Hoy pinta "No pudimos cargar tu cola de hoy"; aquí queda el detalle.
-        this.logger.error('No se pudo armar la cola de Hoy', error);
-        throw error;
-      }
-    },
+        errorMessage: 'No se pudo armar la cola de Hoy',
+        abortSignal,
+      }),
   });
 
   /**
@@ -161,17 +172,21 @@ export class DailyQueueService {
   }
 
   /**
-   * Las tarjetas de la sesión de Hoy, en orden. Si el día de estudio cambió con Hoy abierta, no
-   * sirve la cola pintada: se lee la del día nuevo (el ajuste de ayer ya caducó) y la pantalla se
-   * vuelve a armar.
+   * Las tarjetas de la sesión de Hoy, en orden. Salen de la lectura del servidor (la ya hecha o la
+   * que está en curso), no de la cola pintada, que puede ser la guardada en el dispositivo; si esa
+   * lectura falló, se lee otra vez. Si el día de estudio cambió con Hoy abierta, se lee la del día
+   * nuevo (el ajuste de ayer ya caducó) y la pantalla se vuelve a armar.
    */
   async prepareSession(): Promise<Card[]> {
     const day = this.currentDay();
-    if (day.id === this.studyDay()?.id) {
-      return this.sessionQueue().cards;
+    if (day.id !== this.studyDay()?.id) {
+      this.refresh();
+      return queueFrom(await this.read(day), day).cards;
     }
-    this.refresh();
-    return queueFrom(await this.read(day), day).cards;
+    const last = this.lastServerRead;
+    const data =
+      last && last.dayId === day.id && !last.failed ? await last.promise : await this.read(day);
+    return queueFrom(data, day, this.currentLimits()).cards;
   }
 
   /** Cambia las nuevas de un libro solo para la sesión de hoy; los demás libros no cambian. */
@@ -200,11 +215,33 @@ export class DailyQueueService {
     return data && day ? queueFrom(data, day, sessionNewByBook) : EMPTY_QUEUE;
   }
 
+  /** Lo que el dispositivo ya tiene guardado para armar la cola, sin ir al servidor. */
+  private async readSaved(day: StudyDay): Promise<QueueData> {
+    const uid = requireSessionUid(this.session.user());
+    const [books, candidates, today] = await Promise.all([
+      this.books.loadSaved(),
+      this.cards.listReady(uid, day.endOfDay, 'device'),
+      this.dailyStats.getByDay(uid, day.id, 'device'),
+    ]);
+    return { books, candidates, today };
+  }
+
+  /** La lectura del servidor, guardada para que preparar la sesión la espere sin repetirla. */
+  private read(day: StudyDay): Promise<QueueData> {
+    const read = { dayId: day.id, promise: this.readFromServer(day), failed: false };
+    // El fallo lo registra el recurso; aquí solo se marca para no reutilizar una lectura fallida.
+    read.promise.catch(() => {
+      read.failed = true;
+    });
+    this.lastServerRead = read;
+    return read.promise;
+  }
+
   /**
    * Una lectura completa: libros, listas hasta el fin del día e indicadores de ese día. Los libros
    * se releen siempre: un libro creado (o una tanda cambiada) en otro dispositivo debe entrar.
    */
-  private async read(day: StudyDay): Promise<QueueData> {
+  private async readFromServer(day: StudyDay): Promise<QueueData> {
     const uid = requireSessionUid(this.session.user());
     const [books, candidates, today] = await Promise.all([
       this.books.loadFresh(),

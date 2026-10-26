@@ -75,9 +75,12 @@ async function open(
   if (options.holdList) {
     const gate = new Promise<void>((resolve) => (releaseList = resolve));
     const list = cards.listReady.bind(cards);
-    cards.listReady = async (uid, before) => {
-      await gate;
-      return list(uid, before);
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    cards.listReady = async (uid, before, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, before, source);
     };
   }
   const stats = new FakeDailyStatsRepository();

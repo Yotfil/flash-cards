@@ -50,7 +50,9 @@ Los fakes de `testing/` ganan una lista `onDevice` aparte y un contador por orig
 | `ChaptersService.chapters` | `listByBook(…,'device')` | `listByBook(…)` | |
 | `CardsService.cards` | `listByChapter(…,'device')` | `listByChapter(…)` | |
 | `DailyQueueService.data` | libros + `listReady(…,'device')` + `getByDay(…,'device')` | la lectura actual (`read`) | La fase de dispositivo arma la misma `QueueData`; si **alguna** de las tres viene vacía (libros o candidatas), no se emite: Hoy no debe pintar "al día" ni un héroe con menos tarjetas por una caché parcial. `reportOrphans` solo en la fase de servidor. |
-| `DailyQueueService.streak` | — | igual | barata y solo en Hoy. |
+| `DailyQueueService.streak` | — | igual | barata y solo en Hoy. (Desde la tarea 1.2 solo se lee cuando Hoy la pide.) |
+
+*Precisión al implementar (tareas 4.8 y 4.9):* los libros de la fase de dispositivo los da `BooksService.loadSaved()`. La cola guarda su última lectura del servidor (en curso o terminada, con su día y si falló) y `prepareSession()` la espera en vez de devolver la cola pintada, que puede ser la guardada: así "Estudiar ahora" nunca arranca con la cola del dispositivo ni repite la lectura; si esa lectura falló, se lee otra vez. Las pruebas de página que retenían lecturas ahora retienen solo las del servidor (sus envoltorios descartaban el origen).
 | `ProgressService.collection` | — | agregaciones | ver D4. |
 
 ### D4. Progreso: refresco sin racha y conteo en memoria con invalidación explícita

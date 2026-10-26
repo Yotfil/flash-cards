@@ -191,6 +191,92 @@ describe('DailyQueueService · carga', () => {
   });
 });
 
+/** Deja en espera las listas del servidor (las del dispositivo responden al instante). */
+function holdServerReady(cards: FakeCardRepository): () => void {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const list = cards.listReady.bind(cards);
+  cards.listReady = async (uid, before, source) => {
+    if (source !== 'device') {
+      await gate;
+    }
+    return list(uid, before, source);
+  };
+  return release;
+}
+
+/** Un ciclo sin esperar a que la app quede estable (con el servidor en espera no lo está). */
+async function tick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve));
+  TestBed.tick();
+}
+
+describe('DailyQueueService · lo guardado en el dispositivo primero', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('con libros y tarjetas guardados, pinta esa cola al instante y luego la del servidor', async () => {
+    const { service, books, cards, settle } = setup();
+    books.seedOnDevice(INGLES, MEDICINA);
+    cards.seedOnDevice(dueCard('d1', 'ingles'));
+    const release = holdServerReady(cards);
+
+    service.refresh();
+    await tick();
+    expect(service.status()).toBe('ready');
+    expect(service.baseQueue().cards.map((card) => card.id)).toEqual(['d1']);
+
+    release();
+    await settle();
+    expect(service.baseQueue().cards).toHaveLength(1 + 5 + 5);
+    expect(cards.calls.listReady).toBe(1);
+  });
+
+  it('sin tarjetas guardadas no pinta nada hasta el servidor: nunca "al día" por lo guardado', async () => {
+    const { service, books, cards } = setup();
+    books.seedOnDevice(INGLES, MEDICINA);
+    holdServerReady(cards);
+
+    service.refresh();
+    await tick();
+
+    expect(service.status()).toBe('loading');
+  });
+
+  it('las tarjetas de libros que ya no existen se registran una vez, con la lectura del servidor', async () => {
+    const { service, books, cards, logger, settle } = setup();
+    books.seedOnDevice(INGLES);
+    cards.seed(dueCard('h1', 'borrado'));
+    cards.seedOnDevice(dueCard('h1', 'borrado'), dueCard('d1', 'ingles'));
+
+    service.refresh();
+    await settle();
+
+    expect(logger.entries).toEqual([
+      { level: 'warn', message: 'Tarjetas de libros que ya no existen, fuera de Hoy: 1' },
+    ]);
+  });
+
+  it('"Estudiar ahora" con lo guardado a la vista espera la cola del servidor, sin repetir la lectura', async () => {
+    const { service, books, cards, settle } = setup();
+    books.seedOnDevice(INGLES, MEDICINA);
+    cards.seedOnDevice(dueCard('d1', 'ingles'));
+    const release = holdServerReady(cards);
+    service.refresh();
+    await tick();
+
+    const session = service.prepareSession();
+    release();
+    await settle();
+
+    expect(await session).toHaveLength(1 + 5 + 5);
+    expect(cards.calls.listReady).toBe(1);
+  });
+});
+
 describe('DailyQueueService · ajuste de nuevas por libro', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });

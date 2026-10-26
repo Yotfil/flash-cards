@@ -73,6 +73,11 @@ export class BooksService {
     return this.load();
   }
 
+  /** Lo que el dispositivo ya tiene guardado de la lista, sin ir al servidor (vacío si nunca la leyó). */
+  loadSaved(): Promise<readonly Book[]> {
+    return this.repository.listByUser(requireSessionUid(this.session.user()), 'device');
+  }
+
   /**
    * Carga la lista solo si todavía no se pidió (navegación directa al detalle) y la entrega. Una
    * lectura que falló no se reutiliza: vuelve a leer (si no, reintentar nunca serviría).

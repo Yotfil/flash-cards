@@ -196,6 +196,15 @@ describe('BooksService · lo guardado en el dispositivo primero', () => {
     ]);
   });
 
+  it('loadSaved entrega lo guardado en el dispositivo sin ir al servidor', async () => {
+    const { service, repository } = setup();
+    repository.seedOnDevice(aBook({ id: 'b1' }));
+    repository.seed(aBook({ id: 'b1' }), aBook({ id: 'b2' }));
+
+    expect((await service.loadSaved()).map((book) => book.id)).toEqual(['b1']);
+    expect(repository.calls.listByUser).toBe(0);
+  });
+
   it('loadFresh y ensureLoaded entregan la lectura del servidor, no lo guardado', async () => {
     const { service, repository } = setup();
     repository.seedOnDevice(aBook({ id: 'viejo' }));
