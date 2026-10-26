@@ -163,6 +163,22 @@ module.exports = defineConfig([
     },
   },
   {
+    // `no-restricted-imports` no mira los import() dinámicos: uno de ellos cruzaría cualquier
+    // frontera sin que nadie lo viera. Las cargas diferidas solo viven en las rutas de la raíz
+    // (app.routes.ts) y en core/, que pueden enchufar cualquier capa; en las capas, prohibidas.
+    files: ['src/app/{domain,services,infrastructure,features,shared,testing}/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression',
+          message:
+            'import() dinámico solo en las rutas de la raíz o en core/: en una capa esquivaría sus fronteras.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {},
