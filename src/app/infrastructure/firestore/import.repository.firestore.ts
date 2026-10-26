@@ -24,6 +24,9 @@ export class FirestoreImportRepository extends ImportRepository {
     const now = new Date();
     const bookRef = doc(this.collectionOf(uid, 'books'));
     const writer = new BatchWriter(this.firestore);
+    // Las tarjetas nacen escalonadas por su posición en el archivo: la cola desempata las nuevas
+    // por fecha de creación, así entran en Hoy en ese orden.
+    let position = 0;
     for (const chapter of input.chapters) {
       const chapterRef = doc(this.collectionOf(uid, 'chapters'));
       writer.set(chapterRef, {
@@ -34,12 +37,13 @@ export class FirestoreImportRepository extends ImportRepository {
         updatedAt: now,
       });
       for (const card of chapter.cards) {
+        const createdAt = new Date(now.getTime() + position++);
         writer.set(doc(this.collectionOf(uid, 'cards')), {
           ...card,
           bookId: bookRef.id,
           chapterId: chapterRef.id,
-          createdAt: now,
-          updatedAt: now,
+          createdAt,
+          updatedAt: createdAt,
         });
       }
     }

@@ -32,10 +32,10 @@
 
 ## 4. Paso 10 · Orden de las nuevas (CD-02)
 
-- [ ] 4.1 Escribir en rojo, en `tests/firestore/card.repository.integration.spec.ts`, "las nuevas creadas juntas salen en el orden en que se crearon" (sonda CD-02) y, en `tests/firestore/import.repository.integration.spec.ts`, que las tarjetas de un libro importado tienen fechas de creación crecientes en el orden de capítulos y tarjetas; verificar que fallan.
-- [ ] 4.2 Escalonar la fecha de creación por posición en el repositorio de tarjetas y en la importación de un libro; verificar que pasan las pruebas de 4.1.
-- [ ] 4.3 Escribir en rojo, en `src/app/services/queue/ready-cards.spec.ts`, el desempate de las nuevas con la misma fecha (capítulo, anverso, reverso; mismo orden con la entrada barajada); verificar que falla; implementarlo y verificar que pasa.
-- [ ] 4.4 Puerta completa en verde y commit `fix(cola-diaria): …` del paso.
+- [x] 4.1 Escribir en rojo, en `tests/firestore/card.repository.integration.spec.ts`, "las nuevas creadas juntas salen en el orden en que se crearon" (sonda CD-02) y, en `tests/firestore/import.repository.integration.spec.ts`, que las tarjetas de un libro importado tienen fechas de creación crecientes en el orden de capítulos y tarjetas; verificar que fallan.
+- [x] 4.2 Escalonar la fecha de creación por posición en el repositorio de tarjetas y en la importación de un libro; verificar que pasan las pruebas de 4.1.
+- [x] 4.3 Escribir en rojo, en `src/app/services/queue/ready-cards.spec.ts`, el desempate de las nuevas con la misma fecha (capítulo, anverso, reverso; mismo orden con la entrada barajada); verificar que falla; implementarlo y verificar que pasa.
+- [x] 4.4 Puerta completa en verde y commit `fix(cola-diaria): …` del paso.
 
 ## 5. Cierre del change
 

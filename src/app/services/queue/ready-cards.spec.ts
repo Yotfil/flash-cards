@@ -60,6 +60,40 @@ describe('orderReadyCards', () => {
   });
 });
 
+describe('orderReadyCards · nuevas creadas en el mismo instante', () => {
+  // Versiones anteriores creaban todas las tarjetas de una importación con la misma fecha.
+  const sameInstant = daysBeforeEnd(3);
+  const imported = [
+    fresh('k1', sameInstant, { chapterId: 'unidad-2', front: 'to get by', back: 'arreglárselas' }),
+    fresh('k2', sameInstant, { chapterId: 'unidad-1', front: 'to look up', back: 'buscar' }),
+    fresh('k3', sameInstant, { chapterId: 'unidad-2', front: 'To Give Up', back: 'rendirse' }),
+    fresh('k4', sameInstant, { chapterId: 'unidad-1', front: 'to look up', back: 'admirar' }),
+    fresh('k5', sameInstant, { chapterId: 'unidad-1', front: 'to call off', back: 'cancelar' }),
+  ];
+
+  it('las presenta juntas por capítulo y, dentro, por anverso y reverso', () => {
+    expect(orderReadyCards(imported, END_OF_DAY).map((card) => card.id)).toEqual([
+      'k5',
+      'k4',
+      'k2',
+      'k1',
+      'k3',
+    ]);
+  });
+
+  it('el orden no depende del que traiga la lectura', () => {
+    const reversed = [...imported].reverse();
+
+    expect(orderReadyCards(reversed, END_OF_DAY)).toEqual(orderReadyCards(imported, END_OF_DAY));
+  });
+
+  it('la fecha de creación sigue mandando sobre el desempate', () => {
+    const older = fresh('k0', daysBeforeEnd(4), { chapterId: 'unidad-9', front: 'zzz' });
+
+    expect(orderReadyCards([...imported, older], END_OF_DAY)[0]?.id).toBe('k0');
+  });
+});
+
 describe('countReadyByChapter', () => {
   it('cuenta las listas de cada capítulo; uno sin listas no aparece', () => {
     const cards = [

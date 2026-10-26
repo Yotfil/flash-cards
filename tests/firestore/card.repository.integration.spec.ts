@@ -14,6 +14,7 @@ import { CardState, type NewCard } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';
 import { InvalidDocumentError } from '@infrastructure/firestore/document-boundary';
+import { orderReadyCards } from '@services/queue/ready-cards';
 
 import {
   createRulesTestEnvironment,
@@ -281,6 +282,25 @@ describe('FirestoreCardRepository · tarjetas listas', () => {
     const ready = await repository.listReadyByBook(OWNER_UID, 'b1', END_OF_DAY);
 
     expect(fronts(ready)).toEqual(['justo al límite', 'nueva', 'suspendida', 'vencida'].sort());
+  });
+});
+
+describe('FirestoreCardRepository · orden de creación', () => {
+  it('las nuevas creadas juntas entran en Hoy en el orden en que llegaron (el del archivo)', async () => {
+    // Ada importa 30 palabras en orden; su tanda de hoy son 20.
+    const fronts = Array.from(
+      { length: 30 },
+      (_, index) => `palabra ${String(index + 1).padStart(2, '0')}`,
+    );
+    await repository.createMany(
+      OWNER_UID,
+      fronts.map((front) => newCard({ front, noteId: front })),
+    );
+
+    const endOfDay = new Date('2026-12-31T00:00:00Z');
+    const ordered = orderReadyCards(await repository.listReady(OWNER_UID, endOfDay), endOfDay);
+
+    expect(ordered.slice(0, 20).map((card) => card.front)).toEqual(fronts.slice(0, 20));
   });
 });
 

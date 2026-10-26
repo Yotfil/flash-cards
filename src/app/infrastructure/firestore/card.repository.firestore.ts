@@ -112,9 +112,12 @@ export class FirestoreCardRepository extends CardRepository {
       throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo capítulo.');
     }
     const now = new Date();
-    const created = cards.map((card) => ({
+    const created = cards.map((card, position) => ({
       ref: doc(this.cardsOf(uid)),
       card: toStoredCard(card),
+      // Escalonadas por posición: la cola desempata las nuevas por fecha de creación, así entran
+      // en el orden recibido (el del archivo al importar).
+      createdAt: new Date(now.getTime() + position),
     }));
     await writeInCountedBatches({
       firestore: this.firestore,
@@ -133,18 +136,18 @@ export class FirestoreCardRepository extends CardRepository {
           apply: (writer: BatchWriter) => writer.delete(this.cardRef(uid, cardId)),
           delta: -1 as const,
         })),
-        ...created.map(({ ref, card }) => ({
+        ...created.map(({ ref, card, createdAt }) => ({
           apply: (writer: BatchWriter) =>
-            writer.set(ref, { ...card, createdAt: now, updatedAt: now }),
+            writer.set(ref, { ...card, createdAt, updatedAt: createdAt }),
           delta: 1 as const,
         })),
       ],
     });
-    return created.map(({ ref, card }) => ({
+    return created.map(({ ref, card, createdAt }) => ({
       id: ref.id,
       ...card,
-      createdAt: now,
-      updatedAt: now,
+      createdAt,
+      updatedAt: createdAt,
     }));
   }
 
