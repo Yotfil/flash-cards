@@ -47,6 +47,10 @@ service cloud.firestore {
       match /dailyStats/{date} {
         allow read, write: if isOwner(uid) && isAllowlisted();
       }
+      // Paquetes de práctica con IA: rama aparte de los libros, ítems dentro del documento.
+      match /practicePackages/{packageId} {
+        allow read, write: if isOwner(uid) && isAllowlisted();
+      }
 
       // Historial de repasos: APPEND-ONLY (§6.7). Se crea y se lee, nunca se modifica ni borra.
       match /reviewLogs/{logId} {

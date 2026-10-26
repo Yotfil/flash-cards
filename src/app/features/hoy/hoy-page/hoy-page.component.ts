@@ -9,6 +9,7 @@ import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
 
+import { PracticeAiTodayBlockComponent } from '../../practica-ia/practice-ai-today-block/practice-ai-today-block.component';
 import { BookPendingRowComponent } from '../book-pending-row/book-pending-row.component';
 import { HOY_COPY } from '../hoy.copy';
 import {
@@ -31,6 +32,7 @@ type HoyView = 'loading' | 'error' | 'welcome' | 'settled' | 'queue';
     EmptyStateComponent,
     ErrorStateComponent,
     NewCardsAdjusterComponent,
+    PracticeAiTodayBlockComponent,
     SkeletonComponent,
     StreakBadgeComponent,
     TodayHeroComponent,

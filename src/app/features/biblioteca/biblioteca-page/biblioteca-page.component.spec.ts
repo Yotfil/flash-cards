@@ -7,6 +7,7 @@ import type { Book } from '@domain/models/book.model';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
 import { SessionService } from '@services/session/session.service';
 import {
   allowDialogFocusInJsdom,
@@ -17,6 +18,7 @@ import {
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
+import { FakePracticePackageRepository } from '@testing/fake-practice-package-repository';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -57,6 +59,7 @@ async function open(
       },
       { provide: ConnectivityPort, useValue: connectivity },
       { provide: Logger, useValue: new FakeLogger() },
+      { provide: PracticePackageRepository, useValue: new FakePracticePackageRepository() },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -219,5 +222,21 @@ describe('BibliotecaPageComponent', () => {
 
     expect(repository.calls.countContents).toBe(0);
     expect(openDialog().textContent).toContain('También se borrarán sus capítulos y tarjetas.');
+  });
+
+  it('la sección "Práctica con IA" va debajo de los libros, y también debajo del vacío', async () => {
+    const withBooks = await open({ books: [aBook()] });
+    const list = withBooks.page().querySelector('app-book-card');
+    const section = withBooks.page().querySelector('app-practice-packages-section');
+    expect(section?.querySelector('h2')?.textContent?.trim()).toBe('Práctica con IA');
+    expect(list?.compareDocumentPosition(section as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    TestBed.resetTestingModule();
+
+    const empty = await open({ books: [] });
+    const invitation = empty.page().querySelector('app-empty-state');
+    const emptySection = empty.page().querySelector('app-practice-packages-section');
+    expect(invitation?.compareDocumentPosition(emptySection as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 });

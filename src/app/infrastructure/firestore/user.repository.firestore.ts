@@ -1,6 +1,6 @@
-import { doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
+import { deleteField, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
-import type { User, UserSettings } from '@domain/models/user.model';
+import type { SettingsChanges, User, UserSettings } from '@domain/models/user.model';
 import { UserRepository } from '@domain/ports/user.repository';
 
 import { parseDocument } from './document-boundary';
@@ -26,10 +26,11 @@ export class FirestoreUserRepository extends UserRepository {
     await setDoc(this.profileRef(user.id), toUserDocument(user));
   }
 
-  async updateSettings(uid: string, changes: Partial<UserSettings>): Promise<void> {
+  /** `null` quita el campo (la plantilla vuelve a la de por defecto); `undefined` no se toca. */
+  async updateSettings(uid: string, changes: SettingsChanges): Promise<void> {
     const paths = Object.entries(changes)
       .filter(([, value]) => value !== undefined)
-      .map(([name, value]) => [`settings.${name}`, value]);
+      .map(([name, value]) => [`settings.${name}`, value === null ? deleteField() : value]);
     if (paths.length === 0) {
       return;
     }
@@ -48,11 +49,16 @@ function toUser(id: string, document: UserDocument): User {
     displayName: document.displayName,
     email: document.email,
     createdAt: document.createdAt,
-    settings: document.settings,
+    settings: toSettings(document.settings),
     isSearchable: document.isSearchable,
     ...(document.handle !== undefined ? { handle: document.handle } : {}),
     ...(document.photoURL !== undefined ? { photoURL: document.photoURL } : {}),
   };
+}
+
+function toSettings(settings: UserDocument['settings']): UserSettings {
+  const { promptTemplate, ...rest } = settings;
+  return { ...rest, ...(promptTemplate !== undefined ? { promptTemplate } : {}) };
 }
 
 function toUserDocument(user: User): Record<string, unknown> {

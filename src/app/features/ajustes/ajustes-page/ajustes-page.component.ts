@@ -6,23 +6,30 @@ import type { ThemePreference } from '@domain/models/theme-preference';
 import {
   DEFAULT_AUTO_GRADE_BY_TIME,
   DEFAULT_NEW_CARDS_PER_DAY,
+  DEFAULT_PRACTICE_PACKAGE_CAPACITY,
 } from '@domain/models/study-defaults';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { DEFAULT_PROMPT_TEMPLATE } from '@services/practice-ai/build-prompt';
 import { SessionService } from '@services/session/session.service';
 import { deviceTimeZone, supportedTimeZones } from '@services/settings/time-zones';
 import { ThemeService } from '@services/theme/theme.service';
 import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
 
+import { PRACTICA_IA_COPY } from '../../practica-ia/practica-ia.copy';
 import { VersionFooterComponent } from '../../shell/version-footer/version-footer.component';
 import { AJUSTES_COPY } from '../ajustes.copy';
 import { createImmediateSetting } from '../immediate-setting';
+import {
+  practiceSettingsFormSchema,
+  type PracticeSettingsFormValue,
+} from '../practice-settings-form.schema';
 import { settingsFormSchema, type SettingsFormValue } from '../settings-form.schema';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 // Pantalla Ajustes. Regla de guardado: los controles de elección guardan al tocar (con reversión
-// si falla) y el campo numérico guarda con su botón. Sin red, nada se guarda: los controles se
+// si falla) y los campos de texto guardan con su botón (tarjetas nuevas; práctica con IA). Sin red, nada se guarda: los controles se
 // deshabilitan y una sola nota lo explica; cerrar sesión sigue disponible.
 @Component({
   selector: 'app-ajustes-page',
@@ -60,6 +67,73 @@ export class AjustesPageComponent {
     const field = this.settingsForm.defaultNewCardsPerDay();
     return field.touched() && field.invalid();
   });
+
+  // ── Práctica con IA: plantilla del prompt e ítems por paquete, con su botón "Guardar".
+  protected readonly practiceCopy = PRACTICA_IA_COPY;
+  private readonly savedTemplate = computed(
+    () => this.user()?.settings.promptTemplate ?? DEFAULT_PROMPT_TEMPLATE,
+  );
+  private readonly savedCapacity = computed(
+    () => this.user()?.settings.practicePackageCapacity ?? DEFAULT_PRACTICE_PACKAGE_CAPACITY,
+  );
+  private readonly practiceModel = signal<PracticeSettingsFormValue>({
+    promptTemplate: this.savedTemplate(),
+    practicePackageCapacity: this.savedCapacity(),
+  });
+  protected readonly practiceForm = form(this.practiceModel, (path) =>
+    validateStandardSchema(path, practiceSettingsFormSchema),
+  );
+  protected readonly practiceState = signal<SaveState>('idle');
+  protected readonly templateInvalid = computed(() => {
+    const field = this.practiceForm.promptTemplate();
+    return field.dirty() && field.invalid();
+  });
+  protected readonly capacityInvalid = computed(() => {
+    const field = this.practiceForm.practicePackageCapacity();
+    return field.dirty() && field.invalid();
+  });
+  protected readonly canSavePractice = computed(() => {
+    const { promptTemplate, practicePackageCapacity } = this.practiceModel();
+    const changed =
+      promptTemplate !== this.savedTemplate() || practicePackageCapacity !== this.savedCapacity();
+    return (
+      this.online() && this.practiceState() !== 'saving' && this.practiceForm().valid() && changed
+    );
+  });
+
+  protected restoreTemplate(): void {
+    this.practiceModel.update((value) => ({ ...value, promptTemplate: DEFAULT_PROMPT_TEMPLATE }));
+    this.resetPracticeResult();
+  }
+
+  protected resetPracticeResult(): void {
+    if (this.practiceState() !== 'saving') {
+      this.practiceState.set('idle');
+    }
+  }
+
+  /** La plantilla por defecto se guarda como ausente: así le llegan sus mejoras futuras. */
+  protected async savePractice(event: Event): Promise<void> {
+    event.preventDefault();
+    if (!this.canSavePractice()) {
+      return;
+    }
+    await submit(this.practiceForm, async () => {
+      this.practiceState.set('saving');
+      const { promptTemplate, practicePackageCapacity } = this.practiceModel();
+      try {
+        await this.session.updateSettings({
+          promptTemplate: promptTemplate === DEFAULT_PROMPT_TEMPLATE ? null : promptTemplate,
+          practicePackageCapacity,
+        });
+        this.practiceState.set('saved');
+      } catch (error) {
+        this.logger.error('No se pudieron guardar los ajustes de práctica con IA', error);
+        this.practiceState.set('error');
+      }
+      return undefined;
+    });
+  }
 
   // ── Controles de elección: guardan al tocar y vuelven al valor guardado si falla.
   protected readonly autoGrade = createImmediateSetting(

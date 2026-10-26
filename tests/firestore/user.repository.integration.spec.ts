@@ -53,6 +53,8 @@ const PROFILE: User = {
     theme: 'system',
     defaultNewCardsPerDay: 15,
     autoGradeByTime: false,
+    practicePackageCapacity: 12,
+    promptTemplate: 'Mi plantilla: [[REPASADAS]] / [[DIFICILES]]',
   },
 };
 
@@ -80,6 +82,8 @@ describe('FirestoreUserRepository', () => {
 
     expect(read?.settings.defaultNewCardsPerDay).toBe(20);
     expect(read?.settings.autoGradeByTime).toBe(true);
+    expect(read?.settings.practicePackageCapacity).toBe(20);
+    expect(read?.settings).not.toHaveProperty('promptTemplate');
     expect(read?.settings.theme).toBe('dark');
   });
 
@@ -104,7 +108,7 @@ describe('FirestoreUserRepository', () => {
   });
 
   it('guardar un ajuste solo escribe ese ajuste: el resto del perfil y los ajustes que esta versión no conoce siguen', async () => {
-    // El perfil tal como lo deja una versión posterior (la 1.1.0 añade la plantilla del prompt).
+    // El perfil tal como lo deja una versión posterior, con un ajuste que esta todavía no conoce.
     await seedProfile(OWNER_UID, {
       displayName: 'Ada',
       email: OWNER_EMAIL,
@@ -118,6 +122,7 @@ describe('FirestoreUserRepository', () => {
         autoGradeByTime: true,
         practicePackageCapacity: 30,
         promptTemplate: 'Mi plantilla con [[REPASADAS]]',
+        futureSetting: 'de una versión posterior',
       },
     });
 
@@ -132,8 +137,28 @@ describe('FirestoreUserRepository', () => {
       autoGradeByTime: true,
       practicePackageCapacity: 30,
       promptTemplate: 'Mi plantilla con [[REPASADAS]]',
+      futureSetting: 'de una versión posterior',
     });
     expect(stored['displayName']).toBe('Ada');
+  });
+
+  it('quitar la plantilla propia (`null`) borra el campo del documento y deja el resto', async () => {
+    const repository = repositoryAs(OWNER_UID, OWNER_EMAIL);
+    await repository.save(PROFILE);
+
+    await repository.updateSettings(OWNER_UID, { promptTemplate: null });
+
+    const stored = await readProfile(OWNER_UID);
+    expect(stored['settings']).not.toHaveProperty('promptTemplate');
+    const read = await repository.findById(OWNER_UID);
+    expect(read?.settings).toEqual({
+      timezone: 'America/Bogota',
+      dayStartHour: 4,
+      theme: 'system',
+      defaultNewCardsPerDay: 15,
+      autoGradeByTime: false,
+      practicePackageCapacity: 12,
+    });
   });
 
   it('un ajuste que falta en un perfil antiguo se añade al guardarlo', async () => {
@@ -156,6 +181,7 @@ describe('FirestoreUserRepository', () => {
       theme: 'dark',
       defaultNewCardsPerDay: 5,
       autoGradeByTime: true,
+      practicePackageCapacity: 20,
     });
   });
 });

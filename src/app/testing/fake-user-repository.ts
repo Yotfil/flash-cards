@@ -1,10 +1,10 @@
-import type { User, UserSettings } from '@domain/models/user.model';
+import { applySettingsChanges, type SettingsChanges, type User } from '@domain/models/user.model';
 import { UserRepository } from '@domain/ports/user.repository';
 
 /** Una escritura parcial de ajustes, tal como la pidió el servicio. */
 export interface SettingsUpdate {
   readonly uid: string;
-  readonly changes: Partial<UserSettings>;
+  readonly changes: SettingsChanges;
 }
 
 // Fake en memoria del repositorio de perfiles. `failOnFind`, `failOnSave` y `failOnUpdateSettings`
@@ -49,7 +49,7 @@ export class FakeUserRepository extends UserRepository {
     };
   }
 
-  async updateSettings(uid: string, changes: Partial<UserSettings>): Promise<void> {
+  async updateSettings(uid: string, changes: SettingsChanges): Promise<void> {
     await this.settingsGate;
     if (this.failOnUpdateSettings !== null) {
       throw this.failOnUpdateSettings;
@@ -59,7 +59,7 @@ export class FakeUserRepository extends UserRepository {
       throw new Error(`No existe el perfil ${uid}.`);
     }
     this.settingsUpdates.push({ uid, changes });
-    this.users.set(uid, { ...stored, settings: { ...stored.settings, ...changes } });
+    this.users.set(uid, { ...stored, settings: applySettingsChanges(stored.settings, changes) });
   }
 }
 
@@ -77,6 +77,7 @@ export function aUser(overrides: Partial<User> = {}): User {
       theme: 'system',
       defaultNewCardsPerDay: 20,
       autoGradeByTime: true,
+      practicePackageCapacity: 20,
     },
     ...overrides,
   };

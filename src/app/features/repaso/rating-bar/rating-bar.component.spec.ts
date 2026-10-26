@@ -121,4 +121,22 @@ describe('RatingBarComponent', () => {
 
     expect(render({ keys: false }).element.querySelector('kbd')).toBeNull();
   });
+
+  it('sin previsualizaciones (práctica sin programación): sin intervalos y la etiqueta sola', () => {
+    const fixture = TestBed.createComponent(RatingBarComponent);
+    fixture.componentRef.setInput('previews', null);
+    fixture.detectChanges();
+    const options = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'),
+    );
+
+    expect(options.map((option) => option.getAttribute('aria-label'))).toEqual([
+      'Otra vez',
+      'Difícil',
+      'Bien',
+      'Fácil',
+    ]);
+    expect(options.some((option) => option.querySelector('[data-interval]'))).toBe(false);
+    expect(options.some((option) => option.textContent?.includes('sugerido'))).toBe(false);
+  });
 });

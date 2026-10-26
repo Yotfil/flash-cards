@@ -1,0 +1,54 @@
+@if (packages.status() === 'error') {
+  <section aria-labelledby="practice-ai-today-heading" class="flex flex-col gap-3">
+    <h2 id="practice-ai-today-heading" class="text-base font-bold text-text">
+      {{ copy.todayBlockTitle }}
+    </h2>
+    <div role="alert" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <p class="text-text-dim">{{ copy.loadError }}</p>
+      <button
+        type="button"
+        class="press font-semibold text-accent-text underline-offset-4 hover:underline"
+        (click)="packages.reload()"
+      >
+        {{ copy.retry }}
+      </button>
+    </div>
+  </section>
+} @else if (packages.status() === 'ready' && hasAny()) {
+  <section aria-labelledby="practice-ai-today-heading" class="flex flex-col gap-3">
+    <h2 id="practice-ai-today-heading" class="text-base font-bold text-text">
+      {{ copy.todayBlockTitle }}
+    </h2>
+    @if (rows().length === 0) {
+      <p class="text-sm text-text-dim">
+        {{ copy.nothingPending }}
+        <a
+          routerLink="/biblioteca"
+          class="font-semibold text-accent-text underline-offset-4 hover:underline"
+        >
+          {{ copy.seePackages }}
+        </a>
+      </p>
+    } @else {
+      <ul class="flex flex-col gap-2">
+        @for (row of rows(); track row.id) {
+          <li
+            data-package-today
+            class="glass-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
+          >
+            <span data-text class="min-w-0 text-sm font-semibold text-text">{{ row.text }}</span>
+            <app-study-launch-button
+              variant="secondary"
+              [label]="row.label"
+              [prepare]="row.prepare"
+              [destination]="destination"
+              [discard]="discard"
+              [emptyMessage]="copy.nothingToday"
+              [errorMessage]="copy.practiceError"
+            />
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

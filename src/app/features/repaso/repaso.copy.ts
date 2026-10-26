@@ -40,6 +40,11 @@ export function rejectedAfterFinishLabel(count: number): string {
 }
 
 /** Etiqueta accesible de una opción: "Bien, vuelve en 3 días (sugerido)". */
-export function ratingAriaLabel(label: string, interval: string, suggested: boolean): string {
-  return `${label}, vuelve en ${interval}${suggested ? ' (sugerido)' : ''}`;
+export function ratingAriaLabel(
+  label: string,
+  interval: string | null,
+  suggested: boolean,
+): string {
+  const when = interval === null ? '' : `, vuelve en ${interval}`;
+  return `${label}${when}${suggested ? ' (sugerido)' : ''}`;
 }

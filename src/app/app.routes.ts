@@ -2,6 +2,7 @@ import type { Routes } from '@angular/router';
 
 import { guestOnlyGuard, requireSessionGuard } from '@core/session.guards';
 import { practiceHandoffGuard } from '@features/practica/practice-handoff.guard';
+import { practiceAiHandoffGuard } from '@features/practica-ia/practice-ai-handoff.guard';
 import { studyHandoffGuard } from '@features/repaso/study-handoff.guard';
 
 // Mapa de rutas completo. Cada pantalla carga bajo demanda. Todo exige sesión activa salvo
@@ -33,6 +34,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('@features/repaso/repaso-page/repaso-page.component').then(
         (module) => module.RepasoPageComponent,
+      ),
+  },
+  {
+    path: 'practica-ia',
+    canActivate: [requireSessionGuard, practiceAiHandoffGuard],
+    loadComponent: () =>
+      import('@features/practica-ia/practice-ai-page/practice-ai-page.component').then(
+        (module) => module.PracticeAiPageComponent,
       ),
   },
   {
@@ -77,6 +86,21 @@ export const routes: Routes = [
         loadComponent: () =>
           import('@features/biblioteca/capitulo-detail-page/capitulo-detail-page.component').then(
             (module) => module.CapituloDetailPageComponent,
+          ),
+      },
+      // Los paquetes de práctica viven en la Biblioteca ("completados" antes que el id).
+      {
+        path: 'paquetes/completados',
+        loadComponent: () =>
+          import('@features/practica-ia/completed-packages-page/completed-packages-page.component').then(
+            (module) => module.CompletedPackagesPageComponent,
+          ),
+      },
+      {
+        path: 'paquetes/:id',
+        loadComponent: () =>
+          import('@features/practica-ia/package-detail-page/package-detail-page.component').then(
+            (module) => module.PackageDetailPageComponent,
           ),
       },
       {

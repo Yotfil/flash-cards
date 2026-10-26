@@ -133,6 +133,7 @@ describe('SessionService · perfil del primer acceso', () => {
         theme: 'system',
         defaultNewCardsPerDay: 20,
         autoGradeByTime: true,
+        practicePackageCapacity: 20,
       },
     };
     expect(users.saved).toEqual([expected]);
@@ -445,6 +446,7 @@ describe('SessionService · ajustes', () => {
           theme: 'dark',
           defaultNewCardsPerDay: 15,
           autoGradeByTime: true,
+          practicePackageCapacity: 20,
         },
       }),
     );
@@ -452,6 +454,19 @@ describe('SessionService · ajustes', () => {
     await settle();
     return context;
   }
+
+  it('una plantilla propia se guarda y `null` la quita (vuelve la plantilla por defecto)', async () => {
+    const { session, users } = await activeSession();
+
+    await session.updateSettings({ promptTemplate: 'Mi [[REPASADAS]]' });
+    expect(session.user()?.settings.promptTemplate).toBe('Mi [[REPASADAS]]');
+    expect((await users.findById('u1'))?.settings.promptTemplate).toBe('Mi [[REPASADAS]]');
+
+    await session.updateSettings({ promptTemplate: null });
+    expect(session.user()?.settings).not.toHaveProperty('promptTemplate');
+    expect(users.settingsUpdates.at(-1)).toEqual({ uid: 'u1', changes: { promptTemplate: null } });
+    expect((await users.findById('u1'))?.settings).not.toHaveProperty('promptTemplate');
+  });
 
   it('guarda solo el ajuste cambiado y la sesión lo fusiona con los demás intactos', async () => {
     const { session, users } = await activeSession();
@@ -466,6 +481,7 @@ describe('SessionService · ajustes', () => {
       theme: 'dark',
       defaultNewCardsPerDay: 5,
       autoGradeByTime: true,
+      practicePackageCapacity: 20,
     });
   });
 

@@ -1,0 +1,42 @@
+<div class="flex flex-col gap-6">
+  <header class="flex flex-col gap-3">
+    <a
+      routerLink="/biblioteca"
+      class="self-start text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+    >
+      {{ copy.backToLibrary }}
+    </a>
+    <h1 class="text-2xl font-extrabold tracking-tight text-text">{{ copy.completedTitle }}</h1>
+  </header>
+
+  @switch (packages.status()) {
+    @case ('error') {
+      <app-error-state [title]="copy.loadError" (retry)="packages.reload()" />
+    }
+    @case ('ready') {
+      @if (rows().length === 0) {
+        <p class="text-sm text-text-dim">{{ copy.noCompleted }}</p>
+      } @else {
+        <ul class="flex flex-col gap-2">
+          @for (row of rows(); track row.id) {
+            <li>
+              <a
+                data-completed-row
+                class="glass-soft press flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+                [routerLink]="['/paquetes', row.id]"
+              >
+                <span data-name class="min-w-0 truncate text-sm font-semibold text-text">
+                  {{ row.name }}
+                </span>
+                <span class="shrink-0 text-xs text-text-dim">{{ row.date }} · {{ row.items }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    }
+    @default {
+      <app-skeleton variant="card" [lines]="2" />
+    }
+  }
+</div>

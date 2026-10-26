@@ -13,7 +13,9 @@
       "port": 9099
     },
     "ui": {
-      "enabled": false
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 4000
     },
     "singleProjectMode": true
   }

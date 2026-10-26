@@ -16,6 +16,30 @@ export interface UserSettings {
   defaultNewCardsPerDay: number;
   /** Sugerir un grado por la velocidad de recuerdo al revelar (asiste, nunca califica solo). */
   autoGradeByTime: boolean;
+  /** Capacidad con la que nace un paquete de práctica; los ya creados conservan la suya. */
+  practicePackageCapacity: number;
+  /** Plantilla propia del prompt de práctica; ausente = la plantilla por defecto. */
+  promptTemplate?: string;
+}
+
+/** Cambios de ajustes; `promptTemplate: null` vuelve a la plantilla por defecto (se quita). */
+export type SettingsChanges = Partial<Omit<UserSettings, 'promptTemplate'>> & {
+  promptTemplate?: string | null;
+};
+
+/** Los ajustes con los cambios aplicados: lo `undefined` no cambia y `null` quita la plantilla. */
+export function applySettingsChanges(
+  settings: UserSettings,
+  changes: SettingsChanges,
+): UserSettings {
+  const { promptTemplate, ...rest } = changes;
+  const updated: UserSettings = { ...settings, ...rest };
+  if (promptTemplate === null) {
+    delete updated.promptTemplate;
+  } else if (promptTemplate !== undefined) {
+    updated.promptTemplate = promptTemplate;
+  }
+  return updated;
 }
 
 export interface User {

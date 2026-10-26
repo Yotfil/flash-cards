@@ -12,6 +12,7 @@ import { AuthPort } from '@domain/ports/auth.port';
 import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
+import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
@@ -30,6 +31,7 @@ import { FirestoreAllowlistRepository } from '@infrastructure/firestore/allowlis
 import { FirestoreBookRepository } from '@infrastructure/firestore/book.repository.firestore';
 import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';
 import { FirestoreChapterRepository } from '@infrastructure/firestore/chapter.repository.firestore';
+import { FirestorePracticePackageRepository } from '@infrastructure/firestore/practice-package.repository.firestore';
 import { FirestoreDailyStatsRepository } from '@infrastructure/firestore/daily-stats.repository.firestore';
 import { FirestoreGradePersistence } from '@infrastructure/firestore/grade-persistence.firestore';
 import { FirestoreImportRepository } from '@infrastructure/firestore/import.repository.firestore';
@@ -65,6 +67,10 @@ export function provideCore(): EnvironmentProviders {
     {
       provide: ChapterRepository,
       useFactory: () => new FirestoreChapterRepository(inject(FIRESTORE)),
+    },
+    {
+      provide: PracticePackageRepository,
+      useFactory: () => new FirestorePracticePackageRepository(inject(FIRESTORE), inject(Logger)),
     },
     {
       provide: DailyStatsRepository,
