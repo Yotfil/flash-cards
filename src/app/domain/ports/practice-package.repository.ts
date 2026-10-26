@@ -11,6 +11,24 @@ export class PackageFullError extends Error {
   }
 }
 
+/** El paquete ya no existe (se borró, por ejemplo, desde otro dispositivo): no se escribió nada. */
+export class PracticePackageGoneError extends Error {
+  override readonly name = 'PracticePackageGoneError';
+
+  constructor(readonly packageId: string) {
+    super(`El paquete ${packageId} ya no existe.`);
+  }
+}
+
+/** El paquete existe pero ya no tiene ese ítem (se borró desde otro dispositivo): no se escribió nada. */
+export class PracticeItemGoneError extends Error {
+  override readonly name = 'PracticeItemGoneError';
+
+  constructor(readonly itemId: string) {
+    super(`El ítem ${itemId} ya no está en el paquete.`);
+  }
+}
+
 // Paquetes de práctica del usuario en el almacén: un documento por paquete, con sus ítems dentro.
 // Ninguna operación toca libros, tarjetas, historial ni indicadores del día.
 export abstract class PracticePackageRepository {
@@ -25,7 +43,10 @@ export abstract class PracticePackageRepository {
     packageId: string,
     drafts: readonly CardContentDraft[],
   ): Promise<PracticeItem[]>;
-  /** Cambia el contenido; conserva la última calificación. */
+  /**
+   * Cambia el contenido; conserva la última calificación. Si el paquete o el ítem ya no existen,
+   * lanza `PracticePackageGoneError` o `PracticeItemGoneError` sin escribir nada.
+   */
   abstract updateItem(
     uid: string,
     packageId: string,

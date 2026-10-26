@@ -1,9 +1,14 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { Timestamp, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 
-import { PackageFullError } from '@domain/ports/practice-package.repository';
+import {
+  PackageFullError,
+  PracticeItemGoneError,
+  PracticePackageGoneError,
+} from '@domain/ports/practice-package.repository';
 import { InvalidDocumentError } from '@infrastructure/firestore/document-boundary';
 import { FirestorePracticePackageRepository } from '@infrastructure/firestore/practice-package.repository.firestore';
+import { FakeLogger } from '@testing/fake-logger';
 
 import {
   createRulesTestEnvironment,
@@ -17,6 +22,7 @@ const OWNER_EMAIL = 'ada@ejemplo.com';
 
 let environment: RulesTestEnvironment;
 let repository: FirestorePracticePackageRepository;
+let logger: FakeLogger;
 
 beforeAll(async () => {
   environment = await createRulesTestEnvironment();
@@ -29,10 +35,22 @@ afterAll(async () => {
 beforeEach(async () => {
   await environment.clearFirestore();
   await seedAllowlist(environment, [OWNER_EMAIL]);
+  logger = new FakeLogger();
   repository = new FirestorePracticePackageRepository(
     modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    logger,
   );
 });
+
+/** Otro dispositivo (u otra pestaña) de la misma cuenta: su propio cliente, su caché y su registro. */
+function anotherDevice(): { device: FirestorePracticePackageRepository; deviceLogger: FakeLogger } {
+  const deviceLogger = new FakeLogger();
+  const device = new FirestorePracticePackageRepository(
+    modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    deviceLogger,
+  );
+  return { device, deviceLogger };
+}
 
 async function asAdmin<T>(work: (db: Firestore) => Promise<T>): Promise<T> {
   let result!: T;
@@ -79,6 +97,26 @@ describe('FirestorePracticePackageRepository · paquetes', () => {
 
     await repository.delete(OWNER_UID, pkg.id);
     expect(await repository.listByUser(OWNER_UID)).toEqual([]);
+  });
+
+  it('un ítem listado con datos incompletos hace inválido el documento, con la ruta del campo', async () => {
+    await asAdmin((db) =>
+      setDoc(doc(db, 'users', OWNER_UID, 'practicePackages', 'p1'), {
+        name: 'Película',
+        capacity: 20,
+        status: 'open',
+        items: { i1: { cardType: 'basic', front: 'a', back: 'b' } },
+        itemOrder: ['i1'],
+        createdAt: Timestamp.now(),
+      }),
+    );
+
+    const failure = await repository.listByUser(OWNER_UID).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(InvalidDocumentError);
+    expect((failure as InvalidDocumentError).issues.map((issue) => issue.field)).toEqual([
+      'items.i1.addedAt',
+    ]);
   });
 
   it('un documento corrupto falla con un error que nombra su ruta', async () => {
@@ -185,5 +223,77 @@ describe('FirestorePracticePackageRepository · ítems', () => {
       back: 'd',
       addedAt: expect.any(Timestamp),
     });
+  });
+});
+
+describe('FirestorePracticePackageRepository · un ítem borrado en otro dispositivo', () => {
+  it('calificarlo desde el que aún lo tenía no impide leer: el paquete sale sin él y el registro avisa', async () => {
+    // El móvil arma la práctica de "Película" con «to give up»; en el computador, Ada lo borra.
+    const film = await repository.create(OWNER_UID, { name: 'Película', capacity: 20 });
+    const [giveUp, lookUp] = await repository.addItems(OWNER_UID, film.id, [
+      basic('to give up', 'rendirse'),
+      basic('to look up', 'buscar'),
+    ]);
+    const meeting = await repository.create(OWNER_UID, { name: 'Reunión', capacity: 20 });
+    await repository.addItems(OWNER_UID, meeting.id, [basic('to follow up', 'dar seguimiento')]);
+    const { device: computer, deviceLogger: computerLogger } = anotherDevice();
+    await computer.removeItem(OWNER_UID, film.id, giveUp?.id ?? '');
+
+    // Con la lista vieja, el móvil lo califica: la nota deja un resto suelto en el documento.
+    await repository.recordGrade(OWNER_UID, film.id, giveUp?.id ?? '', {
+      grade: 1,
+      dayId: '2026-10-26',
+    });
+    const listed = await computer.listByUser(OWNER_UID);
+
+    expect(listed.map((pkg) => pkg.id)).toEqual([film.id, meeting.id]);
+    expect(listed[0]?.itemOrder).toEqual([lookUp?.id]);
+    expect(Object.keys(listed[0]?.items ?? {})).toEqual([lookUp?.id]);
+    expect(computerLogger.entries).toEqual([
+      {
+        level: 'warn',
+        message: expect.stringContaining(`users/${OWNER_UID}/practicePackages/${film.id}`),
+      },
+    ]);
+  });
+
+  it('editarlo desde el formulario que el otro tenía abierto falla sin dejar ningún resto', async () => {
+    const film = await repository.create(OWNER_UID, { name: 'Película', capacity: 20 });
+    const [giveUp, lookUp] = await repository.addItems(OWNER_UID, film.id, [
+      basic('to give up', 'rendirse'),
+      basic('to look up', 'buscar'),
+    ]);
+    const { device: computer } = anotherDevice();
+    await repository.removeItem(OWNER_UID, film.id, lookUp?.id ?? '');
+
+    const failure = await computer
+      .updateItem(
+        OWNER_UID,
+        film.id,
+        lookUp?.id ?? '',
+        basic('to look up', 'buscar (en el diccionario)'),
+      )
+      .catch((error: unknown) => error);
+    const raw = await asAdmin(async (db) =>
+      (await getDoc(doc(db, 'users', OWNER_UID, 'practicePackages', film.id))).data(),
+    );
+
+    expect(failure).toBeInstanceOf(PracticeItemGoneError);
+    expect(Object.keys(raw?.['items'] ?? {})).toEqual([giveUp?.id]);
+  });
+
+  it('editar un ítem de un paquete que ya no existe falla sin crearlo', async () => {
+    const film = await repository.create(OWNER_UID, { name: 'Película', capacity: 20 });
+    const [giveUp] = await repository.addItems(OWNER_UID, film.id, [
+      basic('to give up', 'rendirse'),
+    ]);
+    await repository.delete(OWNER_UID, film.id);
+
+    const failure = await repository
+      .updateItem(OWNER_UID, film.id, giveUp?.id ?? '', basic('to give up', 'abandonar'))
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PracticePackageGoneError);
+    expect(await repository.listByUser(OWNER_UID)).toEqual([]);
   });
 });

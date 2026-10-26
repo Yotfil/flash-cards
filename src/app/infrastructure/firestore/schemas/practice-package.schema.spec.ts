@@ -71,6 +71,24 @@ describe('practicePackageDocumentSchema', () => {
     expect(parsed.completedAt).toEqual(completed);
   });
 
+  it('una entrada que el paquete no lista (resto de un ítem borrado) se aparta sin validarla', () => {
+    const parsed = practicePackageDocumentSchema.parse(
+      documentWith({
+        items: {
+          ...documentWith().items,
+          gone: { lastGrade: 1, lastPracticedDayId: '2026-10-26' },
+        },
+      }),
+    );
+
+    expect(Object.keys(parsed.items)).toEqual(['i1', 'i2']);
+    expect(parsed.strayItemIds).toEqual(['gone']);
+  });
+
+  it('sin restos, no aparta nada', () => {
+    expect(practicePackageDocumentSchema.parse(documentWith()).strayItemIds).toEqual([]);
+  });
+
   it.each([
     ['sin nombre', { name: undefined }],
     ['con un estado desconocido', { status: 'archivado' }],

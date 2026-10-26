@@ -70,7 +70,7 @@ export function provideCore(): EnvironmentProviders {
     },
     {
       provide: PracticePackageRepository,
-      useFactory: () => new FirestorePracticePackageRepository(inject(FIRESTORE)),
+      useFactory: () => new FirestorePracticePackageRepository(inject(FIRESTORE), inject(Logger)),
     },
     {
       provide: DailyStatsRepository,

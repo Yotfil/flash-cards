@@ -15,25 +15,30 @@ import {
 import type { CardContentDraft } from '@domain/models/card.model';
 import type { PracticeItem, PracticePackage, TodaySet } from '@domain/models/practice-package';
 import type { Rating } from '@domain/models/rating';
+import { Logger } from '@domain/ports/logger.port';
 import {
   PackageFullError,
+  PracticeItemGoneError,
+  PracticePackageGoneError,
   PracticePackageRepository,
 } from '@domain/ports/practice-package.repository';
 
 import { parseDocument, parseDocuments } from './document-boundary';
 import {
+  packageItemOrderSchema,
   practicePackageDocumentSchema,
   type PracticePackageDocument,
 } from './schemas/practice-package.schema';
 
-/** Lo que hace falta leer para decidir si caben más ítems. */
-const capacitySchema = practicePackageDocumentSchema.pick({ capacity: true, itemOrder: true });
-
 // Paquetes de práctica en `users/{uid}/practicePackages`: un documento por paquete con sus ítems
 // dentro (mapa por id + `itemOrder`). Calificar o fijar el día actualiza solo sus rutas; agregar
-// lee y escribe en una transacción para no pasar nunca de la capacidad.
+// lee y escribe en una transacción para no pasar nunca de la capacidad. Los restos sueltos de un
+// ítem borrado (ver el esquema) no llegan al modelo: se registran como dato inesperado tolerado.
 export class FirestorePracticePackageRepository extends PracticePackageRepository {
-  constructor(private readonly firestore: Firestore) {
+  constructor(
+    private readonly firestore: Firestore,
+    private readonly logger: Logger,
+  ) {
     super();
   }
 
@@ -41,9 +46,9 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
   // y un documento malformado debe verse como fallo de carga.
   async listByUser(uid: string): Promise<PracticePackage[]> {
     const snapshot = await getDocs(this.packagesOf(uid));
-    return parseDocuments(practicePackageDocumentSchema, snapshot.docs)
-      .map(toPackage)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const documents = parseDocuments(practicePackageDocumentSchema, snapshot.docs);
+    documents.forEach((document) => this.reportStrayItems(uid, document));
+    return documents.map(toPackage).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
   async create(uid: string, input: { name: string; capacity: number }): Promise<PracticePackage> {
@@ -76,7 +81,11 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
     const ref = this.packageRef(uid, packageId);
     return runTransaction(this.firestore, async (transaction) => {
       const snapshot = await transaction.get(ref);
-      const { capacity, itemOrder } = parseDocument(capacitySchema, ref.path, snapshot.data());
+      const { capacity, itemOrder } = parseDocument(
+        packageItemOrderSchema,
+        ref.path,
+        snapshot.data(),
+      );
       if (itemOrder.length + drafts.length > capacity) {
         throw new PackageFullError(capacity);
       }
@@ -90,18 +99,31 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
     });
   }
 
-  async updateItem(
+  // En una transacción: escribir por rutas sobre un ítem que otro dispositivo ya borró crearía un
+  // resto suelto. Editar ya exige red, así que leer antes no le quita nada.
+  updateItem(
     uid: string,
     packageId: string,
     itemId: string,
     draft: CardContentDraft,
   ): Promise<void> {
+    const ref = this.packageRef(uid, packageId);
     const example = draft.example?.trim();
-    await updateDoc(this.packageRef(uid, packageId), {
-      [`items.${itemId}.cardType`]: draft.cardType,
-      [`items.${itemId}.front`]: draft.front,
-      [`items.${itemId}.back`]: draft.cardType === 'cloze' ? '' : draft.back,
-      [`items.${itemId}.example`]: example ? example : deleteField(),
+    return runTransaction(this.firestore, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists()) {
+        throw new PracticePackageGoneError(packageId);
+      }
+      const { itemOrder } = parseDocument(packageItemOrderSchema, ref.path, snapshot.data());
+      if (!itemOrder.includes(itemId)) {
+        throw new PracticeItemGoneError(itemId);
+      }
+      transaction.update(ref, {
+        [`items.${itemId}.cardType`]: draft.cardType,
+        [`items.${itemId}.front`]: draft.front,
+        [`items.${itemId}.back`]: draft.cardType === 'cloze' ? '' : draft.back,
+        [`items.${itemId}.example`]: example ? example : deleteField(),
+      });
     });
   }
 
@@ -132,6 +154,18 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
     await updateDoc(this.packageRef(uid, packageId), { status: 'completed', completedAt });
   }
 
+  private reportStrayItems(
+    uid: string,
+    document: PracticePackageDocument & { readonly id: string },
+  ): void {
+    if (document.strayItemIds.length > 0) {
+      const path = this.packageRef(uid, document.id).path;
+      this.logger.warn(
+        `Se ignoraron ${document.strayItemIds.length} restos de ítems borrados en ${path}`,
+      );
+    }
+  }
+
   private packagesOf(uid: string) {
     return collection(this.firestore, 'users', uid, 'practicePackages');
   }
@@ -154,12 +188,20 @@ function newItem(id: string, draft: CardContentDraft, addedAt: Date): PracticeIt
   };
 }
 
-/** El modelo de dominio a partir del documento validado, sin propiedades `undefined`. */
+/**
+ * El modelo de dominio a partir del documento validado, sin propiedades `undefined` y sin los
+ * restos sueltos (campo por campo, para que nada del documento se cuele en el modelo).
+ */
 function toPackage(document: PracticePackageDocument & { readonly id: string }): PracticePackage {
-  const { items, todaySet, completedAt, ...rest } = document;
+  const { items, todaySet, completedAt } = document;
   return {
-    ...rest,
+    id: document.id,
+    name: document.name,
+    capacity: document.capacity,
+    status: document.status,
     items: Object.fromEntries(Object.entries(items).map(([id, item]) => [id, toItem(item)])),
+    itemOrder: document.itemOrder,
+    createdAt: document.createdAt,
     ...(todaySet ? { todaySet } : {}),
     ...(completedAt ? { completedAt } : {}),
   };
