@@ -8,10 +8,10 @@ Orden TDD: cada tarea de código va precedida por su prueba en rojo. Puerta ante
 - [x] 1.2 Añadir `DailyQueueService.refreshQueue()` y usarlo desde `ProgressService.refresh()`. Verificar: 1.1 en verde y `progress.service.spec` existente en verde.
 - [x] 1.3 Prueba en rojo: `CardCollectionChanges` (`services/progress/card-collection-changes.spec.ts`): `version()` arranca en 0 y `notify()` lo incrementa. Verificar: falla por archivo inexistente.
 - [x] 1.4 Crear `CardCollectionChanges` (servicio `providedIn: 'root'`, señal `version` y `notify()`). Verificar: 1.3 en verde.
-- [ ] 1.5 Pruebas en rojo en `progress.service.spec.ts` (con `FakeConnectivity` y `FakeBookRepository`): dos `refresh()` seguidos → 1 conteo; `notify()` entre medias → 2; `retryCollection()` cuenta sin tocar la cola; sin red con conteo previo → `collectionStatus()==='ready'`; sin red sin conteo → `'offline'` y 0 conteos; `enter()` + red que vuelve → 1 conteo; sin `enter()` (o tras `leave()`) + red que vuelve → 0 conteos. Verificar: fallan contra el `resource` actual.
-- [ ] 1.6 Reescribir el conteo de `ProgressService` según D4: señales `counts`/`status`, `ensureCounted()`, `countedVersion`, `enter()`/`leave()` y el `effect` de reconexión; mantener `collectionStatus`, `shares`, `isEmpty`, `retryCollection` con la misma forma para la página. Verificar: 1.5 en verde y las pruebas existentes de Progreso en verde.
-- [ ] 1.7 Prueba en rojo en `progreso-page.component.spec.ts`: al crear la página se llama `enter()` y al destruirla `leave()`; sin red y sin conteo se lee "Necesitas conexión para contar tu colección.". Verificar: falla.
-- [ ] 1.8 Conectar `enter()`/`leave()` en `ProgresoPageComponent` (`ngOnInit`/`DestroyRef`). Verificar: 1.7 en verde.
+- [x] 1.5 Pruebas en rojo en `progress.service.spec.ts` (con `FakeConnectivity` y `FakeBookRepository`): dos `refresh()` seguidos → 1 conteo; `notify()` entre medias → 2; `retryCollection()` cuenta sin tocar la cola; sin red con conteo previo → `collectionStatus()==='ready'`; sin red sin conteo → `'offline'` y 0 conteos; `enter()` + red que vuelve → 1 conteo; sin `enter()` (o tras `leave()`) + red que vuelve → 0 conteos. Verificar: fallan contra el `resource` actual.
+- [x] 1.6 Reescribir el conteo de `ProgressService` según D4: señales `counts`/`status`, `ensureCounted()`, `countedVersion`, `enter()`/`leave()` y el `effect` de reconexión; mantener `collectionStatus`, `shares`, `isEmpty`, `retryCollection` con la misma forma para la página. Verificar: 1.5 en verde y las pruebas existentes de Progreso en verde.
+- [x] 1.7 Prueba en rojo en `progreso-page.component.spec.ts`: al crear la página se llama `enter()` y al destruirla `leave()`; sin red y sin conteo se lee "Necesitas conexión para contar tu colección.". Verificar: falla.
+- [x] 1.8 Conectar `enter()`/`leave()` en `ProgresoPageComponent` (`ngOnInit`/`DestroyRef`). Verificar: 1.7 en verde.
 
 ## 2. Avisar cuando la colección cambia (escritores)
 

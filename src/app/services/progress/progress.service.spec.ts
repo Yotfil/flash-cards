@@ -17,6 +17,7 @@ import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
+import { CardCollectionChanges } from './card-collection-changes';
 import { ProgressService } from './progress.service';
 
 // Sábado 24 de octubre de 2026, 10:00 en Bogotá (día de estudio 2026-10-24).
@@ -56,6 +57,7 @@ function setup(options: { online?: boolean } = {}) {
   const stats = new FakeDailyStatsRepository();
   const connectivity = new FakeConnectivity(options.online ?? true);
   const logger = new FakeLogger();
+  const session = new FakeSessionService({ kind: 'active', user: aUser() });
   TestBed.configureTestingModule({
     providers: [
       { provide: BookRepository, useValue: books },
@@ -63,10 +65,7 @@ function setup(options: { online?: boolean } = {}) {
       { provide: DailyStatsRepository, useValue: stats },
       { provide: ConnectivityPort, useValue: connectivity },
       { provide: Logger, useValue: logger },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
-      },
+      { provide: SessionService, useValue: session },
     ],
   });
   const settle = async () => {
@@ -77,11 +76,13 @@ function setup(options: { online?: boolean } = {}) {
   return {
     service: TestBed.inject(ProgressService),
     queue: TestBed.inject(DailyQueueService),
+    changes: TestBed.inject(CardCollectionChanges),
     books,
     cards,
     stats,
     connectivity,
     logger,
+    session,
     settle,
   };
 }
@@ -204,11 +205,11 @@ describe('ProgressService · colección y fallos', () => {
     expect(cards.calls.listReady).toBe(1);
   });
 
-  it('sin red no se cuenta: "offline", nunca vacío; al volver la red se cuenta sola', async () => {
+  it('sin red no se cuenta: "offline", nunca vacío; con Progreso abierta, al volver la red se cuenta sola', async () => {
     const { service, books, connectivity, settle } = setup({ online: false });
     books.collectionTotals = { newCards: 0, learning: 0, review: 0 };
 
-    service.refresh();
+    service.enter();
     await settle();
 
     expect(books.calls.countCollectionByState).toBe(0);
@@ -242,5 +243,122 @@ describe('ProgressService · colección y fallos', () => {
 
     expect(service.dayStatus()).toBe('error');
     expect(service.collectionStatus()).toBe('ready');
+  });
+});
+
+describe('ProgressService · la colección se cuenta una vez y se guarda en memoria', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('dos visitas seguidas sin cambios cuentan la colección una sola vez', async () => {
+    const { service, books, settle } = setup();
+
+    service.refresh();
+    await settle();
+    service.refresh();
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(1);
+    expect(service.shares()?.total).toBe(10);
+  });
+
+  it('entrar a Progreso con red cuenta una sola vez', async () => {
+    const { service, books, settle } = setup();
+
+    service.enter();
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(1);
+    expect(service.collectionStatus()).toBe('ready');
+  });
+
+  it('tras un cambio de la colección en este dispositivo, la visita siguiente vuelve a contar', async () => {
+    const { service, books, changes, settle } = setup();
+    service.refresh();
+    await settle();
+
+    books.collectionTotals = { newCards: 1, learning: 2, review: 3 };
+    changes.notify();
+    service.refresh();
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(2);
+    expect(service.shares()?.total).toBe(6);
+  });
+
+  it('Reintentar de la sección vuelve a contar sin volver a leer la cola', async () => {
+    const { service, books, cards, settle } = setup();
+    service.refresh();
+    await settle();
+
+    service.retryCollection();
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(2);
+    expect(cards.calls.listReady).toBe(1);
+  });
+
+  it('Reintentar de toda la pantalla repite la cola y también el conteo', async () => {
+    const { service, books, cards, settle } = setup();
+    service.refresh();
+    await settle();
+
+    service.retry();
+    await settle();
+
+    expect(cards.calls.listReady).toBe(2);
+    expect(books.calls.countCollectionByState).toBe(2);
+  });
+
+  it('sin red y con un conteo previo, la colección sigue mostrándolo', async () => {
+    const { service, books, connectivity, settle } = setup();
+    service.refresh();
+    await settle();
+
+    connectivity.setOnline(false);
+    service.refresh();
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(1);
+    expect(service.collectionStatus()).toBe('ready');
+    expect(service.shares()?.total).toBe(10);
+  });
+
+  it('al volver la red en otra pantalla no se cuenta nada', async () => {
+    const { service, books, connectivity, settle } = setup({ online: false });
+    service.refresh();
+    await settle();
+
+    connectivity.setOnline(true);
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(0);
+  });
+
+  it('tras salir de Progreso, la red que vuelve tampoco cuenta', async () => {
+    const { service, books, connectivity, settle } = setup({ online: false });
+    service.enter();
+    await settle();
+    service.leave();
+
+    connectivity.setOnline(true);
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(0);
+  });
+
+  it('el conteo es de la cuenta que lo pidió: con otra cuenta se vuelve a contar', async () => {
+    const { service, books, session, settle } = setup();
+    service.refresh();
+    await settle();
+
+    session.setState({ kind: 'active', user: aUser({ id: 'u2' }) });
+    service.refresh();
+    await settle();
+
+    expect(books.calls.countCollectionByState).toBe(2);
   });
 });

@@ -125,7 +125,18 @@ async function open(
     Array.from(element.querySelectorAll('button')).find(
       (candidate) => candidate.textContent?.trim() === text,
     );
-  return { element, books, cards, connectivity, update, summary, collection, button, releaseList };
+  return {
+    element,
+    fixture,
+    books,
+    cards,
+    connectivity,
+    update,
+    summary,
+    collection,
+    button,
+    releaseList,
+  };
 }
 
 describe('ProgresoPageComponent', () => {
@@ -221,5 +232,17 @@ describe('ProgresoPageComponent', () => {
 
     expect(books.calls.countCollectionByState).toBe(1);
     expect(collection()?.textContent).toContain('1 tarjeta en total');
+  });
+
+  it('al salir de Progreso, la red que vuelve ya no cuenta la colección', async () => {
+    const { books, connectivity, fixture } = await open({ online: false });
+
+    fixture.destroy();
+    connectivity.setOnline(true);
+    await new Promise((resolve) => setTimeout(resolve));
+    TestBed.tick();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(books.calls.countCollectionByState).toBe(0);
   });
 });
