@@ -4,13 +4,17 @@ import type { CardFace } from '@domain/models/card.model';
 import { ratingCountKey, type RatingCounts } from '@domain/models/daily-stats.model';
 import type { Rating } from '@domain/models/rating';
 import { Logger } from '@domain/ports/logger.port';
-import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
+import {
+  PracticePackageGoneError,
+  PracticePackageRepository,
+} from '@domain/ports/practice-package.repository';
 import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 
 import type { PreparedPracticeAi } from './practice-ai-handoff.service';
 import { PracticePackagesService } from './practice-packages.service';
 import {
+  closeBecausePackageIsGone,
   gradeCurrent,
   progress,
   requeueRejected,
@@ -19,14 +23,15 @@ import {
   type PracticeAiSessionState,
 } from './practice-ai-session-state';
 
-export type PracticeAiSessionStatus = 'idle' | 'active' | 'finished';
+export type PracticeAiSessionStatus = 'idle' | 'active' | 'finished' | 'gone';
 
 /** "Otra vez" o "Difícil": lo que se refuerza con la IA. */
 const HARD_GRADE = 2;
 
 // La práctica de un paquete en curso, efímera. Cada nota se guarda sin esperar (solo la última
 // nota y el día del ítem, en su paquete): nunca toca tarjetas, historial ni el día de los libros.
-// Si el servidor rechaza una nota, el ítem vuelve al final con un aviso, como en el repaso.
+// Si el servidor rechaza una nota, el ítem vuelve al final con un aviso, como en el repaso; si la
+// rechaza porque el paquete ya no existe, la práctica se cierra (repetirla no serviría de nada).
 @Injectable({ providedIn: 'root' })
 export class PracticeAiSessionService {
   private readonly packages = inject(PracticePackageRepository);
@@ -110,10 +115,15 @@ export class PracticeAiSessionService {
       .catch((error: unknown) => {
         this.logger.error('No se guardó la calificación de un ítem de práctica', error);
         const current = this.state();
-        if (current && session === this.sessionNumber) {
-          this.state.set(requeueRejected(current, item.id));
-          this.alertsSignal.update((alerts) => [...alerts, { front: item.front }]);
+        if (!current || session !== this.sessionNumber) {
+          return;
         }
+        if (error instanceof PracticePackageGoneError) {
+          this.state.set(closeBecausePackageIsGone(current));
+          return;
+        }
+        this.state.set(requeueRejected(current, item.id));
+        this.alertsSignal.update((alerts) => [...alerts, { front: item.front }]);
       });
   }
 

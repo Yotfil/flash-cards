@@ -3,7 +3,8 @@ import type { Rating } from '@domain/models/rating';
 
 // El estado de una práctica de paquete, sin Angular: cada ítem del día una vez, en orden barajado.
 // Sin programación ni reencolado por nota: la calificación solo decide si el ítem vuelve mañana.
-// La única vuelta es la de una nota que el servidor rechazó (como en el repaso).
+// La única vuelta es la de una nota que el servidor rechazó (como en el repaso). Si la rechazó
+// porque el paquete ya no existe, la práctica se cierra (`gone`): repetirla no serviría de nada.
 export interface PracticeAiSessionState {
   readonly packageId: string;
   readonly dayId: string;
@@ -12,7 +13,7 @@ export interface PracticeAiSessionState {
   readonly revealed: boolean;
   /** La última nota de cada ítem en esta práctica. */
   readonly grades: Readonly<Record<string, Rating>>;
-  readonly status: 'active' | 'finished';
+  readonly status: 'active' | 'finished' | 'gone';
   /** Notas rechazadas cuando ya no quedaba práctica donde repetirlas. */
   readonly rejectedAfterFinish: number;
 }
@@ -65,6 +66,9 @@ export function requeueRejected(
   if (!item) {
     return state;
   }
+  if (state.status === 'gone') {
+    return state;
+  }
   if (state.status === 'finished') {
     return { ...state, rejectedAfterFinish: state.rejectedAfterFinish + 1 };
   }
@@ -73,12 +77,28 @@ export function requeueRejected(
   return { ...state, grades, queue: [...state.queue, item] };
 }
 
+/**
+ * El servidor rechazó una nota porque el paquete ya no existe (se borró en otro dispositivo): una
+ * práctica activa se cierra sin cierre ni prompt. Si ya había terminado, sigue en el cierre y esa
+ * nota se cuenta como cualquier otra rechazada después del final.
+ */
+export function closeBecausePackageIsGone(state: PracticeAiSessionState): PracticeAiSessionState {
+  switch (state.status) {
+    case 'active':
+      return { ...state, revealed: false, status: 'gone' };
+    case 'finished':
+      return { ...state, rejectedAfterFinish: state.rejectedAfterFinish + 1 };
+    case 'gone':
+      return state;
+  }
+}
+
 /** Calificados sobre el total de la cola (al calificar el último llega a 1). */
 export function progress(state: PracticeAiSessionState): number {
   if (state.queue.length === 0) {
     return 1;
   }
-  return state.status === 'finished' ? 1 : state.index / state.queue.length;
+  return state.status === 'active' ? state.index / state.queue.length : 1;
 }
 
 /** Fisher-Yates sobre una copia. */

@@ -19,11 +19,11 @@
 
 ## 2. IA-02 · Si el paquete ya no existe, la práctica se cierra
 
-- [ ] 2.1 Escribir en rojo, en la prueba de integración del repositorio, "calificar en un paquete borrado rechaza con `PracticePackageGoneError`". Implementar la traducción de `not-found` en el adaptador y verificar que pasa.
-- [ ] 2.2 Escribir en rojo, en `practice-ai-session-state.spec.ts`, "`closeBecausePackageIsGone`: activa → `gone`; terminada → sin cambios". Implementar el estado `gone` y la función pura, y verificar que pasa.
-- [ ] 2.3 Escribir en rojo, en `practice-ai-session.service.spec.ts` (sonda IA-02), "si el paquete ya no existe, la práctica se cierra sin reencolar ni apilar avisos", con el fake rechazando con `PracticePackageGoneError`. Verificar que falla y que la prueba existente del rechazo que reencola sigue en verde.
-- [ ] 2.4 Hacer que la sesión cierre la práctica ante `PracticePackageGoneError` y reencole los demás rechazos. Verificar que pasan las pruebas de 2.3 y las existentes de la sesión.
-- [ ] 2.5 Escribir en rojo, en `practice-ai-page.component.spec.ts`, "si el paquete ya no existe: «Este paquete ya no existe» y el enlace a la Biblioteca, sin cerebros". Añadir el caso `gone` a la plantilla y los textos al copy de `practica-ia`. Verificar que pasa. Puerta completa en verde y commit `fix(practica-con-ia): …` del grupo.
+- [x] 2.1 Escribir en rojo, en la prueba de integración del repositorio, "calificar en un paquete borrado rechaza con `PracticePackageGoneError`". Implementar la traducción de `not-found` en el adaptador y verificar que pasa.
+- [x] 2.2 Escribir en rojo, en `practice-ai-session-state.spec.ts`, "`closeBecausePackageIsGone`: activa → `gone`; terminada → sin cambios". Implementar el estado `gone` y la función pura, y verificar que pasa.
+- [x] 2.3 Escribir en rojo, en `practice-ai-session.service.spec.ts` (sonda IA-02), "si el paquete ya no existe, la práctica se cierra sin reencolar ni apilar avisos", con el fake rechazando con `PracticePackageGoneError`. Verificar que falla y que la prueba existente del rechazo que reencola sigue en verde.
+- [x] 2.4 Hacer que la sesión cierre la práctica ante `PracticePackageGoneError` y reencole los demás rechazos. Verificar que pasan las pruebas de 2.3 y las existentes de la sesión.
+- [x] 2.5 Escribir en rojo, en `practice-ai-page.component.spec.ts`, "si el paquete ya no existe: «Este paquete ya no existe» y el enlace a la Biblioteca, sin cerebros". Añadir el caso `gone` a la plantilla y los textos al copy de `practica-ia`. Verificar que pasa. Puerta completa en verde y commit `fix(practica-con-ia): …` del grupo.
 
 ## 3. IA-03 · Practicar es calificar
 

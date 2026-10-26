@@ -10,6 +10,7 @@ import {
   updateDoc,
   type DocumentReference,
   type Firestore,
+  type FirestoreErrorCode,
 } from 'firebase/firestore';
 
 import type { CardContentDraft } from '@domain/models/card.model';
@@ -138,16 +139,25 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
     await updateDoc(this.packageRef(uid, packageId), { todaySet });
   }
 
+  // Sin transacción: tiene que funcionar sin red y no esperar al servidor. `not-found` solo puede
+  // significar que el paquete ya no existe; se traduce para que la práctica no la reintente.
   async recordGrade(
     uid: string,
     packageId: string,
     itemId: string,
     { grade, dayId }: { grade: Rating; dayId: string },
   ): Promise<void> {
-    await updateDoc(this.packageRef(uid, packageId), {
-      [`items.${itemId}.lastGrade`]: grade,
-      [`items.${itemId}.lastPracticedDayId`]: dayId,
-    });
+    try {
+      await updateDoc(this.packageRef(uid, packageId), {
+        [`items.${itemId}.lastGrade`]: grade,
+        [`items.${itemId}.lastPracticedDayId`]: dayId,
+      });
+    } catch (error) {
+      if (hasFirestoreCode(error, 'not-found')) {
+        throw new PracticePackageGoneError(packageId);
+      }
+      throw error;
+    }
   }
 
   async complete(uid: string, packageId: string, completedAt: Date): Promise<void> {
@@ -173,6 +183,14 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
   private packageRef(uid: string, packageId: string): DocumentReference {
     return doc(this.packagesOf(uid), packageId);
   }
+}
+
+/**
+ * ¿Es un error de Firestore con ese código? Se mira `code` y no la clase: el SDK puede llegar en
+ * más de una copia (la API de compatibilidad de las pruebas trae la suya) y `instanceof` fallaría.
+ */
+function hasFirestoreCode(error: unknown, code: FirestoreErrorCode): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
 /** Un ítem nuevo: sin calificación; la cloze sin reverso y el ejemplo recortado (vacío = sin él). */

@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 
 import { Logger } from '@domain/ports/logger.port';
-import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
+import {
+  PracticePackageGoneError,
+  PracticePackageRepository,
+} from '@domain/ports/practice-package.repository';
 import { SessionService } from '@services/session/session.service';
 import { FakeLogger } from '@testing/fake-logger';
 import {
@@ -97,6 +100,25 @@ describe('PracticeAiSessionService', () => {
     expect(session.alerts()).toEqual([{ front: first?.front }]);
     expect(logger.entries.at(-1)?.level).toBe('error');
     expect(session.total()).toBe(4);
+  });
+
+  it('si el paquete ya no existe (se borró en otro dispositivo), la práctica se cierra sin reencolar', async () => {
+    const { session, packages, logger, flush } = setup();
+    session.reveal();
+    session.grade(3);
+    session.reveal();
+    session.grade(3);
+
+    // El servidor rechaza las dos notas: el paquete se borró en el computador.
+    packages.rejectNext(new PracticePackageGoneError('p1'));
+    packages.rejectNext(new PracticePackageGoneError('p1'));
+    await flush();
+
+    expect(session.status()).toBe('gone');
+    expect(session.total()).toBe(3);
+    expect(session.alerts()).toEqual([]);
+    expect(session.current()).toBeUndefined();
+    expect(logger.entries.filter((entry) => entry.level === 'error')).toHaveLength(2);
   });
 
   it('una nota rechazada de una práctica anterior no toca la nueva', async () => {

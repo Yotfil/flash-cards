@@ -22,6 +22,18 @@
         }
       }
     }
+    @case ('gone') {
+      <div class="flex flex-1 items-center justify-center">
+        <app-empty-state [title]="copy.packageGoneTitle" [message]="copy.packageGoneMessage">
+          <a
+            routerLink="/biblioteca"
+            class="press inline-block rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text"
+          >
+            {{ copy.backToLibrary }}
+          </a>
+        </app-empty-state>
+      </div>
+    }
     @case ('finished') {
       <div class="flex flex-1 items-center">
         <app-session-summary

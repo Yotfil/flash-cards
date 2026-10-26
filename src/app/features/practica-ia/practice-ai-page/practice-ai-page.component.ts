@@ -1,10 +1,11 @@
 import { Component, DestroyRef, computed, inject, type OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import type { Rating } from '@domain/models/rating';
 import { PracticeAiHandoffService } from '@services/practice-ai/practice-ai-handoff.service';
 import { PracticeAiSessionService } from '@services/practice-ai/practice-ai-session.service';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
+import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.component';
 
 import { positionLabel } from '../../practica/practica.copy';
@@ -20,14 +21,17 @@ const RATING_KEYS: Readonly<Record<string, Rating>> = { '1': 1, '2': 2, '3': 3, 
 
 // La práctica de un paquete a pantalla completa, con las piezas del repaso (tarjeta, cuatro
 // cerebros sin intervalos, cierre) y sin programación. Cada entrada toma la práctica entregada
-// una sola vez; sin ella, vuelve a la Biblioteca. Teclado: Espacio revela, 1-4 califican.
+// una sola vez; sin ella, vuelve a la Biblioteca. Si el paquete se borró en otro dispositivo, la
+// práctica se cierra con un aviso y el camino a la Biblioteca. Teclado: Espacio revela, 1-4 califican.
 @Component({
   selector: 'app-practice-ai-page',
   imports: [
     CopyPromptButtonComponent,
+    EmptyStateComponent,
     FlipCardComponent,
     OfflineIndicatorComponent,
     RatingBarComponent,
+    RouterLink,
     SessionSummaryComponent,
     SessionTopBarComponent,
   ],

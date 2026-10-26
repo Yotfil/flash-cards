@@ -69,6 +69,8 @@ export const PRACTICA_IA_COPY = {
   seePackages: 'Ver paquetes',
   practicedAgain: 'Ya practicaste hoy · Volver a practicar',
   practiceFinished: 'Práctica terminada',
+  packageGoneTitle: 'Este paquete ya no existe',
+  packageGoneMessage: 'Se borró en otro dispositivo, así que esta práctica ya no se puede guardar.',
   backToPackage: 'Volver al paquete',
   settingsTitle: 'Práctica con IA',
   templateLabel: 'Plantilla del prompt',

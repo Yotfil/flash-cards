@@ -2,6 +2,7 @@ import { anItem } from '@testing/fake-practice-package-repository';
 import { seededRandom } from '@testing/seeded-random';
 
 import {
+  closeBecausePackageIsGone,
   gradeCurrent,
   progress,
   requeueRejected,
@@ -67,5 +68,25 @@ describe('practice-ai-session-state', () => {
     const late = requeueRejected(state, 'c');
     expect(late.rejectedAfterFinish).toBe(1);
     expect(late.queue).toHaveLength(6);
+  });
+
+  it('si el paquete ya no existe, una práctica activa se cierra sin cierre; en una terminada la nota solo se cuenta', () => {
+    const active = gradeCurrent(reveal(start()), 1);
+
+    const gone = closeBecausePackageIsGone(active);
+    expect(gone.status).toBe('gone');
+    expect(gone.queue).toEqual(active.queue);
+    expect(progress(gone)).toBe(1);
+    expect(gradeCurrent(reveal(gone), 3)).toEqual(gone);
+    expect(requeueRejected(gone, active.queue[0]?.id ?? '')).toBe(gone);
+
+    let finished = active;
+    for (let index = 1; index < 5; index++) {
+      finished = gradeCurrent(reveal(finished), 3);
+    }
+    const late = closeBecausePackageIsGone(finished);
+    expect(late.status).toBe('finished');
+    expect(late.rejectedAfterFinish).toBe(1);
+    expect(closeBecausePackageIsGone(gone)).toBe(gone);
   });
 });

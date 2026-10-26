@@ -55,7 +55,10 @@ export abstract class PracticePackageRepository {
   ): Promise<void>;
   abstract removeItem(uid: string, packageId: string, itemId: string): Promise<void>;
   abstract fixTodaySet(uid: string, packageId: string, todaySet: TodaySet): Promise<void>;
-  /** Solo la última calificación y su día, sin tocar el resto del paquete. */
+  /**
+   * Solo la última calificación y su día, sin tocar el resto del paquete. Si el servidor la rechaza
+   * porque el paquete ya no existe, la promesa falla con `PracticePackageGoneError`.
+   */
   abstract recordGrade(
     uid: string,
     packageId: string,

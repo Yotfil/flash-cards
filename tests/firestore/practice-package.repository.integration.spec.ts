@@ -199,6 +199,19 @@ describe('FirestorePracticePackageRepository · ítems', () => {
     expect(stored?.todaySet).toEqual({ dayId: '2026-10-25', itemIds: [item?.id] });
   });
 
+  it('calificar en un paquete que ya no existe se rechaza con "el paquete ya no existe"', async () => {
+    const pkg = await repository.create(OWNER_UID, { name: 'Película', capacity: 20 });
+    const [item] = await repository.addItems(OWNER_UID, pkg.id, [basic('a', 'b')]);
+    const { device: computer } = anotherDevice();
+    await computer.delete(OWNER_UID, pkg.id);
+
+    const failure = await repository
+      .recordGrade(OWNER_UID, pkg.id, item?.id ?? '', { grade: 3, dayId: '2026-10-26' })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PracticePackageGoneError);
+  });
+
   it('calificar cambia solo la última calificación y el día de ese ítem', async () => {
     const pkg = await repository.create(OWNER_UID, { name: 'Película', capacity: 20 });
     const [graded, other] = await repository.addItems(OWNER_UID, pkg.id, [

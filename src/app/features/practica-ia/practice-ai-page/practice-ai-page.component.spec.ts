@@ -9,7 +9,10 @@ import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
 import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
-import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
+import {
+  PracticePackageGoneError,
+  PracticePackageRepository,
+} from '@domain/ports/practice-package.repository';
 import { PracticeAiHandoffService } from '@services/practice-ai/practice-ai-handoff.service';
 import { PracticeAiSessionService } from '@services/practice-ai/practice-ai-session.service';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
@@ -184,6 +187,27 @@ describe('PracticeAiPageComponent', () => {
     button('Volver al paquete')?.click();
     await update();
     expect(url()).toBe('/paquetes/p1');
+  });
+
+  it('si el paquete ya no existe: «Este paquete ya no existe» y el enlace a la Biblioteca, sin cerebros', async () => {
+    const { press, page, update, repository, url } = await open();
+    await press(' ');
+    await press('3');
+
+    // El servidor rechaza la nota: el paquete se borró en otro dispositivo.
+    repository.rejectNext(new PracticePackageGoneError('p1'));
+    await update();
+
+    expect(page().querySelector('h2')?.textContent?.trim()).toBe('Este paquete ya no existe');
+    expect(page().querySelector('app-flip-card')).toBeNull();
+    expect(page().querySelector('app-rating-bar')).toBeNull();
+    expect(page().querySelector('app-session-top-bar')).toBeNull();
+    expect(page().querySelector('app-session-summary')).toBeNull();
+    await press(' ');
+    expect(page().querySelector('app-flip-card')).toBeNull();
+    page().querySelector<HTMLAnchorElement>('a[href="/biblioteca"]')?.click();
+    await update();
+    expect(url()).toBe('/biblioteca');
   });
 
   it('practicar no toca tarjetas, repaso ni el día; funciona sin red', async () => {
