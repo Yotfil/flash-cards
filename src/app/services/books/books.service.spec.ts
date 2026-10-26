@@ -5,6 +5,7 @@ import type { SessionState } from '@domain/models/session-state';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
@@ -222,6 +223,18 @@ describe('BooksService · mutaciones', () => {
       maxReviewsPerDay: 150,
     });
     expect(service.findById('b1')?.newCardsPerDay).toBe(5);
+  });
+
+  it('borrar un libro avisa que la colección cambió, también si falla', async () => {
+    const { service, repository } = await loaded();
+    const changes = TestBed.inject(CardCollectionChanges);
+
+    repository.failWith.deleteWithContents = new Error('offline');
+    await expect(service.remove('b1')).rejects.toThrow('offline');
+    delete repository.failWith.deleteWithContents;
+    await service.remove('b1');
+
+    expect(changes.version()).toBe(2);
   });
 
   it('borrar quita el libro de la lista solo tras el éxito', async () => {

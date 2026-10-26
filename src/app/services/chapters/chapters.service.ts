@@ -13,6 +13,7 @@ import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 
@@ -24,6 +25,7 @@ export class ChaptersService {
   private readonly repository = inject(ChapterRepository);
   private readonly session = inject(SessionService);
   private readonly books = inject(BooksService);
+  private readonly collectionChanges = inject(CardCollectionChanges);
   private readonly connectivity = inject(ConnectivityPort);
   private readonly logger = inject(Logger);
 
@@ -98,7 +100,9 @@ export class ChaptersService {
   async remove(chapterId: string): Promise<number> {
     const uid = requireSessionUid(this.session.user());
     const bookId = this.requireOpenBook();
-    const deleted = await this.repository.deleteWithCards(uid, bookId, chapterId);
+    const deleted = await this.collectionChanges.afterWrite(
+      this.repository.deleteWithCards(uid, bookId, chapterId),
+    );
     this.chapters.update((chapters) => chapters?.filter((chapter) => chapter.id !== chapterId));
     this.books.changeCardCount(bookId, -deleted);
     return deleted;

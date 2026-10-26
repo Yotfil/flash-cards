@@ -5,6 +5,7 @@ import { DEFAULT_MAX_REVIEWS_PER_DAY } from '@domain/models/study-defaults';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { requireSessionUid, requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 
@@ -26,6 +27,7 @@ export class BooksService {
   private readonly repository = inject(BookRepository);
   private readonly session = inject(SessionService);
   private readonly connectivity = inject(ConnectivityPort);
+  private readonly collectionChanges = inject(CardCollectionChanges);
   private readonly logger = inject(Logger);
 
   /** El recurso no lee nada hasta que alguien lo pide (`reload` o `ensureLoaded`). */
@@ -126,7 +128,7 @@ export class BooksService {
   /** Borra el libro con sus capítulos y tarjetas; sale de la lista solo si el borrado terminó. */
   async remove(bookId: string): Promise<void> {
     const uid = requireSessionUid(this.session.user());
-    await this.repository.deleteWithContents(uid, bookId);
+    await this.collectionChanges.afterWrite(this.repository.deleteWithContents(uid, bookId));
     this.books.update((books) => books?.filter((book) => book.id !== bookId));
   }
 

@@ -8,6 +8,7 @@ import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SessionService } from '@services/session/session.service';
 import { BooksService } from '@services/books/books.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
@@ -177,6 +178,17 @@ describe('ChaptersService · mutaciones', () => {
 
     await expect(service.remove('c3')).rejects.toThrow('offline');
     expect(service.chapters.value()?.map((chapter) => chapter.id)).toEqual(['c0', 'c3']);
+  });
+
+  it('borrar un capítulo avisa que la colección cambió, también si falla', async () => {
+    const { service, repository } = await opened();
+    const changes = TestBed.inject(CardCollectionChanges);
+
+    await service.remove('c3');
+    repository.failWith.deleteWithCards = new Error('offline');
+    await expect(service.remove('c0')).rejects.toThrow('offline');
+
+    expect(changes.version()).toBe(2);
   });
 
   it('tras borrar uno del medio, el siguiente va después del mayor', async () => {

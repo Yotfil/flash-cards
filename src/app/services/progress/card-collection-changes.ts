@@ -14,4 +14,17 @@ export class CardCollectionChanges {
   notify(): void {
     this.versionSignal.update((version) => version + 1);
   }
+
+  /**
+   * Espera una escritura que toca tarjetas y avisa al terminar, salga bien o mal: si falla, una
+   * parte pudo guardarse (un borrado o una importación cortados a mitad). Un aviso de más solo
+   * cuesta un conteo; uno de menos dejaría el conteo de Progreso viejo.
+   */
+  async afterWrite<T>(write: Promise<T>): Promise<T> {
+    try {
+      return await write;
+    } finally {
+      this.notify();
+    }
+  }
 }

@@ -15,8 +15,8 @@ Orden TDD: cada tarea de código va precedida por su prueba en rojo. Puerta ante
 
 ## 2. Avisar cuando la colección cambia (escritores)
 
-- [ ] 2.1 Pruebas en rojo, una por escritor, de que la operación incrementa `CardCollectionChanges.version`: `review-session.service.spec` (`grade()`), `cards.service.spec` (`create`, `createMany`, `replaceInChapter`, `delete`, `deleteMany`), `chapters.service.spec` (`delete`), `books.service.spec` (`delete`), `import.service.spec` (`importBook`); y una prueba negativa: editar una tarjeta (`update`) no incrementa. Verificar: fallan.
-- [ ] 2.2 Inyectar `CardCollectionChanges` en esos servicios y llamar `notify()` tras cada escritura listada (en el repaso, al enviar la nota). Verificar: 2.1 en verde; `npm test` completo en verde.
+- [x] 2.1 Pruebas en rojo, una por escritor, de que la operación incrementa `CardCollectionChanges.version`: `review-session.service.spec` (`grade()`), `cards.service.spec` (`create`, `createMany`, `replaceInChapter`, `delete`, `deleteMany`), `chapters.service.spec` (`delete`), `books.service.spec` (`delete`), `import.service.spec` (`importBook`); y una prueba negativa: editar una tarjeta (`update`) no incrementa. Verificar: fallan.
+- [x] 2.2 Inyectar `CardCollectionChanges` en esos servicios y llamar `notify()` tras cada escritura listada (en el repaso, al enviar la nota). Verificar: 2.1 en verde; `npm test` completo en verde.
 
 ## 3. Origen de lectura en puertos, adaptadores y fakes
 

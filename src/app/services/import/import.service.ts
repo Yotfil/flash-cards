@@ -11,6 +11,7 @@ import {
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { CardsService } from '@services/cards/cards.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 
@@ -55,6 +56,7 @@ export class ImportService {
   private readonly repository = inject(ImportRepository);
   private readonly books = inject(BooksService);
   private readonly cards = inject(CardsService);
+  private readonly collectionChanges = inject(CardCollectionChanges);
   private readonly session = inject(SessionService);
   private readonly logger = inject(Logger);
 
@@ -111,22 +113,24 @@ export class ImportService {
     try {
       const user = requireSessionUser(this.session.user());
       const library = await this.books.ensureLoaded();
-      const book = await this.repository.importBook(user.id, {
-        book: {
-          name: name.trim() || DEFAULT_IMPORTED_BOOK_NAME,
-          subject: subject.trim() || DEFAULT_SUBJECT,
-          studyDirection: 'forward',
-          newCardsPerDay: user.settings.defaultNewCardsPerDay,
-          maxReviewsPerDay: DEFAULT_MAX_REVIEWS_PER_DAY,
-          order: this.books.nextOrder(library),
-          cardCount: parse.validCardCount,
-        },
-        chapters: parse.package.chapters.map((chapter, order) => ({
-          name: chapter.name,
-          order,
-          cards: chapter.cards.map((draft) => newImportedCard(draft, now)),
-        })),
-      });
+      const book = await this.collectionChanges.afterWrite(
+        this.repository.importBook(user.id, {
+          book: {
+            name: name.trim() || DEFAULT_IMPORTED_BOOK_NAME,
+            subject: subject.trim() || DEFAULT_SUBJECT,
+            studyDirection: 'forward',
+            newCardsPerDay: user.settings.defaultNewCardsPerDay,
+            maxReviewsPerDay: DEFAULT_MAX_REVIEWS_PER_DAY,
+            order: this.books.nextOrder(library),
+            cardCount: parse.validCardCount,
+          },
+          chapters: parse.package.chapters.map((chapter, order) => ({
+            name: chapter.name,
+            order,
+            cards: chapter.cards.map((draft) => newImportedCard(draft, now)),
+          })),
+        }),
+      );
       this.books.addLocal(book);
       return { bookId: book.id, chapterCount: parse.chapterCount, cardCount: parse.validCardCount };
     } catch (error) {

@@ -10,6 +10,7 @@ import { ImportBookError, ImportRepository } from '@domain/ports/import.reposito
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { CardsService } from '@services/cards/cards.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
@@ -108,6 +109,19 @@ describe('ImportService · libro', () => {
 
     expect(imports.lastInput?.book.name).toBe('Libro importado');
     expect(imports.lastInput?.book.subject).toBe('Francés');
+  });
+
+  it('importar un libro avisa que la colección cambió, también si falla', async () => {
+    const { service, imports } = setup();
+    const changes = TestBed.inject(CardCollectionChanges);
+
+    await service.importBook({ name: 'X', subject: '', text: 'a | b' });
+    imports.failWith = new ImportBookError(450, true, new Error('permiso'));
+    await expect(
+      service.importBook({ name: 'Y', subject: '', text: 'a | b' }),
+    ).rejects.toBeInstanceOf(ImportBookError);
+
+    expect(changes.version()).toBe(2);
   });
 
   it('sin sesión no escribe', async () => {
