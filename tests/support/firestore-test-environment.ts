@@ -11,12 +11,14 @@ import { doc, setDoc, type Firestore } from 'firebase/firestore';
 // de seguridad y los adaptadores (escritor por lotes, repositorios). Todas arrancan el mismo
 // entorno, siembran la lista de acceso y actúan como el dueño de un árbol de usuario.
 
-// Proyecto de demostración: Firebase lo trata como solo-emulador, así que nunca toca la nube.
-const DEMO_PROJECT_ID = 'demo-cadence';
+// Proyecto de demostración (Firebase trata los `demo-*` como solo-emulador: nunca toca la nube),
+// distinto del de desarrollo (`demo-cadence`). Cada prueba vacía su proyecto; el emulador separa los
+// datos por proyecto, así que una prueba que llegara al emulador de desarrollo no borraría los suyos.
+export const INTEGRATION_PROJECT_ID = 'demo-cadence-test';
 
 export function createRulesTestEnvironment(): Promise<RulesTestEnvironment> {
   return initializeTestEnvironment({
-    projectId: DEMO_PROJECT_ID,
+    projectId: INTEGRATION_PROJECT_ID,
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
   });
 }
