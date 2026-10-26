@@ -5,6 +5,7 @@ import type { SessionState } from '@domain/models/session-state';
 import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { BooksService } from '@services/books/books.service';
@@ -12,6 +13,7 @@ import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -19,12 +21,14 @@ import { CardsService } from './cards.service';
 
 function setup(state: SessionState = { kind: 'active', user: aUser({ id: 'u1' }) }) {
   const repository = new FakeCardRepository();
+  const logger = new FakeLogger();
   TestBed.configureTestingModule({
     providers: [
       { provide: CardRepository, useValue: repository },
       { provide: BookRepository, useValue: new FakeBookRepository() },
       { provide: SessionService, useValue: new FakeSessionService(state) },
       { provide: ConnectivityPort, useValue: new FakeConnectivity() },
+      { provide: Logger, useValue: logger },
     ],
   });
   const service = TestBed.inject(CardsService);
@@ -32,7 +36,7 @@ function setup(state: SessionState = { kind: 'active', user: aUser({ id: 'u1' })
     TestBed.tick();
     await TestBed.inject(ApplicationRef).whenStable();
   };
-  return { service, repository, settle };
+  return { service, repository, logger, settle };
 }
 
 describe('CardsService · recurso', () => {
@@ -267,15 +271,20 @@ describe('CardsService · reemplazar las del capítulo', () => {
   }
   const drafts = ['a', 'b', 'c'].map((front) => ({ cardType: 'basic' as const, front, back: 'x' }));
 
-  it('borra las cargadas, crea las nuevas, deja el recurso con ellas y suma la diferencia', async () => {
+  it('borra las del capítulo en el almacén (también las que la lista no tenía), crea las nuevas y suma la diferencia', async () => {
     const { service, repository, changeCardCount } = await opened();
-    const replace = vi.spyOn(repository, 'replaceInChapter');
+    // Otro dispositivo añadió una después de cargar la lista.
+    repository.seed(aCard({ id: 'k3', chapterId: 'c1' }));
 
     await service.replaceAll('b1', 'c1', drafts);
 
-    expect(replace.mock.calls[0]?.[3]).toEqual(['k1', 'k2']);
+    expect([...repository.cards.values()].map((card) => card.front).sort()).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
     expect(service.cards.value()?.map((card) => card.front)).toEqual(['a', 'b', 'c']);
-    expect(changeCardCount).toHaveBeenCalledWith('b1', 1);
+    expect(changeCardCount).toHaveBeenCalledWith('b1', 0);
   });
 
   it('si el almacén falla, nada cambia', async () => {
@@ -286,5 +295,25 @@ describe('CardsService · reemplazar las del capítulo', () => {
 
     expect(service.cards.value()?.map((card) => card.id)).toEqual(['k1', 'k2']);
     expect(changeCardCount).not.toHaveBeenCalled();
+  });
+});
+
+describe('CardsService · registro de fallos', () => {
+  it('si la lectura de las tarjetas del capítulo falla, queda registrada', async () => {
+    const { service, repository, logger, settle } = setup();
+    const failure = new Error('Documento inválido en users/u1/cards/k1');
+    repository.failWith.listByChapter = failure;
+
+    service.openChapter('c1');
+    await settle();
+
+    expect(service.cards.status()).toBe('error');
+    expect(logger.entries).toEqual([
+      {
+        level: 'error',
+        message: 'No se pudieron leer las tarjetas del capítulo c1',
+        cause: failure,
+      },
+    ]);
   });
 });

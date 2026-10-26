@@ -3,6 +3,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   deleteUser,
+  getAdditionalUserInfo,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -13,7 +14,12 @@ import {
 } from 'firebase/auth';
 
 import type { AuthIdentity } from '@domain/models/auth-identity.model';
-import { AuthPort, type EmailCredentials, type Registration } from '@domain/ports/auth.port';
+import {
+  AuthPort,
+  type EmailCredentials,
+  type GoogleSignIn,
+  type Registration,
+} from '@domain/ports/auth.port';
 
 import { toAuthError } from './auth-error.mapper';
 
@@ -41,8 +47,11 @@ export class FirebaseAuthAdapter extends AuthPort {
     await this.translateErrors(() => signInWithEmailAndPassword(this.auth, email, password));
   }
 
-  async signInWithGoogle(): Promise<void> {
-    await this.translateErrors(() => signInWithPopup(this.auth, new GoogleAuthProvider()));
+  async signInWithGoogle(): Promise<GoogleSignIn> {
+    const credential = await this.translateErrors(() =>
+      signInWithPopup(this.auth, new GoogleAuthProvider()),
+    );
+    return { isNewIdentity: getAdditionalUserInfo(credential)?.isNewUser ?? false };
   }
 
   async signOut(): Promise<void> {
@@ -56,9 +65,9 @@ export class FirebaseAuthAdapter extends AuthPort {
     }
   }
 
-  private async translateErrors(operation: () => Promise<unknown>): Promise<void> {
+  private async translateErrors<T>(operation: () => Promise<T>): Promise<T> {
     try {
-      await operation();
+      return await operation();
     } catch (error) {
       throw toAuthError(error instanceof FirebaseError ? error.code : '', error);
     }

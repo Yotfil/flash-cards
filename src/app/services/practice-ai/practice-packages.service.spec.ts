@@ -206,6 +206,15 @@ describe('PracticePackagesService · práctica de hoy', () => {
     ).toEqual(first);
   });
 
+  it('vaciar la bandeja quita la práctica preparada (ya no se va a abrir)', async () => {
+    const { service, handoff } = await setup({ packages: [DAY_TWO] });
+    await service.prepareTodayPractice('p1');
+
+    service.discardPrepared();
+
+    expect(handoff.prepared()).toBeNull();
+  });
+
   it('sin nada para hoy: 0, sin fijar ni entregar', async () => {
     const { service, repository, handoff } = await setup({
       packages: [aPackage({ id: 'p1' }, [good('g1')])],

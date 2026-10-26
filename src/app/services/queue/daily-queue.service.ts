@@ -65,7 +65,15 @@ export class DailyQueueService {
       const day = this.studyDay();
       return day ? { uid: this.session.user()?.id ?? '', day } : undefined;
     },
-    loader: ({ params }) => this.read(params.day),
+    loader: async ({ params }) => {
+      try {
+        return await this.read(params.day);
+      } catch (error) {
+        // Hoy pinta "No pudimos cargar tu cola de hoy"; aquí queda el detalle.
+        this.logger.error('No se pudo armar la cola de Hoy', error);
+        throw error;
+      }
+    },
   });
 
   /**
@@ -127,9 +135,6 @@ export class DailyQueueService {
     }
     const day = this.currentDay();
     if (this.studyDay()?.id === day.id) {
-      if (this.books.books.status() === 'error') {
-        this.books.reload();
-      }
       this.data.reload();
       this.streak.reload();
       return;
@@ -177,15 +182,31 @@ export class DailyQueueService {
     return data && day ? queueFrom(data, day, sessionNewByBook) : EMPTY_QUEUE;
   }
 
-  /** Una lectura completa: libros, listas hasta el fin del día e indicadores de ese día. */
+  /**
+   * Una lectura completa: libros, listas hasta el fin del día e indicadores de ese día. Los libros
+   * se releen siempre: un libro creado (o una tanda cambiada) en otro dispositivo debe entrar.
+   */
   private async read(day: StudyDay): Promise<QueueData> {
     const uid = requireSessionUid(this.session.user());
     const [books, candidates, today] = await Promise.all([
-      this.books.ensureLoaded(),
+      this.books.loadFresh(),
       this.cards.listReady(uid, day.endOfDay),
       this.dailyStats.getByDay(uid, day.id),
     ]);
+    this.reportOrphans(books, candidates);
     return { books, candidates, today };
+  }
+
+  /**
+   * Las tarjetas de un libro borrado que quedaron sin borrar no entran en la cola (ver
+   * `buildDailyQueue`); aquí, al leer, se deja constancia de cuántas hay.
+   */
+  private reportOrphans(books: readonly Book[], candidates: readonly Card[]): void {
+    const bookIds = new Set(books.map((book) => book.id));
+    const orphans = candidates.filter((card) => !bookIds.has(card.bookId)).length;
+    if (orphans > 0) {
+      this.logger.warn(`Tarjetas de libros que ya no existen, fuera de Hoy: ${orphans}`);
+    }
   }
 
   private currentDay(): StudyDay {

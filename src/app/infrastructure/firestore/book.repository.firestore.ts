@@ -3,6 +3,7 @@ import {
   doc,
   getCountFromServer,
   getDocs,
+  getDocsFromServer,
   increment,
   orderBy,
   query,
@@ -59,12 +60,13 @@ export class FirestoreBookRepository extends BookRepository {
   /**
    * Borra tarjetas, capítulos y, en el último lote, el libro. Si un lote falla, el libro sigue
    * existiendo (con menos contenido) y reintentar borra lo que quede. El historial de repasos y las
-   * estadísticas diarias no se tocan.
+   * estadísticas diarias no se tocan. Lo que hay que borrar se lee del servidor: la caché puede
+   * tener solo parte y lo demás quedaría suelto, sin libro (sin red, falla).
    */
   async deleteWithContents(uid: string, bookId: string): Promise<void> {
     const [cards, chapters] = await Promise.all([
-      getDocs(this.ofBook(uid, 'cards', bookId)),
-      getDocs(this.ofBook(uid, 'chapters', bookId)),
+      getDocsFromServer(this.ofBook(uid, 'cards', bookId)),
+      getDocsFromServer(this.ofBook(uid, 'chapters', bookId)),
     ]);
     const writer = new BatchWriter(this.firestore);
     cards.docs.forEach((card) => writer.delete(card.ref));

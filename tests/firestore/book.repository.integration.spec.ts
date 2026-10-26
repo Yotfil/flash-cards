@@ -191,6 +191,31 @@ describe('FirestoreBookRepository · contenidos y borrado en cascada', () => {
     expect(await idsIn('cards')).toEqual([]);
     expect(await repository.listByUser(OWNER_UID)).toEqual([]);
   });
+
+  it('con la red caída, borrar falla sin dejar tarjetas sueltas y el reintento lo borra todo', async () => {
+    const book = await repository.create(OWNER_UID, draft());
+    await seedContents(book.id, 1, 3);
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const db = modularFirestore(context);
+    const device = new FirestoreBookRepository(db);
+    // El dispositivo solo había visto una de las tres tarjetas: es lo único que tiene en caché.
+    await getDoc(doc(db, 'users', OWNER_UID, 'cards', `${book.id}-c0`));
+
+    await context.firestore().disableNetwork();
+    const offlineDeletion = device.deleteWithContents(OWNER_UID, book.id).then(
+      () => 'borró',
+      () => 'falló',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await context.firestore().enableNetwork();
+
+    expect(await offlineDeletion).toBe('falló');
+    expect(await idsIn('cards')).toHaveLength(3);
+    await device.deleteWithContents(OWNER_UID, book.id);
+    expect(await idsIn('cards')).toEqual([]);
+    expect(await idsIn('chapters')).toEqual([]);
+    expect(await repository.listByUser(OWNER_UID)).toEqual([]);
+  });
 });
 
 describe('FirestoreBookRepository · totales por estado', () => {

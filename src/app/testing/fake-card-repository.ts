@@ -4,7 +4,7 @@ import {
   type CardContentChanges,
   type NewCard,
 } from '@domain/models/card.model';
-import { CardRepository } from '@domain/ports/card.repository';
+import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
 
 type FailableMethod =
   | 'listByChapter'
@@ -120,10 +120,12 @@ export class FakeCardRepository extends CardRepository {
     }
   }
 
+  // Como el real: solo descuenta las que existían (otra pestaña pudo borrarlas ya).
   async deleteWithCount(_uid: string, bookId: string, cardId: string): Promise<void> {
     this.record('deleteWithCount');
-    this.cards.delete(cardId);
-    this.addToBook(bookId, -1);
+    if (this.cards.delete(cardId)) {
+      this.addToBook(bookId, -1);
+    }
   }
 
   async deleteManyWithCount(
@@ -132,22 +134,23 @@ export class FakeCardRepository extends CardRepository {
     cardIds: readonly string[],
   ): Promise<number> {
     this.record('deleteManyWithCount');
-    cardIds.forEach((cardId) => this.cards.delete(cardId));
-    this.addToBook(bookId, -cardIds.length);
-    return cardIds.length;
+    const deleted = cardIds.filter((cardId) => this.cards.delete(cardId)).length;
+    this.addToBook(bookId, -deleted);
+    return deleted;
   }
 
+  // Como el real: borra lo que el capítulo tiene en el almacén, no una lista de la pantalla.
   async replaceInChapter(
     _uid: string,
     bookId: string,
-    _chapterId: string,
-    cardIdsToDelete: readonly string[],
+    chapterId: string,
     cards: readonly NewCard[],
-  ): Promise<Card[]> {
+  ): Promise<ChapterReplacement> {
     this.record('replaceInChapter');
-    cardIdsToDelete.forEach((cardId) => this.cards.delete(cardId));
-    this.addToBook(bookId, -cardIdsToDelete.length);
-    return cards.map((card) => this.store(card));
+    const current = [...this.cards.values()].filter((card) => card.chapterId === chapterId);
+    current.forEach((card) => this.cards.delete(card.id));
+    this.addToBook(bookId, -current.length);
+    return { created: cards.map((card) => this.store(card)), deletedCount: current.length };
   }
 
   private store(card: NewCard): Card {

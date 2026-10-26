@@ -5,11 +5,13 @@ import { CardState, type Card } from '@domain/models/card.model';
 import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { CardsService } from '@services/cards/cards.service';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -36,6 +38,7 @@ function setup() {
   TestBed.configureTestingModule({
     providers: [
       { provide: CardRepository, useValue: repository },
+      { provide: Logger, useValue: new FakeLogger() },
       { provide: BookRepository, useValue: new FakeBookRepository() },
       { provide: ConnectivityPort, useValue: new FakeConnectivity() },
       {

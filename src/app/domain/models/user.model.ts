@@ -22,6 +22,26 @@ export interface UserSettings {
   promptTemplate?: string;
 }
 
+/** Cambios de ajustes; `promptTemplate: null` vuelve a la plantilla por defecto (se quita). */
+export type SettingsChanges = Partial<Omit<UserSettings, 'promptTemplate'>> & {
+  promptTemplate?: string | null;
+};
+
+/** Los ajustes con los cambios aplicados: lo `undefined` no cambia y `null` quita la plantilla. */
+export function applySettingsChanges(
+  settings: UserSettings,
+  changes: SettingsChanges,
+): UserSettings {
+  const { promptTemplate, ...rest } = changes;
+  const updated: UserSettings = { ...settings, ...rest };
+  if (promptTemplate === null) {
+    delete updated.promptTemplate;
+  } else if (promptTemplate !== undefined) {
+    updated.promptTemplate = promptTemplate;
+  }
+  return updated;
+}
+
 export interface User {
   /** Igual al identificador de la identidad autenticada. */
   id: string;

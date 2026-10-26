@@ -16,6 +16,16 @@
 
 <div class="mt-6 flex flex-wrap items-center gap-2">
   @if (!readFailed()) {
+    @if (canShare) {
+      <button
+        type="button"
+        class="press rounded-xl px-1 py-2.5 text-sm font-semibold text-accent-text disabled:opacity-50"
+        [disabled]="!canDeliver()"
+        (click)="download()"
+      >
+        {{ actions.download }}
+      </button>
+    }
     <button
       type="button"
       class="press rounded-xl px-1 py-2.5 text-sm font-semibold text-accent-text disabled:opacity-50"

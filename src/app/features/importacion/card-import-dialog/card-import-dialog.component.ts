@@ -19,6 +19,10 @@ import {
   replaceWarning,
   type PreviewWording,
 } from '../importacion.copy';
+import {
+  TextFilePickerComponent,
+  type LoadedTextFile,
+} from '../text-file-picker/text-file-picker.component';
 
 /** Importar a un capítulo: agrega o reemplaza sus tarjetas. */
 export interface ChapterImportTarget {
@@ -51,13 +55,13 @@ export interface CardImportDialogData {
   readonly target: ChapterImportTarget | PackageImportTarget;
 }
 
-// "Importar tarjetas" en un capítulo: pegar el texto, ver qué entra y elegir si se agregan a las
-// existentes o las reemplazan. Reemplazar un capítulo con tarjetas pide una confirmación extra.
-// En un paquete solo se agrega, hasta lo que cabe. Se cierra con `true` solo si importó; si
-// falla, el error se ve dentro y el texto se conserva.
+// "Importar tarjetas" en un capítulo: pegar el texto (o cargarlo de un archivo), ver qué entra y
+// elegir si se agregan a las existentes o las reemplazan. Reemplazar un capítulo con tarjetas pide
+// una confirmación extra. En un paquete solo se agrega, hasta lo que cabe. Se cierra con `true`
+// solo si importó; si falla, el error se ve dentro y el texto se conserva.
 @Component({
   selector: 'app-card-import-dialog',
-  imports: [ImportPreviewComponent],
+  imports: [ImportPreviewComponent, TextFilePickerComponent],
   templateUrl: './card-import-dialog.component.html',
   styleUrl: './card-import-dialog.component.scss',
 })
@@ -106,6 +110,11 @@ export class CardImportDialogComponent {
 
   protected typeText(event: Event): void {
     this.text.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /** El archivo sustituye al texto (aquí no hay nombre que proponer: el capítulo ya existe). */
+  protected loadFile(file: LoadedTextFile): void {
+    this.text.set(file.text);
   }
 
   protected async confirm(event: Event): Promise<void> {

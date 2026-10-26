@@ -53,4 +53,24 @@ describe('buildBookPackage', () => {
     expect(pkg.chapters[0]?.cards.map((card) => card.front)).toEqual(['apple', 'Apple', 'banana']);
     expect(pkg.chapters[1]?.cards).toEqual([{ cardType: 'cloze', front: 'El {{gato}}', back: '' }]);
   });
+
+  it('las tarjetas cuyo capítulo ya no existe salen al final, en «Sin capítulo», en el orden del listado', () => {
+    // Su capítulo se borró a medias o desde otro dispositivo: sin esto, el respaldo las perdería.
+    const cards = [
+      aCard({ id: 'k1', chapterId: 'c1', front: 'hello', back: 'hola' }),
+      aCard({ id: 'k2', chapterId: 'borrado', front: 'to get by', back: 'arreglárselas' }),
+      aCard({ id: 'k3', chapterId: 'otro-borrado', front: 'bye', back: 'adiós' }),
+    ];
+
+    const pkg = buildBookPackage(BOOK, [ONE], cards);
+
+    expect(pkg.chapters.map((chapter) => chapter.name)).toEqual(['Uno', 'Sin capítulo']);
+    expect(pkg.chapters[1]?.cards.map((card) => card.front)).toEqual(['bye', 'to get by']);
+  });
+
+  it('sin tarjetas huérfanas no aparece «Sin capítulo»', () => {
+    const pkg = buildBookPackage(BOOK, [ONE], [aCard({ chapterId: 'c1' })]);
+
+    expect(pkg.chapters.map((chapter) => chapter.name)).toEqual(['Uno']);
+  });
 });

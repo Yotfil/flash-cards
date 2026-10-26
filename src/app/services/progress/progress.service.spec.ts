@@ -55,13 +55,14 @@ function setup(options: { online?: boolean } = {}) {
   );
   const stats = new FakeDailyStatsRepository();
   const connectivity = new FakeConnectivity(options.online ?? true);
+  const logger = new FakeLogger();
   TestBed.configureTestingModule({
     providers: [
       { provide: BookRepository, useValue: books },
       { provide: CardRepository, useValue: cards },
       { provide: DailyStatsRepository, useValue: stats },
       { provide: ConnectivityPort, useValue: connectivity },
-      { provide: Logger, useValue: new FakeLogger() },
+      { provide: Logger, useValue: logger },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
@@ -80,6 +81,7 @@ function setup(options: { online?: boolean } = {}) {
     cards,
     stats,
     connectivity,
+    logger,
     settle,
   };
 }
@@ -161,6 +163,21 @@ describe('ProgressService · colección y fallos', () => {
     expect(service.collectionStatus()).toBe('error');
     expect(service.dayStatus()).toBe('ready');
     expect(service.isEmpty()).toBe(false);
+  });
+
+  it('si el conteo de la colección falla, queda registrado', async () => {
+    const { service, books, logger, settle } = setup();
+    const failure = new Error('sin índice');
+    books.failWith.countCollectionByState = failure;
+
+    service.refresh();
+    await settle();
+
+    expect(logger.entries).toContainEqual({
+      level: 'error',
+      message: 'No se pudo contar la colección',
+      cause: failure,
+    });
   });
 
   it('reintentar la colección no vuelve a leer la cola', async () => {

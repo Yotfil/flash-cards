@@ -1,8 +1,7 @@
 import { computed, signal } from '@angular/core';
 
 import type { SessionState } from '@domain/models/session-state';
-import type { User } from '@domain/models/user.model';
-import { applySettingsChanges, type SettingsChanges } from '@services/session/session.service';
+import { applySettingsChanges, type SettingsChanges, type User } from '@domain/models/user.model';
 
 // Fake del servicio de sesión para guards, rutas y pantallas que solo leen el estado: la prueba
 // fija el estado con `setState`. `whenResolved` se cumple al primer estado distinto de

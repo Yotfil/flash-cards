@@ -80,13 +80,17 @@ describe('buildDailyQueue · vencidas', () => {
     expect(queue.dueCount).toBe(300);
   });
 
-  it('las vencidas de un libro sin metadatos pasan sin tope', () => {
+  it('las tarjetas de un libro que no está en la biblioteca no entran, ni vencidas ni nuevas', () => {
+    // Las de un libro borrado que quedaron sin borrar: no hay dónde verlas ni gestionarlas.
     const queue = build({
       books: [aBook({ id: 'b1', maxReviewsPerDay: 1 })],
-      candidates: [...dues(3, 'b1'), ...dues(3, 'sin-libro')],
+      candidates: [...dues(3, 'b1'), ...dues(2, 'borrado'), newCard('borrado-n0', 'borrado', 1)],
     });
 
-    expect(queue.dueCount).toBe(4);
+    expect(ids(queue.cards)).toEqual(['b1-d0']);
+    expect(queue.dueCount).toBe(1);
+    expect(queue.newCount).toBe(0);
+    expect(queue.perBook.map((row) => row.bookId)).toEqual(['b1']);
   });
 });
 

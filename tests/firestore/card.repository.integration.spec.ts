@@ -1,11 +1,22 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
+import {
+  Timestamp,
+  deleteDoc,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  writeBatch,
+  type Firestore,
+} from 'firebase/firestore';
 
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { CardState, type NewCard } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
+import { BatchCommitError } from '@infrastructure/firestore/batch-writer';
 import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';
 import { InvalidDocumentError } from '@infrastructure/firestore/document-boundary';
+import { orderReadyCards } from '@services/queue/ready-cards';
 
 import {
   createRulesTestEnvironment,
@@ -31,9 +42,19 @@ afterAll(async () => {
 beforeEach(async () => {
   await environment.clearFirestore();
   await seedAllowlist(environment, [OWNER_EMAIL]);
-  await asAdmin((db) =>
-    setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 10 }),
-  );
+  await asAdmin(async (db) => {
+    await setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 10 });
+    // Crear tarjetas exige que su capítulo exista.
+    for (const chapterId of ['c1', 'c2']) {
+      await setDoc(doc(db, 'users', OWNER_UID, 'chapters', chapterId), {
+        bookId: 'b1',
+        name: chapterId,
+        order: 0,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+    }
+  });
   repository = new FirestoreCardRepository(
     modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
   );
@@ -158,6 +179,19 @@ describe('FirestoreCardRepository · contador del libro', () => {
     expect(await bookCount()).toBe(13);
   });
 
+  it('crear en un capítulo que otro dispositivo acaba de borrar falla sin crear ninguna ni sumar al libro', async () => {
+    // El diálogo de importar seguía abierto en el computador; en el móvil se borró el capítulo.
+    await asAdmin((db) => deleteDoc(doc(db, 'users', OWNER_UID, 'chapters', 'c1')));
+
+    const failure = await repository
+      .createMany(OWNER_UID, [newCard({ front: 'a' }), newCard({ front: 'b' })])
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(await repository.listByChapter(OWNER_UID, 'c1')).toEqual([]);
+    expect(await bookCount()).toBe(10);
+  });
+
   it('borrar una resta 1 y conserva el historial de repasos', async () => {
     const card = await repository.create(OWNER_UID, newCard());
     await asAdmin((db) =>
@@ -175,6 +209,32 @@ describe('FirestoreCardRepository · contador del libro', () => {
     ).toBe(true);
   });
 
+  it('borrar dos veces la misma tarjeta (otra pestaña con la lista vieja) descuenta una sola vez', async () => {
+    const [first] = await repository.createMany(OWNER_UID, [
+      newCard({ front: 'to give up' }),
+      newCard({ front: 'to look up' }),
+    ]);
+
+    await repository.deleteWithCount(OWNER_UID, 'b1', first!.id);
+    await repository.deleteWithCount(OWNER_UID, 'b1', first!.id);
+
+    expect(await bookCount()).toBe(11);
+  });
+
+  it('un borrado masivo con tarjetas que ya no existen descuenta solo las que borró', async () => {
+    const created = await repository.createMany(OWNER_UID, [newCard(), newCard(), newCard()]);
+    await repository.deleteWithCount(OWNER_UID, 'b1', created[0]!.id);
+
+    const deleted = await repository.deleteManyWithCount(
+      OWNER_UID,
+      'b1',
+      created.map((card) => card.id),
+    );
+
+    expect(deleted).toBe(2);
+    expect(await bookCount()).toBe(10);
+  });
+
   it('borrar 2 resta 2 y dice cuántas', async () => {
     const [first, second] = await repository.createMany(OWNER_UID, [newCard(), newCard()]);
 
@@ -185,12 +245,19 @@ describe('FirestoreCardRepository · contador del libro', () => {
   });
 
   it('si el borrado masivo se corta a mitad, el error nombra las ya borradas y el contador cuadra', async () => {
-    await asAdmin((db) =>
-      setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 1000 }),
-    );
     const ids = Array.from({ length: 900 }, (_, index) => `k${index}`);
+    await asAdmin(async (db) => {
+      await setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 1000 });
+      for (let start = 0; start < ids.length; start += 400) {
+        const batch = writeBatch(db);
+        ids.slice(start, start + 400).forEach((id) => {
+          batch.set(doc(db, 'users', OWNER_UID, 'cards', id), { bookId: 'b1', chapterId: 'c1' });
+        });
+        await batch.commit();
+      }
+    });
     // Un id con barras cae fuera de las reglas (`cards/{cardId}` es un solo segmento), así que el
-    // segundo lote se rechaza después de confirmarse el primero.
+    // segundo tramo se rechaza después de confirmarse el primero.
     ids[448] = 'fuera/de/reglas';
 
     const failure = await repository
@@ -253,6 +320,25 @@ describe('FirestoreCardRepository · tarjetas listas', () => {
   });
 });
 
+describe('FirestoreCardRepository · orden de creación', () => {
+  it('las nuevas creadas juntas entran en Hoy en el orden en que llegaron (el del archivo)', async () => {
+    // Ada importa 30 palabras en orden; su tanda de hoy son 20.
+    const fronts = Array.from(
+      { length: 30 },
+      (_, index) => `palabra ${String(index + 1).padStart(2, '0')}`,
+    );
+    await repository.createMany(
+      OWNER_UID,
+      fronts.map((front) => newCard({ front, noteId: front })),
+    );
+
+    const endOfDay = new Date('2026-12-31T00:00:00Z');
+    const ordered = orderReadyCards(await repository.listReady(OWNER_UID, endOfDay), endOfDay);
+
+    expect(ordered.slice(0, 20).map((card) => card.front)).toEqual(fronts.slice(0, 20));
+  });
+});
+
 describe('FirestoreCardRepository · reemplazar las tarjetas de un capítulo', () => {
   const bookCount = () =>
     asAdmin(
@@ -269,21 +355,68 @@ describe('FirestoreCardRepository · reemplazar las tarjetas de un capítulo', (
     ]);
     await asAdmin((db) => updateDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { cardCount: 10 }));
 
-    const created = await repository.replaceInChapter(
-      OWNER_UID,
-      'b1',
-      'c1',
-      old.map((card) => card.id),
-      [newCard({ front: 'nueva 1' }), newCard({ front: 'nueva 2' }), newCard({ front: 'nueva 3' })],
-    );
+    const replacement = await repository.replaceInChapter(OWNER_UID, 'b1', 'c1', [
+      newCard({ front: 'nueva 1' }),
+      newCard({ front: 'nueva 2' }),
+      newCard({ front: 'nueva 3' }),
+    ]);
 
-    expect(created.map((card) => card.front)).toEqual(['nueva 1', 'nueva 2', 'nueva 3']);
+    expect(replacement.created.map((card) => card.front)).toEqual([
+      'nueva 1',
+      'nueva 2',
+      'nueva 3',
+    ]);
+    expect(replacement.deletedCount).toBe(old.length);
     expect(await chapterFronts()).toEqual(['nueva 1', 'nueva 2', 'nueva 3']);
     expect(await bookCount()).toBe(11);
   });
 
+  it('borra las que el capítulo tiene en el servidor, también las que otro dispositivo añadió', async () => {
+    await repository.createMany(OWNER_UID, [
+      newCard({ front: 'vieja 1' }),
+      newCard({ front: 'vieja 2' }),
+    ]);
+    // El computador tenía cargadas las dos; en el móvil se añade otra antes de reemplazar.
+    await repository.create(OWNER_UID, newCard({ front: 'añadida en el móvil' }));
+
+    const replacement = await repository.replaceInChapter(OWNER_UID, 'b1', 'c1', [
+      newCard({ front: 'nueva 1' }),
+    ]);
+
+    expect(await chapterFronts()).toEqual(['nueva 1']);
+    expect(replacement.deletedCount).toBe(3);
+    expect(await bookCount()).toBe(11);
+  });
+
+  it('reintentar un reemplazo grande que falló a mitad deja el capítulo como se quería', async () => {
+    await repository.createMany(
+      OWNER_UID,
+      Array.from({ length: 300 }, (_, index) => newCard({ front: `vieja ${index}` })),
+    );
+    // 300 por 300 = 600 escrituras, dos lotes; el segundo se rechaza (un documento de más de 1 MiB).
+    const drafts = Array.from({ length: 300 }, (_, index) => newCard({ front: `nueva ${index}` }));
+    const huge = 'x'.repeat(1_100_000);
+    const failure = await repository
+      .replaceInChapter(
+        OWNER_UID,
+        'b1',
+        'c1',
+        drafts.map((draft, index) => (index === 200 ? { ...draft, example: huge } : draft)),
+      )
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(BatchCommitError);
+
+    // El diálogo conserva el texto y el usuario pulsa otra vez "Reemplazar todo".
+    await repository.replaceInChapter(OWNER_UID, 'b1', 'c1', drafts);
+
+    const fronts = await chapterFronts();
+    expect(fronts).toHaveLength(300);
+    expect(new Set(fronts).size).toBe(300);
+    expect(await bookCount()).toBe(310);
+  });
+
   it('si una parte no se puede escribir, el capítulo y el contador no cambian', async () => {
-    const old = await repository.createMany(OWNER_UID, [
+    await repository.createMany(OWNER_UID, [
       newCard({ front: 'vieja 1' }),
       newCard({ front: 'vieja 2' }),
     ]);
@@ -291,13 +424,7 @@ describe('FirestoreCardRepository · reemplazar las tarjetas de un capítulo', (
 
     // Un libro inexistente hace fallar el ajuste del contador: el lote entero se rechaza.
     const failure = await repository
-      .replaceInChapter(
-        OWNER_UID,
-        'no-existe',
-        'c1',
-        old.map((card) => card.id),
-        [newCard()],
-      )
+      .replaceInChapter(OWNER_UID, 'no-existe', 'c1', [newCard({ bookId: 'no-existe' })])
       .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);

@@ -24,9 +24,11 @@ export interface ExportBookDialogData {
 /** Cuánto se ve "Copiado" junto al botón. */
 const COPIED_VISIBLE_MS = 2000;
 
-// "Exportar «libro»": lee el libro entero del servidor, resume qué se va a exportar y lo entrega
-// compartiendo o descargando (nunca las dos) o copiando el texto. Se cierra con `true` solo tras
-// compartir o descargar; cerrar la hoja de compartir no es un error y deja el diálogo abierto.
+// "Exportar «libro»": lee el libro entero del servidor, resume qué se va a exportar y lo entrega.
+// La acción principal es compartir si el navegador puede, y descargar si no; donde se puede
+// compartir, descargar sigue como secundaria (en el escritorio, la hoja de compartir no guarda el
+// archivo en el disco), junto a copiar el texto. Se cierra con `true` solo tras compartir o
+// descargar; cerrar la hoja de compartir no es un error y deja el diálogo abierto.
 @Component({
   selector: 'app-export-book-dialog',
   imports: [ErrorStateComponent, SkeletonComponent],
@@ -42,7 +44,7 @@ export class ExportBookDialogComponent {
   protected readonly actions = EXPORT_ACTIONS;
   protected readonly readError = EXPORT_READ_ERROR;
   protected readonly copiedText = COPIED;
-  /** Se decide una vez al abrir: nunca se ofrecen compartir y descargar a la vez. */
+  /** Se decide una vez al abrir: con compartir, la descarga pasa a secundaria. */
   protected readonly canShare = inject(FileDeliveryPort).canShareFiles();
 
   protected readonly preview = resource({
@@ -66,17 +68,24 @@ export class ExportBookDialogComponent {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.copiedTimer));
   }
 
+  /** La acción principal: compartir donde se puede, si no descargar. */
+  protected deliver(): Promise<void> {
+    return this.handOver(this.canShare ? 'share' : 'download');
+  }
+
+  /** La descarga como secundaria, donde la principal es compartir. */
+  protected download(): Promise<void> {
+    return this.handOver('download');
+  }
+
   /** Compartir o descargar: con éxito cierra; si el usuario cerró la hoja, sigue abierto. */
-  protected async deliver(): Promise<void> {
+  private async handOver(mode: 'share' | 'download'): Promise<void> {
     const preview = this.start();
     if (!preview) {
       return;
     }
     try {
-      const result = await this.exportService.deliver(
-        preview,
-        this.canShare ? 'share' : 'download',
-      );
+      const result = await this.exportService.deliver(preview, mode);
       if (result === 'done') {
         this.dialogRef.close(true);
         return;

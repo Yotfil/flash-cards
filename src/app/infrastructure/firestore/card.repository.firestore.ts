@@ -4,7 +4,9 @@ import {
   doc,
   getDocs,
   getDocsFromServer,
+  increment,
   query,
+  runTransaction,
   Timestamp,
   updateDoc,
   where,
@@ -14,10 +16,10 @@ import {
 
 import type { Card, CardContentChanges, NewCard } from '@domain/models/card.model';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
-import { CardRepository } from '@domain/ports/card.repository';
+import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
 
-import { BatchCommitError, type BatchWriter } from './batch-writer';
-import { writeInCountedBatches } from './counted-batch';
+import { chunksOf, type BatchWriter } from './batch-writer';
+import { COUNTED_GROUP_SIZE, writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
 import { cardDocumentSchema, type CardDocument } from './schemas/card.schema';
 
@@ -83,18 +85,25 @@ export class FirestoreCardRepository extends CardRepository {
     uid: string,
     bookId: string,
     chapterId: string,
-    cardIdsToDelete: readonly string[],
     cards: readonly NewCard[],
-  ): Promise<Card[]> {
+  ): Promise<ChapterReplacement> {
     if (cards.some((card) => card.chapterId !== chapterId)) {
       throw new Error('Las tarjetas nuevas de un reemplazo deben ser del mismo capítulo.');
     }
-    return this.replaceCards(uid, bookId, cardIdsToDelete, cards);
+    // Lo que el capítulo tiene de verdad, del servidor: la lista cargada pudo quedarse vieja.
+    const current = await getDocsFromServer(
+      query(this.cardsOf(uid), where('chapterId', '==', chapterId)),
+    );
+    const idsToDelete = current.docs.map((card) => card.id);
+    const created = await this.replaceCards(uid, bookId, idsToDelete, cards);
+    return { created, deletedCount: idsToDelete.length };
   }
 
   /**
-   * Bajas (−1) seguidas de altas (+1) en lotes con su ajuste del contador. Con 448 operaciones o
-   * menos es un único lote: o se escribe todo o nada.
+   * Bajas (−1) seguidas de altas (+1) en lotes con su ajuste del contador. Con 447 operaciones o
+   * menos es un único lote: o se escribe todo o nada. Cada lote que crea toca también el capítulo
+   * (`updatedAt`): si otro dispositivo lo borró, el lote falla entero (no existe el documento) y no
+   * quedan tarjetas sin capítulo, que nadie podría ver ni borrar.
    */
   private async replaceCards(
     uid: string,
@@ -105,31 +114,47 @@ export class FirestoreCardRepository extends CardRepository {
     if (cards.some((card) => card.bookId !== bookId)) {
       throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo libro.');
     }
+    const chapterId = cards[0]?.chapterId;
+    if (cards.some((card) => card.chapterId !== chapterId)) {
+      throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo capítulo.');
+    }
     const now = new Date();
-    const created = cards.map((card) => ({
+    const created = cards.map((card, position) => ({
       ref: doc(this.cardsOf(uid)),
       card: toStoredCard(card),
+      // Escalonadas por posición: la cola desempata las nuevas por fecha de creación, así entran
+      // en el orden recibido (el del archivo al importar).
+      createdAt: new Date(now.getTime() + position),
     }));
     await writeInCountedBatches({
       firestore: this.firestore,
       bookRef: this.bookRef(uid, bookId),
+      ...(chapterId !== undefined
+        ? {
+            everyBatch: {
+              apply: (writer: BatchWriter) =>
+                writer.update(this.chapterRef(uid, chapterId), { updatedAt: now }),
+              delta: 0 as const,
+            },
+          }
+        : {}),
       operations: [
         ...cardIdsToDelete.map((cardId) => ({
           apply: (writer: BatchWriter) => writer.delete(this.cardRef(uid, cardId)),
           delta: -1 as const,
         })),
-        ...created.map(({ ref, card }) => ({
+        ...created.map(({ ref, card, createdAt }) => ({
           apply: (writer: BatchWriter) =>
-            writer.set(ref, { ...card, createdAt: now, updatedAt: now }),
+            writer.set(ref, { ...card, createdAt, updatedAt: createdAt }),
           delta: 1 as const,
         })),
       ],
     });
-    return created.map(({ ref, card }) => ({
+    return created.map(({ ref, card, createdAt }) => ({
       id: ref.id,
       ...card,
-      createdAt: now,
-      updatedAt: now,
+      createdAt,
+      updatedAt: createdAt,
     }));
   }
 
@@ -157,25 +182,37 @@ export class FirestoreCardRepository extends CardRepository {
     bookId: string,
     cardIds: readonly string[],
   ): Promise<number> {
-    const refs = cardIds.map((cardId) => this.cardRef(uid, cardId));
-    try {
-      await writeInCountedBatches({
-        firestore: this.firestore,
-        bookRef: this.bookRef(uid, bookId),
-        operations: refs.map((ref) => ({ apply: (writer) => writer.delete(ref), delta: -1 })),
-      });
-    } catch (error) {
-      if (error instanceof BatchCommitError) {
-        // Los lotes confirmados ya descontaron lo suyo: se informa qué tarjetas se fueron.
-        const committed = new Set(error.committed.map((ref) => ref.path));
-        const deletedIds = cardIds.filter((cardId) =>
-          committed.has(this.cardRef(uid, cardId).path),
-        );
-        throw new PartialDeletionError(deletedIds, error.cause);
+    const goneIds: string[] = [];
+    let deleted = 0;
+    for (const chunk of chunksOf(cardIds, COUNTED_GROUP_SIZE)) {
+      try {
+        deleted += await this.deleteExisting(uid, bookId, chunk);
+      } catch (error) {
+        // Los tramos confirmados ya descontaron lo suyo: se informa qué tarjetas ya no están.
+        throw new PartialDeletionError(goneIds, error);
       }
-      throw error;
+      goneIds.push(...chunk);
     }
-    return cardIds.length;
+    return deleted;
+  }
+
+  /**
+   * Un tramo en una transacción: lee las tarjetas, borra las que existen y descuenta exactamente
+   * esas. Una que otra pestaña ya borró no descuenta otra vez (el contador guardado no se
+   * descuadra). Devuelve cuántas borró.
+   */
+  private deleteExisting(uid: string, bookId: string, cardIds: readonly string[]): Promise<number> {
+    return runTransaction(this.firestore, async (transaction) => {
+      const snapshots = await Promise.all(
+        cardIds.map((cardId) => transaction.get(this.cardRef(uid, cardId))),
+      );
+      const existing = snapshots.filter((snapshot) => snapshot.exists());
+      existing.forEach((snapshot) => transaction.delete(snapshot.ref));
+      if (existing.length > 0) {
+        transaction.update(this.bookRef(uid, bookId), { cardCount: increment(-existing.length) });
+      }
+      return existing.length;
+    });
   }
 
   private cardsOf(uid: string) {
@@ -188,6 +225,10 @@ export class FirestoreCardRepository extends CardRepository {
 
   private bookRef(uid: string, bookId: string): DocumentReference {
     return doc(this.firestore, 'users', uid, 'books', bookId);
+  }
+
+  private chapterRef(uid: string, chapterId: string): DocumentReference {
+    return doc(this.firestore, 'users', uid, 'chapters', chapterId);
   }
 }
 

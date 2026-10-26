@@ -4,9 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import type { SessionState } from '@domain/models/session-state';
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
+import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
 
@@ -24,11 +26,13 @@ function setup(state: SessionState = activeSession(), online = true) {
   const repository = new FakeBookRepository();
   const session = new FakeSessionService(state);
   const connectivity = new FakeConnectivity(online);
+  const logger = new FakeLogger();
   TestBed.configureTestingModule({
     providers: [
       { provide: BookRepository, useValue: repository },
       { provide: SessionService, useValue: session },
       { provide: ConnectivityPort, useValue: connectivity },
+      { provide: Logger, useValue: logger },
     ],
   });
   const service = TestBed.inject(BooksService);
@@ -36,7 +40,7 @@ function setup(state: SessionState = activeSession(), online = true) {
     TestBed.tick();
     await TestBed.inject(ApplicationRef).whenStable();
   };
-  return { service, repository, session, connectivity, settle };
+  return { service, repository, session, connectivity, logger, settle };
 }
 
 describe('BooksService · recurso', () => {
@@ -50,6 +54,33 @@ describe('BooksService · recurso', () => {
     expect(repository.listedUids).toEqual(['u1']);
     expect(service.books.status()).toBe('resolved');
     expect(service.books.value()?.map((book) => book.id)).toEqual(['b2', 'b1']);
+  });
+
+  it('si la lectura falla (un libro que la frontera rechaza), queda registrada', async () => {
+    const { service, repository, logger, settle } = setup();
+    const failure = new Error('Documento inválido en users/u1/books/b1');
+    repository.failWith.listByUser = failure;
+
+    service.reload();
+    await settle();
+
+    expect(service.books.status()).toBe('error');
+    expect(logger.entries).toContainEqual({
+      level: 'error',
+      message: 'No se pudo leer la Biblioteca',
+      cause: failure,
+    });
+  });
+
+  it('una lectura fallida no se reutiliza: pedir la lista otra vez vuelve a leer', async () => {
+    const { service, repository } = setup();
+    repository.failWith.listByUser = new Error('offline');
+    await expect(service.ensureLoaded()).rejects.toThrow('offline');
+
+    delete repository.failWith.listByUser;
+    repository.seed(aBook({ id: 'b1' }));
+
+    expect((await service.ensureLoaded()).map((book) => book.id)).toEqual(['b1']);
   });
 
   it('si el repositorio falla, el recurso queda en error', async () => {

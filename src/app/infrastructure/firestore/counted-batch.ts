@@ -4,6 +4,7 @@ import {
   BatchCommitError,
   BatchWriter,
   MAX_BATCH_SIZE,
+  chunksOf,
   type BatchCommitResult,
 } from './batch-writer';
 
@@ -27,18 +28,25 @@ export interface CountedBatchOptions {
   readonly operations: readonly CountedOperation[];
   /** Operación que va solo en el último lote (borrar el capítulo, escribir el libro importado). */
   readonly trailing?: CountedOperation;
+  /**
+   * Operación que va en cada lote, como tocar el capítulo de las tarjetas que se crean: si otro
+   * dispositivo lo borró, ese lote entero falla y no quedan tarjetas sin capítulo.
+   */
+  readonly everyBatch?: CountedOperation;
 }
 
 /**
- * Escribe altas y bajas de tarjetas en lotes de hasta 448, cada lote con el ajuste del contador
- * del libro (la suma de los deltas de sus operaciones) en la misma escritura atómica: si un lote
- * falla a mitad, el contador sigue cuadrando con lo que de verdad quedó, y la operación final no
- * llega a escribirse. El error lleva lo ya escrito.
+ * Escribe altas y bajas de tarjetas en lotes de hasta 448 (447 con una operación en cada lote),
+ * cada lote con el ajuste del contador del libro (la suma de los deltas de sus operaciones) en la
+ * misma escritura atómica: si un lote falla a mitad, el contador sigue cuadrando con lo que de
+ * verdad quedó, y la operación final no llega a escribirse. El error lleva lo ya escrito.
  */
 export async function writeInCountedBatches(
   options: CountedBatchOptions,
 ): Promise<BatchCommitResult> {
-  const groups = chunksOf(options.operations, COUNTED_GROUP_SIZE);
+  // Con más de 450 escrituras, el escritor partiría el lote y dejaría de ser atómico.
+  const groupSize = options.everyBatch ? COUNTED_GROUP_SIZE - 1 : COUNTED_GROUP_SIZE;
+  const groups = chunksOf(options.operations, groupSize);
   if (groups.length === 0) {
     if (!options.trailing) {
       return { batches: 0, written: [] };
@@ -51,7 +59,11 @@ export async function writeInCountedBatches(
   for (const [index, group] of groups.entries()) {
     const writer = new BatchWriter(options.firestore);
     const isLast = index === groups.length - 1;
-    const inBatch = options.trailing && isLast ? [...group, options.trailing] : group;
+    const inBatch = [
+      ...(options.everyBatch ? [options.everyBatch] : []),
+      ...group,
+      ...(options.trailing && isLast ? [options.trailing] : []),
+    ];
     inBatch.forEach((operation) => operation.apply(writer));
     const delta = inBatch.reduce((sum, operation) => sum + operation.delta, 0);
     if (delta !== 0) {
@@ -65,12 +77,4 @@ export async function writeInCountedBatches(
     batches++;
   }
   return { batches, written };
-}
-
-function chunksOf<T>(items: readonly T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < items.length; start += size) {
-    chunks.push(items.slice(start, start + size));
-  }
-  return chunks;
 }

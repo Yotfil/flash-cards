@@ -2,6 +2,7 @@ import { Injectable, computed, inject, resource, signal } from '@angular/core';
 
 import { BookRepository } from '@domain/ports/book.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { Logger } from '@domain/ports/logger.port';
 import { DailyQueueService } from '@services/queue/daily-queue.service';
 import { SessionService } from '@services/session/session.service';
 
@@ -19,6 +20,7 @@ export class ProgressService {
   private readonly books = inject(BookRepository);
   private readonly session = inject(SessionService);
   private readonly online = inject(ConnectivityPort).online;
+  private readonly logger = inject(Logger);
 
   /** La colección se cuenta desde la primera visita, no al crear el servicio. */
   private readonly collectionRequested = signal(false);
@@ -28,7 +30,15 @@ export class ProgressService {
       const uid = this.session.user()?.id;
       return this.collectionRequested() && this.online() && uid ? { uid } : undefined;
     },
-    loader: ({ params }) => this.books.countCollectionByState(params.uid),
+    loader: async ({ params }) => {
+      try {
+        return await this.books.countCollectionByState(params.uid);
+      } catch (error) {
+        // La sección pinta "No pudimos contar tu colección."; aquí queda el detalle.
+        this.logger.error('No se pudo contar la colección', error);
+        throw error;
+      }
+    },
   });
 
   readonly dayStatus = this.queue.status;

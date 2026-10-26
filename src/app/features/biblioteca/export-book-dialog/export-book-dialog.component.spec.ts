@@ -149,10 +149,10 @@ describe('ExportBookDialogComponent', () => {
     expect(button('Descargar .txt')).toBeDefined();
   });
 
-  it('donde se puede compartir, la única acción principal es "Compartir" y comparte el archivo', async () => {
+  it('donde se puede compartir, la acción principal es "Compartir" y comparte el archivo', async () => {
     const { ref, delivery, button, click } = await open({ canShare: true });
 
-    expect(button('Descargar .txt')).toBeUndefined();
+    expect(button('Compartir')?.classList).toContain('bg-accent');
     await click('Compartir');
 
     expect(delivery.shared).toEqual([
@@ -185,10 +185,27 @@ describe('ExportBookDialogComponent', () => {
     expect(button('Copiar texto')?.disabled).toBe(false);
   });
 
-  it('donde no se puede compartir, "Descargar .txt" descarga el archivo y cierra', async () => {
-    const { ref, delivery, button, click } = await open({ canShare: false });
+  it('donde se puede compartir, "Descargar .txt" también está, como secundaria, y descarga y cierra', async () => {
+    // En el escritorio la hoja de compartir no guarda el archivo en el disco.
+    const { ref, delivery, button, click } = await open({ canShare: true });
+
+    expect(button('Descargar .txt')?.classList).not.toContain('bg-accent');
+    await click('Descargar .txt');
+
+    expect(delivery.downloaded.map((file) => file.name)).toEqual(['Phrasal Verbs.txt']);
+    expect(delivery.shared).toEqual([]);
+    await expect(ref.closed).resolves.toBe(true);
+  });
+
+  it('donde no se puede compartir, una sola "Descargar .txt", la principal, descarga el archivo y cierra', async () => {
+    const { ref, delivery, dialog, button, click } = await open({ canShare: false });
 
     expect(button('Compartir')).toBeUndefined();
+    const downloads = Array.from(dialog().querySelectorAll('button')).filter(
+      (candidate) => candidate.textContent?.trim() === 'Descargar .txt',
+    );
+    expect(downloads).toHaveLength(1);
+    expect(downloads[0]?.classList).toContain('bg-accent');
     await click('Descargar .txt');
 
     expect(delivery.downloaded.map((file) => file.name)).toEqual(['Phrasal Verbs.txt']);
@@ -207,14 +224,14 @@ describe('ExportBookDialogComponent', () => {
     expect(dialog()).not.toBeNull();
   });
 
-  it('sin portapapeles, avisa que use Compartir o Descargar', async () => {
+  it('sin portapapeles, avisa que use «Descargar .txt» (que siempre está)', async () => {
     const { delivery, dialog, click } = await open();
     delivery.failWith.copyText = new Error('sin portapapeles');
 
     await click('Copiar texto');
 
     expect(dialog().querySelector('[role="alert"]')?.textContent?.trim()).toBe(
-      'No se pudo copiar. Usa Compartir o Descargar.',
+      'No se pudo copiar. Usa «Descargar .txt».',
     );
   });
 

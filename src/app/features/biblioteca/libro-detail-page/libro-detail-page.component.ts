@@ -101,9 +101,13 @@ export class LibroDetailPageComponent {
       this.studySource(),
     );
   protected readonly studyDestination = ['/repaso'];
+  protected readonly discardStudy = () => {
+    this.studyHandoff.take();
+  };
   protected readonly practiceCopy = PRACTICA_COPY;
   protected readonly preparePractice = () => this.practice.prepareBookPractice(this.bookId());
   protected readonly practiceDestination = ['/practicar'];
+  protected readonly discardPractice = () => this.practice.discardPrepared();
 
   constructor() {
     // Las listas por capítulo (filas) y el botón de estudiar usan las del libro abierto.

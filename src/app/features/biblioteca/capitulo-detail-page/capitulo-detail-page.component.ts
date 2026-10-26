@@ -110,6 +110,9 @@ export class CapituloDetailPageComponent {
       this.studySource(),
     );
   protected readonly studyDestination = ['/repaso'];
+  protected readonly discardStudy = () => {
+    this.studyHandoff.take();
+  };
   protected readonly practiceCopy = PRACTICA_COPY;
   protected readonly preparePractice = () =>
     this.practice.prepareChapterPractice(this.loadedCards(), {
@@ -118,6 +121,7 @@ export class CapituloDetailPageComponent {
       chapterId: this.chapterId(),
     });
   protected readonly practiceDestination = ['/practicar'];
+  protected readonly discardPractice = () => this.practice.discardPrepared();
 
   constructor() {
     this.booksService.ensureLoaded().catch((error: unknown) => {

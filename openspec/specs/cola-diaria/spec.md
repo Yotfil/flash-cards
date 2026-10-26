@@ -44,7 +44,7 @@ El sistema SHALL incluir en la cola toda tarjeta no suspendida cuyo estado no se
 - **THEN** no aparece en la cola de hoy
 
 ### Requirement: Las vencidas se topan por libro al máximo de repasos diarios del libro
-El sistema SHALL limitar las vencidas de cada libro a `maxReviewsPerDay` del libro menos los repasos ya completados hoy en ese libro, conservando las más atrasadas. Un valor `0` significa sin tope. Las tarjetas de un libro cuyos metadatos no estén disponibles pasan sin tope.
+El sistema SHALL limitar las vencidas de cada libro a `maxReviewsPerDay` del libro menos los repasos ya completados hoy en ese libro, conservando las más atrasadas. Un valor `0` significa sin tope. Las tarjetas de un libro que no está en la biblioteca del usuario (las de un libro borrado que quedaron sin borrar) NO SHALL entrar en la cola, ni vencidas ni nuevas, y el sistema SHALL dejar constancia en el registro de errores de la app de cuántas quedaron fuera.
 
 #### Scenario: Tope por libro conserva las más atrasadas
 - **WHEN** un libro tiene `maxReviewsPerDay = 2` y cinco tarjetas vencidas
@@ -58,8 +58,12 @@ El sistema SHALL limitar las vencidas de cada libro a `maxReviewsPerDay` del lib
 - **WHEN** un libro tiene `maxReviewsPerDay = 0` y 300 tarjetas vencidas
 - **THEN** la cola incluye las 300
 
+#### Scenario: Tarjetas de un libro que ya no existe
+- **WHEN** quedan en la cuenta dos tarjetas vencidas y una nueva de un libro que ya no está en la biblioteca
+- **THEN** ninguna de las tres entra en la cola ni en el desglose, y el registro de errores de la app dice que tres tarjetas quedaron fuera
+
 ### Requirement: Las tarjetas nuevas entran por libro hasta la tanda diaria, descontando las ya introducidas hoy
-El sistema SHALL incluir, por cada libro, hasta `newCardsPerDay` tarjetas nuevas (estado "nueva") menos las que ya se introdujeron hoy en ese libro, eligiendo las más antiguas por fecha de creación. Las nuevas se presentan después de las vencidas.
+El sistema SHALL incluir, por cada libro, hasta `newCardsPerDay` tarjetas nuevas (estado "nueva") menos las que ya se introdujeron hoy en ese libro, eligiendo las más antiguas por fecha de creación. Las tarjetas creadas juntas (al importar un libro, al importar tarjetas en un capítulo o al crear varias a la vez) SHALL quedar con fechas de creación en el orden en que llegaron, de modo que entren en el orden del archivo. Entre nuevas con la misma fecha de creación (las que versiones anteriores crearon juntas), el orden SHALL ser el mismo cada vez que se arma la cola y SHALL presentar juntas las de un mismo capítulo, ordenadas dentro de él por anverso normalizado y luego por reverso. Las nuevas se presentan después de las vencidas.
 
 #### Scenario: Respeta la tanda del libro
 - **WHEN** un libro tiene `newCardsPerDay = 3` y 10 tarjetas nuevas
@@ -76,6 +80,14 @@ El sistema SHALL incluir, por cada libro, hasta `newCardsPerDay` tarjetas nuevas
 #### Scenario: Vencidas antes que nuevas
 - **WHEN** la cola tiene vencidas y nuevas
 - **THEN** todas las vencidas se presentan antes que cualquier nueva
+
+#### Scenario: Las nuevas de un libro importado salen en el orden del archivo
+- **WHEN** el usuario importa un libro cuyo archivo trae 30 tarjetas y su tanda es 20
+- **THEN** la cola de hoy incluye las 20 primeras del archivo, en ese orden
+
+#### Scenario: Nuevas creadas en el mismo instante por una versión anterior
+- **WHEN** un libro tiene nuevas que comparten la misma fecha de creación, repartidas en dos capítulos
+- **THEN** la cola presenta juntas las de cada capítulo, cada grupo ordenado por anverso, y en el mismo orden cada vez que se arma
 
 ### Requirement: El usuario puede ajustar la cantidad de nuevas solo para la sesión de hoy
 El sistema SHALL permitir al usuario indicar, desde Hoy, cuántas tarjetas nuevas de cada libro entran en la sesión de hoy. El control SHALL vivir plegado bajo el desglose por libro, bajo el rótulo "Ajustar nuevas de hoy", con la aclaración "Solo para la sesión de hoy. Tus libros no cambian.", y SHALL ofrecer un control por cada libro que tenga tarjetas nuevas disponibles, con el número actual, su máximo elegible ("de N") y acciones para bajar y subir de uno en uno. Cada libro SHALL arrancar en el número que le dio la cola base (su tanda menos las ya introducidas hoy) y SHALL poder moverse entre 0 y sus nuevas disponibles. El ajuste de un libro NUNCA SHALL tomar tarjetas nuevas de otro libro ni alterar el de otro libro. Un libro con nuevas pero sin nuevas disponibles SHALL aparecer en el control con el texto "sin nuevas", sin acciones. El ajuste NO SHALL cambiar el `newCardsPerDay` de ningún libro. La cola, el bloque principal y la fila del libro SHALL recalcularse al instante a partir de las tarjetas ya cargadas, sin volver a consultar. El ajuste SHALL pertenecer al día de estudio en curso: navegar dentro de la app (Progreso, Biblioteca, volver de una sesión) NO SHALL restablecerlo; al cambiar el día de estudio SHALL descartarse; no se conserva entre recargas de la aplicación.

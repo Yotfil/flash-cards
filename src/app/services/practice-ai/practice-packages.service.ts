@@ -175,6 +175,11 @@ export class PracticePackagesService {
     return items.length;
   }
 
+  /** Vacía la bandeja de la práctica: lo preparado ya no se va a abrir. */
+  discardPrepared(): void {
+    this.handoff.take();
+  }
+
   /** La práctica guarda cada nota por su cuenta; aquí se refleja para el detalle y el prompt. */
   applyGrade(packageId: string, itemId: string, grade: Rating, dayId: string): void {
     this.changeItem(packageId, itemId, (item) => ({

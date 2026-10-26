@@ -258,6 +258,24 @@ describe('CardImportDialogComponent', () => {
     expect(buttonIn(importDialog(), (text) => text === 'Cancelar')?.disabled).toBe(false);
   });
 
+  it('«Cargar archivo» rellena el texto con el del archivo y lo previsualiza, también sin red', async () => {
+    const { importDialog, update } = await open({ online: false });
+    const fileInput = importDialog().querySelector<HTMLInputElement>(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    Object.defineProperty(fileInput, 'files', {
+      value: [new File(['a | b\nc | d'], 'unidad-3.txt', { type: 'text/plain' })],
+      configurable: true,
+    });
+
+    fileInput.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await update();
+
+    expect(importDialog().querySelector('textarea')?.value).toBe('a | b\nc | d');
+    expect(importDialog().textContent).toContain('2 tarjetas');
+  });
+
   it('sin red previsualiza pero no deja importar; cancelar no escribe', async () => {
     const { ref, service, type, importButton, importDialog, buttonIn } = await open({
       online: false,

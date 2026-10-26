@@ -73,6 +73,9 @@ export class HoyPageComponent implements OnInit {
   });
   protected readonly prepare = async () =>
     this.studyHandoff.handCards(await this.queue.prepareSession(), { kind: 'today' });
+  protected readonly discard = () => {
+    this.studyHandoff.take();
+  };
 
   ngOnInit(): void {
     this.queue.refresh();

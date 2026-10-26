@@ -16,11 +16,13 @@ async function render(
   destination: string[] = ['/repaso'],
 ) {
   const logger = new FakeLogger();
+  const discard = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'repaso', component: BlankPageComponent },
         { path: 'practicar', component: BlankPageComponent },
+        { path: 'hoy', component: BlankPageComponent },
       ]),
       { provide: Logger, useValue: logger },
     ],
@@ -30,6 +32,7 @@ async function render(
   fixture.componentRef.setInput('variant', variant);
   fixture.componentRef.setInput('prepare', prepare);
   fixture.componentRef.setInput('destination', destination);
+  fixture.componentRef.setInput('discard', discard);
   fixture.componentRef.setInput(
     'emptyMessage',
     'Estás al día con este capítulo. No hay tarjetas para repasar ahora.',
@@ -50,7 +53,7 @@ async function render(
     Array.from(element.querySelectorAll('button')).find(
       (candidate) => candidate.textContent?.trim() === text,
     );
-  return { fixture, element, update, button, logger };
+  return { fixture, element, update, button, logger, discard };
 }
 
 describe('StudyLaunchButtonComponent', () => {
@@ -117,6 +120,52 @@ describe('StudyLaunchButtonComponent', () => {
     await update();
     expect(prepare).toHaveBeenCalledTimes(2);
     expect(element.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('si mientras prepara el usuario se va a otra pantalla, al terminar no navega y vacía la bandeja', async () => {
+    // "Practicar" tarda; Ada se cansa, se va a Hoy y empieza a repasar.
+    let release!: (count: number) => void;
+    const { button, update, discard } = await render(
+      () => new Promise<number>((resolve) => (release = resolve)),
+      'secondary',
+      ['/practicar'],
+    );
+    button('Estudiar este capítulo')?.click();
+    await update();
+
+    await TestBed.inject(Router).navigateByUrl('/hoy');
+    release(10);
+    await update();
+
+    expect(TestBed.inject(Router).url).toBe('/hoy');
+    expect(discard).toHaveBeenCalledTimes(1);
+  });
+
+  it('si su pantalla ya no está cuando termina de preparar, no navega y vacía la bandeja', async () => {
+    let release!: (count: number) => void;
+    const { fixture, button, update, discard } = await render(
+      () => new Promise<number>((resolve) => (release = resolve)),
+    );
+    button('Estudiar este capítulo')?.click();
+    await update();
+
+    fixture.destroy();
+    release(3);
+    await new Promise((resolve) => setTimeout(resolve));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/');
+    expect(discard).toHaveBeenCalledTimes(1);
+  });
+
+  it('si navega a su destino, no vacía la bandeja', async () => {
+    const { button, update, discard } = await render(async () => 3);
+
+    button('Estudiar este capítulo')?.click();
+    await update();
+
+    expect(TestBed.inject(Router).url).toBe('/repaso');
+    expect(discard).not.toHaveBeenCalled();
   });
 
   it('primario en acento; secundario con borde', async () => {

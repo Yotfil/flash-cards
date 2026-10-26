@@ -157,6 +157,7 @@ export class PackageDetailPageComponent implements OnInit {
     return completedAt ? this.copy.completedOn(completedAt.toLocaleDateString('es')) : '';
   });
   protected readonly preparePractice = () => this.packages.prepareTodayPractice(this.packageId());
+  protected readonly discardPractice = () => this.packages.discardPrepared();
 
   ngOnInit(): void {
     this.packages.reload();

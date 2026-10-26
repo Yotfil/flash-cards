@@ -130,6 +130,51 @@ describe('DailyQueueService · carga', () => {
     expect(service.status()).toBe('ready');
   });
 
+  it('volver a Hoy relee también los libros: un libro creado en otro dispositivo entra en la cola', async () => {
+    const { service, books, cards, settle } = setup();
+    service.refresh();
+    await settle();
+
+    // En el computador importa "Inglés B2" con 30 nuevas; el móvil seguía con Cadence abierta.
+    books.seed(aBook({ id: 'b2', name: 'Inglés B2', newCardsPerDay: 20, order: 2 }));
+    cards.seed(...Array.from({ length: 30 }, (_, index) => newCard(`b2-${index}`, 'b2', 1)));
+    service.refresh();
+    await settle();
+
+    expect(service.baseQueue().perBook.find((row) => row.bookId === 'b2')?.new).toBe(20);
+    expect(books.calls.listByUser).toBe(2);
+  });
+
+  it('deja fuera las tarjetas de un libro que ya no existe y registra cuántas', async () => {
+    const { service, cards, logger, settle } = setup();
+    cards.seed(dueCard('h1', 'borrado'), dueCard('h2', 'borrado'), newCard('h3', 'borrado', 1));
+
+    service.refresh();
+    await settle();
+
+    expect(service.baseQueue().cards.map((card) => card.bookId)).not.toContain('borrado');
+    expect(service.baseQueue().dueCount).toBe(1);
+    expect(logger.entries).toEqual([
+      { level: 'warn', message: 'Tarjetas de libros que ya no existen, fuera de Hoy: 3' },
+    ]);
+  });
+
+  it('si la cola no se puede armar, queda registrado', async () => {
+    const { service, cards, logger, settle } = setup();
+    const failure = new Error('Documento inválido en users/u1/cards/k1');
+    cards.failWith.listReady = failure;
+
+    service.refresh();
+    await settle();
+
+    expect(service.status()).toBe('error');
+    expect(logger.entries).toContainEqual({
+      level: 'error',
+      message: 'No se pudo armar la cola de Hoy',
+      cause: failure,
+    });
+  });
+
   it('si fallan las tarjetas o los libros, la cola está en error', async () => {
     const failingCards = setup();
     failingCards.cards.failWith.listReady = new Error('offline');

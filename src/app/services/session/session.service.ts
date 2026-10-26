@@ -8,9 +8,14 @@ import {
   DEFAULT_NEW_CARDS_PER_DAY,
   DEFAULT_PRACTICE_PACKAGE_CAPACITY,
 } from '@domain/models/study-defaults';
-import type { User, UserSettings } from '@domain/models/user.model';
+import { applySettingsChanges, type SettingsChanges, type User } from '@domain/models/user.model';
 import { AllowlistRepository } from '@domain/ports/allowlist.repository';
-import { AuthPort, type EmailCredentials, type Registration } from '@domain/ports/auth.port';
+import {
+  AuthPort,
+  type EmailCredentials,
+  type GoogleSignIn,
+  type Registration,
+} from '@domain/ports/auth.port';
 import { Logger } from '@domain/ports/logger.port';
 import { UserRepository } from '@domain/ports/user.repository';
 
@@ -37,6 +42,17 @@ const FALLBACK_DISPLAY_NAME = 'Estudiante';
 /** La parte del correo antes de la arroba, o "Estudiante" si no hay. */
 function displayNameFromEmail(email: string | null): string {
   return email?.split('@')[0] || FALLBACK_DISPLAY_NAME;
+}
+
+/** Si la ventana de Google dijo que la identidad es nueva. Ante la duda, no lo es (no se borra). */
+async function isNewIdentity(signIn: Promise<GoogleSignIn>): Promise<boolean> {
+  try {
+    return (await signIn).isNewIdentity;
+  } catch {
+    // El fallo de la ventana ya lo recibe quien la abrió (la pantalla de acceso lo muestra y lo
+    // registra); aquí solo importa no borrar una identidad de la que no se sabe nada.
+    return false;
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -72,8 +88,11 @@ export class SessionService {
    * fije su nombre, así que el perfil lo toma de aquí.
    */
   private pendingDisplayName: string | null = null;
-  /** Hay una ventana de Google abierta: si su identidad no está en la lista, se borra. */
-  private googleSignInInFlight = false;
+  /**
+   * La ventana de Google abierta, que dirá si su identidad es nueva. Si esa identidad no está en la
+   * lista, solo se borra cuando es nueva: una cuenta que ya existía conserva sus datos.
+   */
+  private googleSignIn: Promise<GoogleSignIn> | null = null;
   /**
    * Se acaba de borrar una identidad no autorizada: el proveedor avisará "sin sesión", pero la
    * sesión debe seguir en "sin acceso" con su correo.
@@ -118,11 +137,14 @@ export class SessionService {
 
   /** Abre la ventana de Google; la identidad llega por el observador (aunque la ventana calle). */
   async signInWithGoogle(): Promise<void> {
-    this.googleSignInInFlight = true;
+    const signIn = this.authPort.signInWithGoogle();
+    this.googleSignIn = signIn;
     try {
-      await this.authPort.signInWithGoogle();
+      await signIn;
     } catch (error) {
-      this.googleSignInInFlight = false;
+      if (this.googleSignIn === signIn) {
+        this.googleSignIn = null;
+      }
       throw error;
     }
   }
@@ -142,20 +164,27 @@ export class SessionService {
     this.generation++;
     this.currentIdentity = null;
     this.pendingDisplayName = null;
-    this.googleSignInInFlight = false;
+    this.googleSignIn = null;
     this.keepNoAccessOnNextSignOut = false;
     this.setState({ kind: 'signedOut' });
   }
 
   /**
-   * Guarda ajustes del perfil: escribe el perfil completo con los cambios y, solo si el guardado
-   * termina bien, la sesión pasa a reflejarlos. Si falla, el error sube y la sesión no cambia.
+   * Guarda ajustes del perfil: escribe solo los cambiados (así no borra los que añada una versión
+   * posterior) y, solo si el guardado termina bien, la sesión pasa a reflejarlos. Se fusionan sobre
+   * el perfil vigente al terminar, no sobre la copia de antes: si otro ajuste se guardó mientras
+   * tanto, se conservan los dos. Si falla, el error sube y la sesión no cambia.
    */
   async updateSettings(changes: SettingsChanges): Promise<void> {
-    const user = requireSessionUser(this.user());
-    const updated: User = { ...user, settings: applySettingsChanges(user.settings, changes) };
-    await this.users.save(updated);
-    this.setState({ kind: 'active', user: updated });
+    const { id } = requireSessionUser(this.user());
+    await this.users.updateSettings(id, changes);
+    const current = this.user();
+    if (current?.id === id) {
+      this.setState({
+        kind: 'active',
+        user: { ...current, settings: applySettingsChanges(current.settings, changes) },
+      });
+    }
   }
 
   /** La consulta de la lista sin red se explica como "sin conexión". */
@@ -178,8 +207,8 @@ export class SessionService {
       this.setState({ kind: 'signedOut' });
       return;
     }
-    const cameFromGoogle = this.googleSignInInFlight;
-    this.googleSignInInFlight = false;
+    const googleSignIn = this.googleSignIn;
+    this.googleSignIn = null;
 
     try {
       const allowed = identity.email !== null && (await this.allowlist.isAllowed(identity.email));
@@ -188,7 +217,9 @@ export class SessionService {
       }
       if (!allowed) {
         this.setState({ kind: 'noAccess', email: identity.email });
-        if (cameFromGoogle) {
+        // Esperar la ventana puede dejar pasar otro aviso: solo se borra si la identidad sigue
+        // siendo la vigente (borrar otra cuenta sería irreparable).
+        if (googleSignIn && (await isNewIdentity(googleSignIn)) && generation === this.generation) {
           await this.discardUnauthorizedIdentity();
         }
         return;
@@ -254,23 +285,4 @@ export class SessionService {
       this.markInitialResolution();
     }
   }
-}
-
-/** Cambios de ajustes; `promptTemplate: null` vuelve a la plantilla por defecto (se quita). */
-export type SettingsChanges = Partial<Omit<UserSettings, 'promptTemplate'>> & {
-  promptTemplate?: string | null;
-};
-
-export function applySettingsChanges(
-  settings: UserSettings,
-  changes: SettingsChanges,
-): UserSettings {
-  const { promptTemplate, ...rest } = changes;
-  const updated: UserSettings = { ...settings, ...rest };
-  if (promptTemplate === null) {
-    delete updated.promptTemplate;
-  } else if (promptTemplate !== undefined) {
-    updated.promptTemplate = promptTemplate;
-  }
-  return updated;
 }

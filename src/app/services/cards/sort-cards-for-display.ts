@@ -7,11 +7,15 @@ import { normalizeCardText } from './normalize-card-text';
  * una repetida queda al lado de su igual) y, a igualdad, la más antigua primero. No muta la lista.
  */
 export function sortCardsForDisplay(cards: readonly Card[]): Card[] {
-  return [...cards].sort(
-    (a, b) =>
-      compareText(a.front, b.front) ||
-      compareText(a.back, b.back) ||
-      a.createdAt.getTime() - b.createdAt.getTime(),
+  return [...cards].sort(compareCardsForDisplay);
+}
+
+/** La comparación del listado, para quien ordena con ese mismo criterio (la cola, al desempatar). */
+export function compareCardsForDisplay(a: Card, b: Card): number {
+  return (
+    compareText(a.front, b.front) ||
+    compareText(a.back, b.back) ||
+    a.createdAt.getTime() - b.createdAt.getTime()
   );
 }
 

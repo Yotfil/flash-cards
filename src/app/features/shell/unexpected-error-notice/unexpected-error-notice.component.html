@@ -1,0 +1,16 @@
+@if (notice.visible()) {
+  <div
+    role="alert"
+    class="fixed inset-x-4 bottom-24 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-glass-border bg-surface py-2.5 ps-4 pe-2 text-sm text-text shadow-card md:bottom-6"
+  >
+    <p class="flex-1">{{ copy.unexpectedError }}</p>
+    <button
+      type="button"
+      class="press rounded-xl p-2 text-text-dim"
+      [attr.aria-label]="copy.dismissUnexpectedError"
+      (click)="notice.dismiss()"
+    >
+      <app-icon name="x" size="sm" />
+    </button>
+  </div>
+}

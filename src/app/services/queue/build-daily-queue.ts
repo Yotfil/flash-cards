@@ -60,7 +60,7 @@ export function buildDailyQueue(input: BuildDailyQueueInput): DailyQueue {
     bookById,
     input.reviewedByBook,
   );
-  // Las nuevas de un libro sin metadatos no entran: no hay tanda que aplicarles.
+  // Las nuevas de un libro que no está en la biblioteca no entran: no hay tanda que aplicarles.
   const newByBook = groupByBook(
     ready.filter((card) => card.scheduling.state === CardState.New && bookById.has(card.bookId)),
   );
@@ -97,8 +97,9 @@ function planNewCards(
 
 /**
  * Vencidas topadas por libro a `maxReviewsPerDay` menos las ya repasadas hoy (0 = sin tope). Entran
- * ordenadas de la más atrasada a la más reciente, así el tope conserva las más atrasadas. Las de
- * un libro sin metadatos pasan sin tope: no hay tope que aplicar.
+ * ordenadas de la más atrasada a la más reciente, así el tope conserva las más atrasadas. La lista
+ * de libros se lee entera, así que un libro ausente es uno borrado: sus vencidas no entran (no hay
+ * dónde verlas ni gestionarlas).
  */
 function capDueByBook(
   due: readonly Card[],
@@ -108,7 +109,10 @@ function capDueByBook(
   const takenByBook = new Map<string, number>();
   return due.filter((card) => {
     const book = bookById.get(card.bookId);
-    if (!book || book.maxReviewsPerDay === 0) {
+    if (!book) {
+      return false;
+    }
+    if (book.maxReviewsPerDay === 0) {
       return true;
     }
     const remaining = Math.max(0, book.maxReviewsPerDay - (reviewedByBook[card.bookId] ?? 0));

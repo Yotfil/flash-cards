@@ -20,6 +20,7 @@ export class PracticeAiTodayBlockComponent implements OnInit {
 
   protected readonly copy = PRACTICA_IA_COPY;
   protected readonly destination = ['/practica-ia'];
+  protected readonly discard = () => this.packages.discardPrepared();
   protected readonly hasAny = computed(
     () => this.packages.open().length + this.packages.completed().length > 0,
   );

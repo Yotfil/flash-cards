@@ -9,6 +9,8 @@ import {
 
 import { BatchCommitError, BatchWriter } from './batch-writer';
 
+type RollBackResult = { readonly done: true } | { readonly done: false; readonly failure: unknown };
+
 // Un libro importado entero en lotes de 450: capítulos y tarjetas primero y el documento del libro
 // en el último, con su `cardCount` ya calculado, así el libro nunca aparece a medias en la
 // Biblioteca. (No usa `writeInCountedBatches`: su `increment` sería un `update` sobre un libro que
@@ -22,6 +24,9 @@ export class FirestoreImportRepository extends ImportRepository {
     const now = new Date();
     const bookRef = doc(this.collectionOf(uid, 'books'));
     const writer = new BatchWriter(this.firestore);
+    // Las tarjetas nacen escalonadas por su posición en el archivo: la cola desempata las nuevas
+    // por fecha de creación, así entran en Hoy en ese orden.
+    let position = 0;
     for (const chapter of input.chapters) {
       const chapterRef = doc(this.collectionOf(uid, 'chapters'));
       writer.set(chapterRef, {
@@ -32,12 +37,13 @@ export class FirestoreImportRepository extends ImportRepository {
         updatedAt: now,
       });
       for (const card of chapter.cards) {
+        const createdAt = new Date(now.getTime() + position++);
         writer.set(doc(this.collectionOf(uid, 'cards')), {
           ...card,
           bookId: bookRef.id,
           chapterId: chapterRef.id,
-          createdAt: now,
-          updatedAt: now,
+          createdAt,
+          updatedAt: createdAt,
         });
       }
     }
@@ -48,25 +54,31 @@ export class FirestoreImportRepository extends ImportRepository {
       await writer.commit();
     } catch (error) {
       if (error instanceof BatchCommitError) {
-        const rolledBack = await this.rollBack(error.committed);
-        throw new ImportBookError(error.committed.length, rolledBack, error.cause);
+        const rollBack = await this.rollBack(error.committed);
+        throw new ImportBookError(
+          error.committed.length,
+          rollBack.done,
+          error.cause,
+          rollBack.done ? undefined : rollBack.failure,
+        );
       }
       throw error;
     }
     return { id: bookRef.id, ...book };
   }
 
-  /** Borrado compensatorio de lo ya confirmado. Dice si lo consiguió (no lanza). */
-  private async rollBack(committed: readonly DocumentReference[]): Promise<boolean> {
+  /**
+   * Borrado compensatorio de lo ya confirmado. No lanza: si falla, su error viaja en
+   * `ImportBookError` y el servicio de importación lo registra.
+   */
+  private async rollBack(committed: readonly DocumentReference[]): Promise<RollBackResult> {
     const writer = new BatchWriter(this.firestore);
     committed.forEach((ref) => writer.delete(ref));
     try {
       await writer.commit();
-      return true;
-    } catch {
-      // El fallo no se pierde: viaja como `rolledBack: false` en `ImportBookError` y el servicio
-      // de importación lo registra con el número de escrituras confirmadas.
-      return false;
+      return { done: true };
+    } catch (error) {
+      return { done: false, failure: error };
     }
   }
 

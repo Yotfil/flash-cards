@@ -45,6 +45,18 @@ describe('FirestoreDailyStatsRepository', () => {
     expect(await repository.getByDay(OWNER_UID, '2026-10-24')).toBeNull();
   });
 
+  it('sin red, un día que el dispositivo nunca vio se lee como "sin indicadores", sin fallar', async () => {
+    // Ada estudió ayer con red; hoy abre Hoy en el metro, sin red, antes de estudiar nada.
+    await seedDay('2026-10-25', { reviewsCompleted: 12 });
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const offlineRepository = new FirestoreDailyStatsRepository(modularFirestore(context));
+    await offlineRepository.listRecent(OWNER_UID, 60);
+    await context.firestore().disableNetwork();
+
+    expect(await offlineRepository.getByDay(OWNER_UID, '2026-10-26')).toBeNull();
+    expect((await offlineRepository.getByDay(OWNER_UID, '2026-10-25'))?.reviewsCompleted).toBe(12);
+  });
+
   it('lee los indicadores de un día con sus contadores', async () => {
     await seedDay('2026-10-24', {
       newCardsIntroduced: { b1: 3 },
@@ -73,8 +85,12 @@ describe('FirestoreDailyStatsRepository', () => {
   });
 
   it('un documento corrupto falla con un error que nombra su ruta', async () => {
+    // El día se busca por su campo `date` (siempre igual al id; también en la 0.1.1).
     await asAdmin((db) =>
-      setDoc(doc(db, 'users', OWNER_UID, 'dailyStats', '2026-10-24'), { reviewsCompleted: 'x' }),
+      setDoc(doc(db, 'users', OWNER_UID, 'dailyStats', '2026-10-24'), {
+        date: '2026-10-24',
+        reviewsCompleted: 'x',
+      }),
     );
 
     const failure = await repository
