@@ -8,6 +8,8 @@ import type { Rating } from '@domain/models/rating';
 export interface PracticeAiSessionState {
   readonly packageId: string;
   readonly dayId: string;
+  /** El conjunto del día: los ítems preparados, en el orden del paquete (lo fija la primera nota). */
+  readonly itemIds: readonly string[];
   readonly queue: readonly PracticeItem[];
   readonly index: number;
   readonly revealed: boolean;
@@ -25,6 +27,7 @@ export function startPracticeSession(
   return {
     packageId: prepared.packageId,
     dayId: prepared.dayId,
+    itemIds: prepared.items.map((item) => item.id),
     queue: shuffle(prepared.items, random),
     index: 0,
     revealed: false,

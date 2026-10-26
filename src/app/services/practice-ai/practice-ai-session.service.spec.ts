@@ -161,4 +161,23 @@ describe('PracticeAiSessionService', () => {
     );
     expect(packages.calls.listByUser).toBe(1);
   });
+
+  it('la primera nota fija el conjunto del día con lo preparado, en el orden del paquete; las siguientes no', async () => {
+    const { session, packages, flush } = setup();
+    const list = TestBed.inject(PracticePackagesService);
+    list.reload();
+    await flush();
+    TestBed.tick();
+    await flush();
+    expect(packages.todaySets).toEqual([]);
+
+    for (const rating of [1, 3] as const) {
+      session.reveal();
+      session.grade(rating);
+    }
+
+    expect(packages.todaySets).toEqual([
+      { packageId: 'p1', todaySet: { dayId: '2026-10-25', itemIds: ['a', 'b', 'c'] } },
+    ]);
+  });
 });

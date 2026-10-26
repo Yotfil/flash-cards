@@ -104,6 +104,8 @@ export class PracticeAiSessionService {
       return;
     }
     this.state.set(next);
+    // Practicar es calificar: la primera nota del día fija su conjunto (las demás no hacen nada).
+    this.packageList.fixTodaySetOnFirstGrade(state.packageId, state.dayId, state.itemIds);
     // El detalle del paquete y el prompt ven la nota ya, sin releer.
     this.packageList.applyGrade(state.packageId, item.id, rating, state.dayId);
     const session = this.sessionNumber;

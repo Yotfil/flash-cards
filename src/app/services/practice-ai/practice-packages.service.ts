@@ -150,8 +150,8 @@ export class PracticePackagesService {
 
   /**
    * Prepara la práctica de hoy y la entrega; devuelve cuántos ítems tiene (0 = nada para hoy).
-   * La primera del día fija el conjunto sin esperar al servidor (sin red queda en la cola del
-   * almacén y se usa igual): los ítems agregados después ya no entran hoy.
+   * Preparar no es practicar: el conjunto del día lo fija la primera nota (ver abajo), así que
+   * abrir la práctica y salir sin calificar no cuenta como "Ya practicaste hoy".
    */
   async prepareTodayPractice(packageId: string): Promise<number> {
     const pkg = this.findById(packageId);
@@ -159,20 +159,29 @@ export class PracticePackagesService {
       throw new Error(`El paquete ${packageId} no está cargado.`);
     }
     const dayId = this.currentDayId();
-    const itemIds = todayItemIds(pkg, dayId);
-    if (itemIds.length === 0) {
+    const items = todayItemIds(pkg, dayId).flatMap((id) => (pkg.items[id] ? [pkg.items[id]] : []));
+    if (items.length === 0) {
       return 0;
     }
-    if (!hasPracticedToday(pkg, dayId)) {
-      const todaySet = { dayId, itemIds };
-      this.change(packageId, (current) => ({ ...current, todaySet }));
-      this.repository.fixTodaySet(this.uid(), packageId, todaySet).catch((error: unknown) => {
-        this.logger.error('No se pudo fijar el conjunto de hoy del paquete', error);
-      });
-    }
-    const items = itemIds.flatMap((id) => (pkg.items[id] ? [pkg.items[id]] : []));
     this.handoff.hand({ packageId, dayId, items });
     return items.length;
+  }
+
+  /**
+   * La primera nota del día fija el conjunto de ese día (los ítems de la práctica, en el orden del
+   * paquete) sin esperar al servidor: sin red queda en la cola del almacén y se usa igual. Desde
+   * ahí, los ítems agregados ya no entran ese día. Las notas siguientes no hacen nada aquí.
+   */
+  fixTodaySetOnFirstGrade(packageId: string, dayId: string, itemIds: readonly string[]): void {
+    const pkg = this.findById(packageId);
+    if (!pkg || hasPracticedToday(pkg, dayId)) {
+      return;
+    }
+    const todaySet = { dayId, itemIds: [...itemIds] };
+    this.change(packageId, (current) => ({ ...current, todaySet }));
+    this.repository.fixTodaySet(this.uid(), packageId, todaySet).catch((error: unknown) => {
+      this.logger.error('No se pudo fijar el conjunto de hoy del paquete', error);
+    });
   }
 
   /** Vacía la bandeja de la práctica: lo preparado ya no se va a abrir. */

@@ -169,30 +169,50 @@ describe('PracticePackagesService · práctica de hoy', () => {
     ...['n1', 'n2', 'n3', 'n4', 'n5', 'n6'].map(fresh),
   ]);
 
-  it('la primera práctica del día fija el conjunto (11) y lo entrega', async () => {
+  it('preparar entrega lo de hoy sin fijarlo: no cuenta como practicado y lo agregado después entra', async () => {
     const { service, repository, handoff } = await setup({ packages: [DAY_TWO] });
 
     expect(service.pendingCountFor(DAY_TWO)).toBe(11);
     expect(await service.prepareTodayPractice('p1')).toBe(11);
 
-    expect(repository.todaySets).toEqual([
-      { packageId: 'p1', todaySet: { dayId: TODAY, itemIds: expect.any(Array) } },
-    ]);
     const prepared = handoff.take();
     expect(prepared?.dayId).toBe(TODAY);
     expect(prepared?.items.map((item) => item.id).sort()).toEqual(
       ['h1', 'h2', 'h3', 'h4', 'h5', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6'].sort(),
     );
+    // Ada toca "Salir" sin calificar nada: no practicó.
+    expect(repository.todaySets).toEqual([]);
+    expect(service.practicedToday(service.findById('p1') as PracticePackage)).toBe(false);
+    await service.addItems('p1', [{ cardType: 'basic', front: 'tarde', back: 'late' }]);
+    expect(await service.prepareTodayPractice('p1')).toBe(12);
+  });
+
+  it('la primera nota del día fija el conjunto preparado, en el orden del paquete, una sola vez', async () => {
+    const { service, repository, handoff } = await setup({ packages: [DAY_TWO] });
+    await service.prepareTodayPractice('p1');
+    const itemIds = handoff.take()?.items.map((item) => item.id) ?? [];
+
+    service.fixTodaySetOnFirstGrade('p1', TODAY, itemIds);
+    service.fixTodaySetOnFirstGrade('p1', TODAY, itemIds);
+    service.fixTodaySetOnFirstGrade('no-cargado', TODAY, ['x']);
+
+    expect(repository.todaySets).toEqual([
+      {
+        packageId: 'p1',
+        todaySet: {
+          dayId: TODAY,
+          itemIds: ['h1', 'h2', 'h3', 'h4', 'h5', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+        },
+      },
+    ]);
     expect(service.practicedToday(service.findById('p1') as PracticePackage)).toBe(true);
   });
 
   it('repetir en el día usa el mismo conjunto sin volver a fijarlo', async () => {
     const { service, repository, handoff } = await setup({ packages: [DAY_TWO] });
     await service.prepareTodayPractice('p1');
-    const first = handoff
-      .take()
-      ?.items.map((item) => item.id)
-      .sort();
+    const first = handoff.take()?.items.map((item) => item.id) ?? [];
+    service.fixTodaySetOnFirstGrade('p1', TODAY, first);
     await service.addItems('p1', [{ cardType: 'basic', front: 'tarde', back: 'late' }]);
 
     expect(await service.prepareTodayPractice('p1')).toBe(11);
@@ -203,7 +223,7 @@ describe('PracticePackagesService · práctica de hoy', () => {
         .take()
         ?.items.map((item) => item.id)
         .sort(),
-    ).toEqual(first);
+    ).toEqual([...first].sort());
   });
 
   it('vaciar la bandeja quita la práctica preparada (ya no se va a abrir)', async () => {
@@ -239,6 +259,7 @@ describe('PracticePackagesService · práctica de hoy', () => {
       settings: { promptTemplate: 'R:[[REPASADAS]] D:[[DIFICILES]]' },
     });
     await custom.service.prepareTodayPractice('p1');
+    custom.service.fixTodaySetOnFirstGrade('p1', TODAY, ['a', 'b']);
     custom.service.applyGrade('p1', 'a', 1, TODAY);
     custom.service.applyGrade('p1', 'b', 4, TODAY);
 

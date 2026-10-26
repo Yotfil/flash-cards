@@ -27,9 +27,9 @@
 
 ## 3. IA-03 · Practicar es calificar
 
-- [ ] 3.1 Escribir en rojo, en `practice-packages.service.spec.ts` (sonda IA-03), "preparar entrega el conjunto sin fijarlo: el paquete sigue sin practicar hoy y un ítem agregado después entra en la siguiente". Adaptar "la primera práctica del día fija el conjunto…" y "repetir en el día usa el mismo conjunto…" para que lo fije la primera nota (`fixTodaySetOnFirstGrade`). Verificar que fallan.
-- [ ] 3.2 Quitar el fijado de `prepareTodayPractice` y añadir `fixTodaySetOnFirstGrade` (idempotente: no hace nada si ya se practicó ese día o el paquete no está cargado). Verificar que pasan las pruebas de 3.1.
-- [ ] 3.3 Escribir en rojo, en `practice-ai-session.service.spec.ts`, "la primera nota fija el conjunto preparado en el orden del paquete; las siguientes no lo vuelven a fijar". Guardar en el estado de la sesión los ids preparados (`itemIds`) y llamar al método en cada nota. Verificar que pasa, junto con las suites de Hoy, el detalle del paquete y la pantalla de práctica (adaptar las que suponían el fijado al preparar). Puerta completa en verde y commit `fix(practica-con-ia): …` del grupo.
+- [x] 3.1 Escribir en rojo, en `practice-packages.service.spec.ts` (sonda IA-03), "preparar entrega el conjunto sin fijarlo: el paquete sigue sin practicar hoy y un ítem agregado después entra en la siguiente". Adaptar "la primera práctica del día fija el conjunto…" y "repetir en el día usa el mismo conjunto…" para que lo fije la primera nota (`fixTodaySetOnFirstGrade`). Verificar que fallan.
+- [x] 3.2 Quitar el fijado de `prepareTodayPractice` y añadir `fixTodaySetOnFirstGrade` (idempotente: no hace nada si ya se practicó ese día o el paquete no está cargado). Verificar que pasan las pruebas de 3.1.
+- [x] 3.3 Escribir en rojo, en `practice-ai-session.service.spec.ts`, "la primera nota fija el conjunto preparado en el orden del paquete; las siguientes no lo vuelven a fijar". Guardar en el estado de la sesión los ids preparados (`itemIds`) y llamar al método en cada nota. Verificar que pasa, junto con las suites de Hoy, el detalle del paquete y la pantalla de práctica (adaptar las que suponían el fijado al preparar). Puerta completa en verde y commit `fix(practica-con-ia): …` del grupo.
 
 ## 4. IA-04 · El prompt del cierre usa el día de la práctica
 
