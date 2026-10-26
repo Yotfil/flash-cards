@@ -15,6 +15,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# La CI solo lee el código: su token no puede escribir en el repositorio. Las acciones van por
+# etiqueta (no por SHA): son oficiales de GitHub y, con este permiso, no pueden escribir aunque
+# una etiqueta cambiara (decidido el 2026-10-26).
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: Lint, tipos, pruebas y build
