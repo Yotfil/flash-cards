@@ -13,6 +13,7 @@ import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
+import { readDeviceThenServer } from '@services/data-loading/read-device-then-server';
 import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
@@ -31,16 +32,20 @@ export class ChaptersService {
 
   private readonly bookId = signal<string | undefined>(undefined);
 
+  /** Pinta primero lo guardado en el dispositivo y lo cambia por la lectura del servidor al llegar. */
   readonly chapters = resource({
     params: () => this.bookId(),
-    loader: async ({ params }) => {
-      try {
-        return await this.repository.listByBook(requireSessionUid(this.session.user()), params);
-      } catch (error) {
+    stream: async ({ params: bookId, abortSignal }) => {
+      const uid = requireSessionUid(this.session.user());
+      return readDeviceThenServer({
+        fromDevice: () => this.repository.listByBook(uid, bookId, 'device'),
+        fromServer: () => this.repository.listByBook(uid, bookId),
+        hasContent: (chapters) => chapters.length > 0,
+        logger: this.logger,
         // La pantalla pinta el error; aquí queda el detalle (p. ej. qué documento rechazó la frontera).
-        this.logger.error(`No se pudieron leer los capítulos del libro ${params}`, error);
-        throw error;
-      }
+        errorMessage: `No se pudieron leer los capítulos del libro ${bookId}`,
+        abortSignal,
+      });
     },
   });
 

@@ -33,7 +33,7 @@ Orden TDD: cada tarea de código va precedida por su prueba en rojo. Puerta ante
 - [x] 4.3 Prueba en rojo en `books.service.spec.ts`: con `onDevice=[a]`, `reload()` deja `books.hasValue()` cierto con `[a]` antes de resolver el servidor y `[a,b]` después; `loadFresh()`/`ensureLoaded()` siguen devolviendo la lista del servidor. Verificar: falla.
 - [x] 4.4 Pasar `BooksService.books` a `stream` con `readDeviceThenServer`. Verificar: 4.3 y todo `books.service.spec` en verde.
 - [x] 4.5 Prueba en rojo en `practice-packages.service.spec.ts` (mismo patrón que 4.3) y pasar `packages` a `stream`. Verificar: en verde.
-- [ ] 4.6 Prueba en rojo en `chapters.service.spec.ts` y pasar `chapters` a `stream`. Verificar: en verde.
+- [x] 4.6 Prueba en rojo en `chapters.service.spec.ts` y pasar `chapters` a `stream`. Verificar: en verde.
 - [ ] 4.7 Prueba en rojo en `cards.service.spec.ts` y pasar `cards` a `stream`. Verificar: en verde.
 - [ ] 4.8 Pruebas en rojo en `daily-queue.service.spec.ts`: con libros y candidatas `onDevice` → emite la cola del dispositivo y luego la del servidor; con candidatas `onDevice=[]` → no emite hasta el servidor; `reportOrphans` solo con el servidor; `prepareSession()` sigue usando la lectura del servidor. Verificar: fallan.
 - [ ] 4.9 Pasar `DailyQueueService.data` a `stream` (fase de dispositivo = libros + `listReady` + `getByDay` con `'device'`, descartada si libros o candidatas vienen vacías). Verificar: 4.8 y todo el spec en verde.

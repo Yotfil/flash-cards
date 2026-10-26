@@ -104,6 +104,58 @@ describe('ChaptersService · recurso', () => {
   });
 });
 
+/** Deja en espera las lecturas del servidor (las del dispositivo responden al instante). */
+function holdServerReads(repository: FakeChapterRepository): () => void {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const list = repository.listByBook.bind(repository);
+  repository.listByBook = async (uid, bookId, source) => {
+    if (source !== 'device') {
+      await gate;
+    }
+    return list(uid, bookId, source);
+  };
+  return release;
+}
+
+describe('ChaptersService · lo guardado en el dispositivo primero', () => {
+  it('pinta al instante los capítulos guardados y después los del servidor', async () => {
+    const { service, repository, settle } = setup();
+    repository.seedOnDevice(aChapter({ id: 'c0', bookId: 'b1', order: 0 }));
+    repository.seed(
+      aChapter({ id: 'c0', bookId: 'b1', order: 0 }),
+      aChapter({ id: 'c1', bookId: 'b1', order: 1 }),
+    );
+    const release = holdServerReads(repository);
+    const ids = () => service.chapters.value()?.map((chapter) => chapter.id);
+
+    service.openBook('b1');
+    await settle();
+    expect(ids()).toEqual(['c0']);
+
+    release();
+    await settle();
+    expect(ids()).toEqual(['c0', 'c1']);
+    expect(repository.calls.listByBook).toBe(1);
+  });
+
+  it('si el servidor falla con lo guardado a la vista, la lista se queda y el fallo se registra', async () => {
+    const { service, repository, logger, settle } = setup();
+    repository.seedOnDevice(aChapter({ id: 'c0', bookId: 'b1' }));
+    const failure = new Error('unavailable');
+    repository.failWith.listByBook = failure;
+
+    service.openBook('b1');
+    await settle();
+
+    expect(service.chapters.status()).not.toBe('error');
+    expect(service.chapters.value()?.map((chapter) => chapter.id)).toEqual(['c0']);
+    expect(logger.entries).toEqual([
+      { level: 'error', message: 'No se pudieron leer los capítulos del libro b1', cause: failure },
+    ]);
+  });
+});
+
 describe('ChaptersService · mutaciones', () => {
   async function opened(
     chapters = [aChapter({ id: 'c0', order: 0 }), aChapter({ id: 'c3', order: 3 })],
