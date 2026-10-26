@@ -127,9 +127,6 @@ export class DailyQueueService {
     }
     const day = this.currentDay();
     if (this.studyDay()?.id === day.id) {
-      if (this.books.books.status() === 'error') {
-        this.books.reload();
-      }
       this.data.reload();
       this.streak.reload();
       return;
@@ -177,11 +174,14 @@ export class DailyQueueService {
     return data && day ? queueFrom(data, day, sessionNewByBook) : EMPTY_QUEUE;
   }
 
-  /** Una lectura completa: libros, listas hasta el fin del día e indicadores de ese día. */
+  /**
+   * Una lectura completa: libros, listas hasta el fin del día e indicadores de ese día. Los libros
+   * se releen siempre: un libro creado (o una tanda cambiada) en otro dispositivo debe entrar.
+   */
   private async read(day: StudyDay): Promise<QueueData> {
     const uid = requireSessionUid(this.session.user());
     const [books, candidates, today] = await Promise.all([
-      this.books.ensureLoaded(),
+      this.books.loadFresh(),
       this.cards.listReady(uid, day.endOfDay),
       this.dailyStats.getByDay(uid, day.id),
     ]);

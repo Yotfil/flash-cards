@@ -47,6 +47,15 @@ export class BooksService {
     }
   }
 
+  /**
+   * Vuelve a leer la lista y la entrega recién leída, no la que había en memoria (que no sabe de un
+   * libro creado en otro dispositivo). El recurso comparte esa misma lectura.
+   */
+  loadFresh(): Promise<readonly Book[]> {
+    this.reload();
+    return this.load();
+  }
+
   /** Carga la lista solo si todavía no se pidió (navegación directa al detalle) y la entrega. */
   async ensureLoaded(): Promise<readonly Book[]> {
     if (this.books.hasValue()) {

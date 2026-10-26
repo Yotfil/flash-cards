@@ -130,6 +130,21 @@ describe('DailyQueueService · carga', () => {
     expect(service.status()).toBe('ready');
   });
 
+  it('volver a Hoy relee también los libros: un libro creado en otro dispositivo entra en la cola', async () => {
+    const { service, books, cards, settle } = setup();
+    service.refresh();
+    await settle();
+
+    // En el computador importa "Inglés B2" con 30 nuevas; el móvil seguía con Cadence abierta.
+    books.seed(aBook({ id: 'b2', name: 'Inglés B2', newCardsPerDay: 20, order: 2 }));
+    cards.seed(...Array.from({ length: 30 }, (_, index) => newCard(`b2-${index}`, 'b2', 1)));
+    service.refresh();
+    await settle();
+
+    expect(service.baseQueue().perBook.find((row) => row.bookId === 'b2')?.new).toBe(20);
+    expect(books.calls.listByUser).toBe(2);
+  });
+
   it('si fallan las tarjetas o los libros, la cola está en error', async () => {
     const failingCards = setup();
     failingCards.cards.failWith.listReady = new Error('offline');
