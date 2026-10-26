@@ -21,14 +21,14 @@
 
 ## 3. Paso 5 · Tarjetas huérfanas (C-01, CD-04, IM-05, EX-03)
 
-- [ ] 3.1 Escribir en rojo, en `tests/firestore/chapter.repository.integration.spec.ts` y `tests/firestore/book.repository.integration.spec.ts`, que borrar sin red falla sin borrar nada y que, con red, borra también las tarjetas que la caché no tenía (sonda de `capitulos`); verificar que fallan.
-- [ ] 3.2 Leer lo que se va a borrar con la lectura del servidor en el borrado del capítulo y del libro; verificar que pasan las pruebas de 3.1.
-- [ ] 3.3 Escribir en rojo, en `src/app/services/queue/build-daily-queue.spec.ts`, "las tarjetas de un libro que no está en la lista no entran" (dos vencidas y una nueva, sin fila en el desglose) y, en `daily-queue.service.spec.ts`, el aviso en el registro con el número; verificar que fallan.
-- [ ] 3.4 Excluir del armado las vencidas de un libro ausente y registrar en la lectura de la cola cuántas candidatas quedaron fuera; verificar que pasan las pruebas de 3.3.
-- [ ] 3.5 Escribir en rojo, en `tests/firestore/card.repository.integration.spec.ts`, "crear tarjetas en un capítulo que ya no existe falla sin crear nada ni sumar al libro" (sonda 3 de `importacion`) y, en `tests/firestore/counted-batch.integration.spec.ts`, que la operación "en cada lote" va en todos los lotes sin pasar de 450 escrituras; verificar que fallan.
-- [ ] 3.6 Añadir al escritor con contador la operación en cada lote y usarla al crear y reemplazar tarjetas en un capítulo existente (el `update` del capítulo); verificar que pasan las pruebas de 3.5 y las existentes de tarjetas e importación.
-- [ ] 3.7 Escribir en rojo, en `src/app/services/export/build-book-package.spec.ts`, "las tarjetas sin capítulo salen al final en «Sin capítulo»" (sonda EX-03) y "sin huérfanas no aparece"; verificar que fallan; implementarlo y verificar que pasan.
-- [ ] 3.8 Puerta completa en verde y commit `fix(capitulos): …` del paso.
+- [x] 3.1 Escribir en rojo, en `tests/firestore/chapter.repository.integration.spec.ts` y `tests/firestore/book.repository.integration.spec.ts`, que borrar sin red falla sin borrar nada y que, con red, borra también las tarjetas que la caché no tenía (sonda de `capitulos`); verificar que fallan.
+- [x] 3.2 Leer lo que se va a borrar con la lectura del servidor en el borrado del capítulo y del libro; verificar que pasan las pruebas de 3.1.
+- [x] 3.3 Escribir en rojo, en `src/app/services/queue/build-daily-queue.spec.ts`, "las tarjetas de un libro que no está en la lista no entran" (dos vencidas y una nueva, sin fila en el desglose) y, en `daily-queue.service.spec.ts`, el aviso en el registro con el número; verificar que fallan.
+- [x] 3.4 Excluir del armado las vencidas de un libro ausente y registrar en la lectura de la cola cuántas candidatas quedaron fuera; verificar que pasan las pruebas de 3.3.
+- [x] 3.5 Escribir en rojo, en `tests/firestore/card.repository.integration.spec.ts`, "crear tarjetas en un capítulo que ya no existe falla sin crear nada ni sumar al libro" (sonda 3 de `importacion`) y, en `tests/firestore/counted-batch.integration.spec.ts`, que la operación "en cada lote" va en todos los lotes sin pasar de 450 escrituras; verificar que fallan.
+- [x] 3.6 Añadir al escritor con contador la operación en cada lote y usarla al crear y reemplazar tarjetas en un capítulo existente (el `update` del capítulo); verificar que pasan las pruebas de 3.5 y las existentes de tarjetas e importación.
+- [x] 3.7 Escribir en rojo, en `src/app/services/export/build-book-package.spec.ts`, "las tarjetas sin capítulo salen al final en «Sin capítulo»" (sonda EX-03) y "sin huérfanas no aparece"; verificar que fallan; implementarlo y verificar que pasan.
+- [x] 3.8 Puerta completa en verde y commit `fix(capitulos): …` del paso.
 
 ## 4. Paso 10 · Orden de las nuevas (CD-02)
 

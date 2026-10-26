@@ -1,5 +1,13 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
+import {
+  Timestamp,
+  deleteDoc,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  type Firestore,
+} from 'firebase/firestore';
 
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { CardState, type NewCard } from '@domain/models/card.model';
@@ -31,9 +39,19 @@ afterAll(async () => {
 beforeEach(async () => {
   await environment.clearFirestore();
   await seedAllowlist(environment, [OWNER_EMAIL]);
-  await asAdmin((db) =>
-    setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 10 }),
-  );
+  await asAdmin(async (db) => {
+    await setDoc(doc(db, 'users', OWNER_UID, 'books', 'b1'), { name: 'Libro', cardCount: 10 });
+    // Crear tarjetas exige que su capítulo exista.
+    for (const chapterId of ['c1', 'c2']) {
+      await setDoc(doc(db, 'users', OWNER_UID, 'chapters', chapterId), {
+        bookId: 'b1',
+        name: chapterId,
+        order: 0,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+    }
+  });
   repository = new FirestoreCardRepository(
     modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
   );
@@ -156,6 +174,19 @@ describe('FirestoreCardRepository · contador del libro', () => {
 
     expect(created).toHaveLength(3);
     expect(await bookCount()).toBe(13);
+  });
+
+  it('crear en un capítulo que otro dispositivo acaba de borrar falla sin crear ninguna ni sumar al libro', async () => {
+    // El diálogo de importar seguía abierto en el computador; en el móvil se borró el capítulo.
+    await asAdmin((db) => deleteDoc(doc(db, 'users', OWNER_UID, 'chapters', 'c1')));
+
+    const failure = await repository
+      .createMany(OWNER_UID, [newCard({ front: 'a' }), newCard({ front: 'b' })])
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(await repository.listByChapter(OWNER_UID, 'c1')).toEqual([]);
+    expect(await bookCount()).toBe(10);
   });
 
   it('borrar una resta 1 y conserva el historial de repasos', async () => {

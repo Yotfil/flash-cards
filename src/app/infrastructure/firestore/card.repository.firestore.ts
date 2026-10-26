@@ -93,8 +93,10 @@ export class FirestoreCardRepository extends CardRepository {
   }
 
   /**
-   * Bajas (−1) seguidas de altas (+1) en lotes con su ajuste del contador. Con 448 operaciones o
-   * menos es un único lote: o se escribe todo o nada.
+   * Bajas (−1) seguidas de altas (+1) en lotes con su ajuste del contador. Con 447 operaciones o
+   * menos es un único lote: o se escribe todo o nada. Cada lote que crea toca también el capítulo
+   * (`updatedAt`): si otro dispositivo lo borró, el lote falla entero (no existe el documento) y no
+   * quedan tarjetas sin capítulo, que nadie podría ver ni borrar.
    */
   private async replaceCards(
     uid: string,
@@ -105,6 +107,10 @@ export class FirestoreCardRepository extends CardRepository {
     if (cards.some((card) => card.bookId !== bookId)) {
       throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo libro.');
     }
+    const chapterId = cards[0]?.chapterId;
+    if (cards.some((card) => card.chapterId !== chapterId)) {
+      throw new Error('Todas las tarjetas de una escritura en lote deben ser del mismo capítulo.');
+    }
     const now = new Date();
     const created = cards.map((card) => ({
       ref: doc(this.cardsOf(uid)),
@@ -113,6 +119,15 @@ export class FirestoreCardRepository extends CardRepository {
     await writeInCountedBatches({
       firestore: this.firestore,
       bookRef: this.bookRef(uid, bookId),
+      ...(chapterId !== undefined
+        ? {
+            everyBatch: {
+              apply: (writer: BatchWriter) =>
+                writer.update(this.chapterRef(uid, chapterId), { updatedAt: now }),
+              delta: 0 as const,
+            },
+          }
+        : {}),
       operations: [
         ...cardIdsToDelete.map((cardId) => ({
           apply: (writer: BatchWriter) => writer.delete(this.cardRef(uid, cardId)),
@@ -188,6 +203,10 @@ export class FirestoreCardRepository extends CardRepository {
 
   private bookRef(uid: string, bookId: string): DocumentReference {
     return doc(this.firestore, 'users', uid, 'books', bookId);
+  }
+
+  private chapterRef(uid: string, chapterId: string): DocumentReference {
+    return doc(this.firestore, 'users', uid, 'chapters', chapterId);
   }
 }
 

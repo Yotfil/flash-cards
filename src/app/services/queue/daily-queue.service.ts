@@ -185,7 +185,20 @@ export class DailyQueueService {
       this.cards.listReady(uid, day.endOfDay),
       this.dailyStats.getByDay(uid, day.id),
     ]);
+    this.reportOrphans(books, candidates);
     return { books, candidates, today };
+  }
+
+  /**
+   * Las tarjetas de un libro borrado que quedaron sin borrar no entran en la cola (ver
+   * `buildDailyQueue`); aquí, al leer, se deja constancia de cuántas hay.
+   */
+  private reportOrphans(books: readonly Book[], candidates: readonly Card[]): void {
+    const bookIds = new Set(books.map((book) => book.id));
+    const orphans = candidates.filter((card) => !bookIds.has(card.bookId)).length;
+    if (orphans > 0) {
+      this.logger.warn(`Tarjetas de libros que ya no existen, fuera de Hoy: ${orphans}`);
+    }
   }
 
   private currentDay(): StudyDay {

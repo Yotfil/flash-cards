@@ -145,6 +145,20 @@ describe('DailyQueueService · carga', () => {
     expect(books.calls.listByUser).toBe(2);
   });
 
+  it('deja fuera las tarjetas de un libro que ya no existe y registra cuántas', async () => {
+    const { service, cards, logger, settle } = setup();
+    cards.seed(dueCard('h1', 'borrado'), dueCard('h2', 'borrado'), newCard('h3', 'borrado', 1));
+
+    service.refresh();
+    await settle();
+
+    expect(service.baseQueue().cards.map((card) => card.bookId)).not.toContain('borrado');
+    expect(service.baseQueue().dueCount).toBe(1);
+    expect(logger.entries).toEqual([
+      { level: 'warn', message: 'Tarjetas de libros que ya no existen, fuera de Hoy: 3' },
+    ]);
+  });
+
   it('si fallan las tarjetas o los libros, la cola está en error', async () => {
     const failingCards = setup();
     failingCards.cards.failWith.listReady = new Error('offline');

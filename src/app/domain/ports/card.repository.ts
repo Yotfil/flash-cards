@@ -22,9 +22,12 @@ export abstract class CardRepository {
    * guardado (para practicar, una caché parcial basta).
    */
   abstract listByBook(uid: string, bookId: string): Promise<Card[]>;
-  /** Crea una tarjeta y suma 1 al libro. */
+  /** Crea una tarjeta y suma 1 al libro. Falla si su capítulo ya no existe. */
   abstract create(uid: string, card: NewCard): Promise<Card>;
-  /** Crea varias tarjetas de un mismo libro en lotes, cada lote con su suma al libro. */
+  /**
+   * Crea varias tarjetas de un mismo capítulo en lotes, cada lote con su suma al libro. Un lote
+   * falla entero si el capítulo ya no existe (otro dispositivo lo borró).
+   */
   abstract createMany(uid: string, cards: readonly NewCard[]): Promise<Card[]>;
   abstract updateContent(uid: string, cardId: string, changes: CardContentChanges): Promise<void>;
   abstract setSuspended(uid: string, cardId: string, suspended: boolean): Promise<void>;
