@@ -28,8 +28,8 @@ Orden TDD: cada tarea de código va precedida por su prueba en rojo. Puerta ante
 
 ## 4. Lectura en dos fases (función pura y servicios)
 
-- [ ] 4.1 Pruebas en rojo de `services/data-loading/read-device-then-server.spec.ts`: dispositivo `[a]` → servidor `[a,b]` emite dos valores; dispositivo `[]` → no emite hasta el servidor; servidor falla con valor previo → valor se queda y `logger.error`; servidor falla sin valor → `{ error }`; dispositivo falla → `logger.warn` y sigue; `abortSignal` abortado → el valor tardío no se emite. Verificar: fallan por archivo inexistente.
-- [ ] 4.2 Crear `readDeviceThenServer(fromDevice, fromServer, logger, abortSignal)` que devuelve la señal del flujo para `resource({ stream })`. Verificar: 4.1 en verde.
+- [x] 4.1 Pruebas en rojo de `services/data-loading/read-device-then-server.spec.ts`: dispositivo `[a]` → servidor `[a,b]` emite dos valores; dispositivo `[]` → no emite hasta el servidor; servidor falla con valor previo → valor se queda y `logger.error`; servidor falla sin valor → `{ error }`; dispositivo falla → `logger.warn` y sigue; `abortSignal` abortado → el valor tardío no se emite. Verificar: fallan por archivo inexistente.
+- [x] 4.2 Crear `readDeviceThenServer(fromDevice, fromServer, logger, abortSignal)` que devuelve la señal del flujo para `resource({ stream })`. Verificar: 4.1 en verde.
 - [ ] 4.3 Prueba en rojo en `books.service.spec.ts`: con `onDevice=[a]`, `reload()` deja `books.hasValue()` cierto con `[a]` antes de resolver el servidor y `[a,b]` después; `loadFresh()`/`ensureLoaded()` siguen devolviendo la lista del servidor. Verificar: falla.
 - [ ] 4.4 Pasar `BooksService.books` a `stream` con `readDeviceThenServer`. Verificar: 4.3 y todo `books.service.spec` en verde.
 - [ ] 4.5 Prueba en rojo en `practice-packages.service.spec.ts` (mismo patrón que 4.3) y pasar `packages` a `stream`. Verificar: en verde.
