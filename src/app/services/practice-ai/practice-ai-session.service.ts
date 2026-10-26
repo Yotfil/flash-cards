@@ -47,6 +47,8 @@ export class PracticeAiSessionService {
   readonly alerts = this.alertsSignal.asReadonly();
   readonly status = computed<PracticeAiSessionStatus>(() => this.state()?.status ?? 'idle');
   readonly packageId = computed(() => this.state()?.packageId ?? null);
+  /** El día de estudio de la práctica (el de cuando se preparó, aunque cruce el inicio del día). */
+  readonly dayId = computed(() => this.state()?.dayId ?? null);
   readonly current = computed<CardFace | undefined>(() => {
     const state = this.state();
     return state?.status === 'active' ? state.queue[state.index] : undefined;

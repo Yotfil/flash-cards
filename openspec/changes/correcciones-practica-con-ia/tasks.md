@@ -33,8 +33,8 @@
 
 ## 4. IA-04 · El prompt del cierre usa el día de la práctica
 
-- [ ] 4.1 Escribir en rojo, en `practice-packages.service.spec.ts`, "`promptFor` con un día arma el prompt de ese día" y, en `practice-ai-page.component.spec.ts` (sonda IA-04), "una práctica que cruza el inicio del día: el prompt del cierre lista los difíciles que el cierre anuncia". Verificar que fallan.
-- [ ] 4.2 Aceptar el día en `promptFor`, exponer `dayId` en la sesión y usarlo en el prompt del cierre. Verificar que pasan las pruebas de 4.1 y que "Copiar prompt de hoy" del detalle sigue usando el día de ahora (sus pruebas en verde). Puerta completa en verde y commit `fix(practica-con-ia): …` del grupo.
+- [x] 4.1 Escribir en rojo, en `practice-packages.service.spec.ts`, "`promptFor` con un día arma el prompt de ese día" y, en `practice-ai-page.component.spec.ts` (sonda IA-04), "una práctica que cruza el inicio del día: el prompt del cierre lista los difíciles que el cierre anuncia". Verificar que fallan.
+- [x] 4.2 Aceptar el día en `promptFor`, exponer `dayId` en la sesión y usarlo en el prompt del cierre. Verificar que pasan las pruebas de 4.1 y que "Copiar prompt de hoy" del detalle sigue usando el día de ahora (sus pruebas en verde). Puerta completa en verde y commit `fix(practica-con-ia): …` del grupo.
 
 ## 5. Cierre
 

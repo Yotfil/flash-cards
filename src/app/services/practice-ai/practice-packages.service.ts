@@ -199,10 +199,12 @@ export class PracticePackagesService {
   }
 
   /**
-   * El prompt de hoy: todos los ítems del conjunto del día y los difíciles de hoy. De un paquete
-   * completado, todos sus ítems y ningún difícil. `null` si el paquete no está cargado.
+   * El prompt de un día: todos los ítems de su conjunto y los difíciles de ese día. Sin día, el de
+   * ahora ("Copiar prompt de hoy"); el cierre pasa el de su práctica, que pudo empezar antes del
+   * inicio del día. De un paquete completado, todos sus ítems y ningún difícil. `null` si el
+   * paquete no está cargado.
    */
-  promptFor(packageId: string): string | null {
+  promptFor(packageId: string, dayId?: string): string | null {
     const pkg = this.findById(packageId);
     if (!pkg) {
       return null;
@@ -212,13 +214,9 @@ export class PracticePackagesService {
     if (pkg.status === 'completed') {
       return buildPrompt(template, orderedItems(pkg), []);
     }
-    const dayId = this.currentDayId();
+    const day = dayId ?? this.currentDayId();
     const facesOf = (ids: string[]) => ids.flatMap((id) => (pkg.items[id] ? [pkg.items[id]] : []));
-    return buildPrompt(
-      template,
-      facesOf(todayItemIds(pkg, dayId)),
-      facesOf(hardTodayIds(pkg, dayId)),
-    );
+    return buildPrompt(template, facesOf(todayItemIds(pkg, day)), facesOf(hardTodayIds(pkg, day)));
   }
 
   private uid(): string {

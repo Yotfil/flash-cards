@@ -59,9 +59,11 @@ export class PracticeAiPageComponent implements OnInit {
     this.session.alerts().map((alert) => rejectedGradeMessage(alert.front)),
   );
   protected readonly hardText = computed(() => hardCountLabel(this.session.hardCount()));
+  /** Con el día de la práctica: sus difíciles son los que el cierre anuncia, aunque ya sea otro día. */
   protected readonly prompt = computed(() => {
     const packageId = this.session.packageId();
-    return packageId ? this.packages.promptFor(packageId) : null;
+    const dayId = this.session.dayId();
+    return packageId && dayId ? this.packages.promptFor(packageId, dayId) : null;
   });
   private packageId: string | null = null;
 

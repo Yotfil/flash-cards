@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { CardRepository } from '@domain/ports/card.repository';
+import type { UserSettings } from '@domain/models/user.model';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
@@ -40,7 +41,10 @@ class BlankPageComponent {}
 const T0 = new Date('2026-10-25T15:00:00Z');
 const ITEMS = ['a', 'b', 'c'].map((id) => anItem({ id, front: `front ${id}`, back: `back ${id}` }));
 
-async function open(options: { online?: boolean; handOff?: boolean } = {}) {
+async function open(
+  options: { online?: boolean; handOff?: boolean; settings?: Partial<UserSettings> } = {},
+) {
+  const user = aUser();
   const repository = new FakePracticePackageRepository();
   repository.seed(aPackage({ id: 'p1' }, ITEMS));
   const cards = new FakeCardRepository();
@@ -62,7 +66,10 @@ async function open(options: { online?: boolean; handOff?: boolean } = {}) {
       { provide: Logger, useValue: new FakeLogger() },
       {
         provide: SessionService,
-        useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
+        useValue: new FakeSessionService({
+          kind: 'active',
+          user: { ...user, settings: { ...user.settings, ...options.settings } },
+        }),
       },
     ],
   });
@@ -208,6 +215,28 @@ describe('PracticeAiPageComponent', () => {
     page().querySelector<HTMLAnchorElement>('a[href="/biblioteca"]')?.click();
     await update();
     expect(url()).toBe('/biblioteca');
+  });
+
+  it('si la práctica cruza el inicio del día, el prompt del cierre lista los difíciles que anuncia', async () => {
+    // Ada empieza el día a medianoche y practica a las 23:58 del domingo 25.
+    vi.setSystemTime(new Date('2026-10-26T04:58:00Z'));
+    const { press, page, button, update, delivery } = await open({ settings: { dayStartHour: 0 } });
+    for (let index = 0; index < 2; index++) {
+      await press(' ');
+      await press('1');
+    }
+    // La última nota llega a las 00:02 del lunes 26: ya es otro día de estudio.
+    vi.setSystemTime(new Date('2026-10-26T05:02:00Z'));
+    await press(' ');
+    await press('1');
+
+    expect(page().querySelector('app-session-summary')?.textContent).toContain(
+      '3 para reforzar con la IA',
+    );
+    button('Copiar prompt')?.click();
+    await update();
+    const hardBlock = delivery.copied[0]?.split('<hard_terms>')[1]?.split('</hard_terms>')[0] ?? '';
+    expect(hardBlock.split('\n').filter((line) => line.trim() !== '')).toHaveLength(3);
   });
 
   it('practicar no toca tarjetas, repaso ni el día; funciona sin red', async () => {

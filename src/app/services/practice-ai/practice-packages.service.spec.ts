@@ -273,6 +273,22 @@ describe('PracticePackagesService · práctica de hoy', () => {
     expect(DEFAULT_PROMPT_TEMPLATE).toContain('[[REPASADAS]]');
   });
 
+  it('el prompt de un día dado usa el conjunto y los difíciles de ese día, no los de ahora', async () => {
+    const { service } = await setup({
+      packages: [aPackage({ id: 'p1' }, [fresh('a'), fresh('b')])],
+      settings: { promptTemplate: 'R:[[REPASADAS]] D:[[DIFICILES]]' },
+    });
+    // Practicó ayer: «a» salió "Otra vez" y «b» "Fácil".
+    service.fixTodaySetOnFirstGrade('p1', YESTERDAY, ['a', 'b']);
+    service.applyGrade('p1', 'a', 1, YESTERDAY);
+    service.applyGrade('p1', 'b', 4, YESTERDAY);
+
+    expect(service.promptFor('p1', YESTERDAY)).toBe(
+      'R:front a | back a\nfront b | back b D:front a | back a',
+    );
+    expect(service.promptFor('p1')).toBe('R:front a | back a D:');
+  });
+
   it('un paquete completado da todos sus ítems como repasados y ninguno difícil', async () => {
     const pkg = aPackage({ id: 'p1', status: 'completed' }, [hard('a'), fresh('b')]);
     const { service } = await setup({
