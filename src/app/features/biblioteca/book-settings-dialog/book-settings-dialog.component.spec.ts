@@ -110,6 +110,27 @@ describe('BookSettingsDialogComponent', () => {
     await expect(ref.closed).resolves.toMatchObject({ maxReviewsPerDay: 0 });
   });
 
+  it('si no confirma en 6 s, avisa que quedó guardado en el dispositivo y deja cerrar', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { ref, repository, update, submit } = await setup();
+    vi.spyOn(repository, 'update').mockReturnValue(new Promise<void>(() => undefined));
+    typeInto('#new-cards-per-day', '5');
+    await update();
+    submit();
+    await update();
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(openDialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Quedó guardado en este dispositivo; se enviará cuando vuelva la red.',
+    );
+    expect(dialogButton('Guardando…')?.disabled).toBe(true);
+    expect(dialogButton('Cerrar')?.disabled).toBe(false);
+    dialogButton('Cerrar')?.click();
+    await expect(ref.closed).resolves.toBeUndefined();
+    vi.useRealTimers();
+  });
+
   it('si falla sigue abierto con su mensaje', async () => {
     const { repository, update, submit } = await setup();
     repository.failWith.update = new Error('offline');

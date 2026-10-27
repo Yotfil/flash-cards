@@ -7,7 +7,11 @@ import { Logger } from '@domain/ports/logger.port';
 import { isDuplicateDraft } from '@services/cards/card-duplicates';
 import { CardsService } from '@services/cards/cards.service';
 import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  NEEDS_CONNECTION_MESSAGE,
+  SAVED_ON_DEVICE_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
 import { cardFormSchema, type CardFormValue } from '@services/cards/card-form.schema';
@@ -45,6 +49,10 @@ export class CardFormDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = BIBLIOTECA_COPY.cardForm;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly savedOnDevice = SAVED_ON_DEVICE_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: lo escrito ya está en el dispositivo y se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly isEdit = this.data.mode === 'edit';
 
   private readonly model = signal<CardFormValue>(initialValue(this.data));
@@ -111,7 +119,9 @@ export class CardFormDialogComponent {
   private async save(): Promise<void> {
     this.saving.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    // Un guardado propio (un ítem de paquete) va por transacción: no queda en el dispositivo y
+    // no se puede prometer; el de un capítulo, sí.
+    this.dialogRef.setPending(true, { releaseWhenSlow: !('save' in this.data) });
     try {
       await this.persist(this.model());
     } catch (error) {

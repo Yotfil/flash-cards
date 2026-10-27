@@ -174,6 +174,27 @@ describe('BookFormDialogComponent', () => {
     expect(repository.calls.create).toBe(1);
   });
 
+  it('si no confirma en 6 s, avisa que quedó guardado en el dispositivo y deja cerrar', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { ref, repository, update, submit } = await setup({ mode: 'create' });
+    repository.create = () => new Promise<Book>(() => undefined);
+    typeInto('#book-name', 'Química');
+    await update();
+    submit();
+    await update();
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(openDialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Quedó guardado en este dispositivo; se enviará cuando vuelva la red.',
+    );
+    expect(dialogButton('Guardando…')?.disabled).toBe(true);
+    expect(dialogButton('Cerrar')?.disabled).toBe(false);
+    dialogButton('Cerrar')?.click();
+    await expect(ref.closed).resolves.toBeUndefined();
+    vi.useRealTimers();
+  });
+
   it('si falla sigue abierto con el error y lo escrito; el reintento cierra con el libro', async () => {
     const { ref, repository, update, submit } = await setup({ mode: 'create' });
     repository.failWith.create = new Error('offline');

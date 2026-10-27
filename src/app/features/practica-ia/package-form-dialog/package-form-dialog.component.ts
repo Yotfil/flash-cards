@@ -10,7 +10,11 @@ import {
 } from '@services/practice-ai/package-form.schema';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
 import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  NEEDS_CONNECTION_MESSAGE,
+  SAVED_ON_DEVICE_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { PRACTICA_IA_COPY } from '../practica-ia.copy';
 
@@ -33,6 +37,10 @@ export class PackageFormDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = PRACTICA_IA_COPY.packageForm;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly savedOnDevice = SAVED_ON_DEVICE_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: lo escrito ya está en el dispositivo y se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly isRename = this.data.mode === 'rename';
 
   private readonly model = signal<PackageFormValue>({
@@ -69,7 +77,7 @@ export class PackageFormDialogComponent {
   private async save(): Promise<void> {
     this.saving.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    this.dialogRef.setPending(true, { releaseWhenSlow: true });
     try {
       if (this.data.mode === 'rename') {
         await this.packages.rename(this.data.pkg.id, this.model().name);

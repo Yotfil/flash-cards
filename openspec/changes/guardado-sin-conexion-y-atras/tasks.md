@@ -14,8 +14,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 
 ## 3. Diálogos que guardan en el dispositivo
 
-- [ ] 3.1 Pruebas en rojo: libro (crear), ajustes del libro, capítulo, tarjeta de capítulo (con aviso) y tarjeta con `save` propio (sin aviso), paquete: a los 6 s, el aviso con `role="status"`, "Cerrar" habilitado que cierra. Verificar: fallan.
-- [ ] 3.2 Apuntar esos diálogos (`releaseWhenSlow`), pintar el aviso y el botón "Cerrar". Verificar: 3.1 en verde.
+- [x] 3.1 Pruebas en rojo: libro (crear), ajustes del libro, capítulo, tarjeta de capítulo (con aviso) y tarjeta con `save` propio (sin aviso), paquete: a los 6 s, el aviso con `role="status"`, "Cerrar" habilitado que cierra. Verificar: fallan.
+- [x] 3.2 Apuntar esos diálogos (`releaseWhenSlow`), pintar el aviso y el botón "Cerrar". Verificar: 3.1 en verde.
 
 ## 4. Importar
 

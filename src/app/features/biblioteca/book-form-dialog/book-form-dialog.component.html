@@ -38,6 +38,9 @@
   @if (!online()) {
     <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
   }
+  @if (savingTooLong()) {
+    <p role="status" class="text-sm text-text-dim">{{ savedOnDevice }}</p>
+  }
   @if (failed()) {
     <p role="alert" class="text-sm text-danger">{{ copy.saveError }}</p>
   }
@@ -46,10 +49,10 @@
     <button
       type="button"
       class="press rounded-xl border border-glass-border px-4 py-2.5 text-sm font-semibold text-text disabled:opacity-50"
-      [disabled]="saving()"
+      [disabled]="saving() && !savingTooLong()"
       (click)="cancel()"
     >
-      {{ copy.cancel }}
+      {{ savingTooLong() ? closeLabel : copy.cancel }}
     </button>
     <button
       type="submit"
