@@ -22,7 +22,7 @@ import {
   type SessionState,
 } from './review-session-state';
 
-export type ReviewSessionStatus = 'idle' | 'active' | 'finished';
+export type ReviewSessionStatus = 'idle' | 'active' | 'finished' | 'accessLost';
 
 /** Cómo terminó la última sesión y sus tarjetas difíciles (lo consumirá la práctica con IA). */
 export interface ReviewSessionEnd {

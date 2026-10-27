@@ -132,7 +132,7 @@ describe('ReviewSessionService · rechazo tardío, fin y salida', () => {
     persistence.rejectNext(failure);
     await flush();
 
-    expect(service.alerts()).toEqual([{ cardId: 'A', front: 'to give up' }]);
+    expect(service.alerts()).toEqual([{ cardId: 'A', front: 'to give up', kind: 'failed' }]);
     expect(service.ratingCounts().good).toBe(0);
     expect(service.progress()).toBe(0);
     expect(service.remaining()).toBe(3);

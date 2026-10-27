@@ -34,8 +34,12 @@ export interface InFlightGrade {
   readonly requeuedAppearanceId: string | null;
 }
 
+/** Por qué no se guardó una nota: un fallo pasajero (vuelve a calificarse) o la tarjeta se borró. */
+export type GradeAlertKind = 'failed' | 'gone';
+
 export interface SessionState {
-  readonly status: 'active' | 'finished';
+  /** `accessLost`: el servidor negó el permiso; la sesión se cerró y nada la reabre. */
+  readonly status: 'active' | 'finished' | 'accessLost';
   /** La aparición actual es `queue[0]`. */
   readonly queue: readonly Appearance[];
   /** Tarjetas distintas con que arrancó la sesión. */
@@ -59,8 +63,12 @@ export interface SessionState {
   }[];
   /** Calificaciones cuyo guardado no se confirmó todavía, por aparición. */
   readonly inFlight: ReadonlyMap<string, InFlightGrade>;
-  /** Tarjetas cuyo guardado se rechazó (la pantalla pone el texto del aviso). */
-  readonly alerts: readonly { readonly cardId: string; readonly front: string }[];
+  /** Tarjetas cuyo guardado se rechazó (la pantalla pone el texto del aviso según su tipo). */
+  readonly alerts: readonly {
+    readonly cardId: string;
+    readonly front: string;
+    readonly kind: GradeAlertKind;
+  }[];
   /** Rechazos que llegaron con el cierre ya visible: esas tarjetas siguen pendientes. */
   readonly rejectedAfterFinish: number;
   readonly nextAppearance: number;
@@ -162,7 +170,7 @@ export function grade(
 /** El almacén confirmó el guardado: deja de estar en vuelo y, si la tarjeta tenía un aviso, se quita. */
 export function confirmSaved(state: SessionState, appearanceId: string): SessionState {
   const entry = state.inFlight.get(appearanceId);
-  if (!entry) {
+  if (!entry || state.status === 'accessLost') {
     return state;
   }
   const inFlight = new Map(state.inFlight);
@@ -172,9 +180,9 @@ export function confirmSaved(state: SessionState, appearanceId: string): Session
 }
 
 /**
- * El almacén rechazó el guardado (que no dejó nada a medias): se deshace lo que esa calificación
- * contó y la tarjeta vuelve al final con su programación anterior, sin revelar, con un aviso. Con
- * el cierre ya visible no se reabre la sesión: solo se cuenta.
+ * El almacén rechazó el guardado por un fallo pasajero (que no dejó nada a medias): se deshace lo
+ * que esa calificación contó y la tarjeta vuelve al final con su programación anterior, sin
+ * revelar, con un aviso. Con el cierre ya visible no se reabre la sesión: solo se cuenta.
  */
 export function rejectSaved(
   state: SessionState,
@@ -183,17 +191,10 @@ export function rejectSaved(
   preview: PreviewFn,
 ): SessionState {
   const entry = state.inFlight.get(appearanceId);
-  if (!entry) {
+  if (!entry || state.status === 'accessLost') {
     return state;
   }
-  const inFlight = new Map(state.inFlight);
-  inFlight.delete(appearanceId);
-  const undone: SessionState = {
-    ...state,
-    inFlight,
-    ratingCounts: countRating(state.ratingCounts, entry.rating, -1),
-    difficult: state.difficult.filter((difficult) => difficult.appearanceId !== appearanceId),
-  };
+  const undone = undoGrade(state, appearanceId, entry);
   if (state.status === 'finished') {
     return { ...undone, rejectedAfterFinish: state.rejectedAfterFinish + 1 };
   }
@@ -204,7 +205,7 @@ export function rejectSaved(
   const returned: SessionState = {
     ...undone,
     exitedCardIds,
-    alerts: [...state.alerts, { cardId: card.id, front: card.front }],
+    alerts: [...state.alerts, { cardId: card.id, front: card.front, kind: 'failed' }],
   };
 
   const requeuedIndex = state.queue.findIndex(
@@ -220,6 +221,48 @@ export function rejectSaved(
     { id: appearanceIdFor(state.nextAppearance), card },
   ];
   return { ...returned, queue, nextAppearance: state.nextAppearance + 1 };
+}
+
+/**
+ * El almacén rechazó el guardado porque la tarjeta ya no existe (se borró en otro dispositivo):
+ * reencolarla no serviría. Se deshace lo que esa nota contó, la tarjeta sale de la sesión con todas
+ * sus apariciones (cuenta como salida en la barra) y queda su aviso. Si era la que se mostraba,
+ * entra la siguiente (o el cierre). Con el cierre ya visible solo se deshace: no queda pendiente.
+ */
+export function dropGoneCard(
+  state: SessionState,
+  appearanceId: string,
+  now: Date,
+  preview: PreviewFn,
+): SessionState {
+  const entry = state.inFlight.get(appearanceId);
+  if (!entry || state.status === 'accessLost') {
+    return state;
+  }
+  const undone = undoGrade(state, appearanceId, entry);
+  if (state.status === 'finished') {
+    return undone;
+  }
+  const card = entry.cardBefore;
+  const wasShowing = state.queue[0]?.card.id === card.id;
+  const dropped: SessionState = {
+    ...undone,
+    queue: state.queue.filter((appearance) => appearance.card.id !== card.id),
+    exitedCardIds: new Set([...state.exitedCardIds, card.id]),
+    alerts: [
+      ...state.alerts.filter((alert) => alert.cardId !== card.id),
+      { cardId: card.id, front: card.front, kind: 'gone' },
+    ],
+  };
+  return wasShowing ? showNext(dropped, now, preview) : dropped;
+}
+
+/**
+ * El servidor negó el permiso (le retiraron el acceso): ninguna nota más se guardaría. La sesión
+ * se cierra, también con el cierre visible, y los resultados que lleguen después no la reabren.
+ */
+export function closeForLostAccess(state: SessionState): SessionState {
+  return { ...state, status: 'accessLost', revealed: false, suggested: null, previews: null };
 }
 
 /** Apariciones que faltan, contando las que volvieron al final. */
@@ -268,6 +311,18 @@ function showNext(state: SessionState, now: Date, preview: PreviewFn): SessionSt
     suggested: null,
     shownAt: now.getTime(),
     previews: next ? preview(next.card.scheduling, now) : null,
+  };
+}
+
+/** Quita una nota rechazada de lo que contó: en vuelo, desglose y difíciles. */
+function undoGrade(state: SessionState, appearanceId: string, entry: InFlightGrade): SessionState {
+  const inFlight = new Map(state.inFlight);
+  inFlight.delete(appearanceId);
+  return {
+    ...state,
+    inFlight,
+    ratingCounts: countRating(state.ratingCounts, entry.rating, -1),
+    difficult: state.difficult.filter((difficult) => difficult.appearanceId !== appearanceId),
   };
 }
 
