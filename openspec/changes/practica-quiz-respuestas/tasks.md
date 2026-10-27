@@ -36,10 +36,10 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 - [x] 5.2 Añadir el atributo (D6). Verificar: 5.1 en verde.
 - [x] 5.3 Pruebas en rojo: `multiple-choice-question.component.spec` (al crearse y al cambiar `questionId`, el foco está en el `h2` del enunciado, que tiene `tabindex="-1"`); `practica-page.component.spec` (al abrir con una de opción múltiple, foco en su enunciado; tras responder, en "Siguiente"; al avanzar a una escrita, en el campo; al avanzar a otra de opción múltiple, en su enunciado; en la última, en "Ver resultado"). Verificar: fallan las de opción múltiple.
 - [x] 5.4 Implementar D5 en `multiple-choice-question` (entrada `questionId`, `effect` de foco, `tabindex="-1"` y `focus-visible:outline-none`) y pasarle `question.id` desde la página. Verificar: 5.3 en verde.
-- [ ] 5.5 Pruebas en rojo: `practice-summary.component.spec` (al crearse, foco en su `h1`); `practica-page.component.spec` ("Ver resultado" → foco en "¡Práctica completada!"). Verificar: fallan.
-- [ ] 5.6 Implementar en `practice-summary` (`afterNextRender`, `tabindex="-1"`, sin anillo). Verificar: 5.5 en verde.
-- [ ] 5.7 Pruebas en rojo: `session-summary.component.spec` (al crearse, foco en el `h1`); `repaso-page.component.spec` (al terminar la sesión, foco en "Sesión terminada"); `practice-ai-page.component.spec` (al terminar, foco en "Práctica terminada"). Verificar: fallan.
-- [ ] 5.8 Implementar en `session-summary` (enfocar el título en el mismo `afterNextRender` que arranca el conteo; `tabindex="-1"`, sin anillo). Verificar: 5.7 en verde y el resto de pruebas del repaso y de la práctica con IA en verde.
+- [x] 5.5 Pruebas en rojo: `practice-summary.component.spec` (al crearse, foco en su `h1`); `practica-page.component.spec` ("Ver resultado" → foco en "¡Práctica completada!"). Verificar: fallan.
+- [x] 5.6 Implementar en `practice-summary` (`afterNextRender`, `tabindex="-1"`, sin anillo). Verificar: 5.5 en verde.
+- [x] 5.7 Pruebas en rojo: `session-summary.component.spec` (al crearse, foco en el `h1`); `repaso-page.component.spec` (al terminar la sesión, foco en "Sesión terminada"); `practice-ai-page.component.spec` (al terminar, foco en "Práctica terminada"). Verificar: fallan.
+- [x] 5.8 Implementar en `session-summary` (enfocar el título en el mismo `afterNextRender` que arranca el conteo; `tabindex="-1"`, sin anillo). Verificar: 5.7 en verde y el resto de pruebas del repaso y de la práctica con IA en verde.
 
 ## 6. Cierre
 

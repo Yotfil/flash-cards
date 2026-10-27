@@ -184,6 +184,7 @@ describe('PracticeAiPageComponent', () => {
 
     const summary = page().querySelector('app-session-summary');
     expect(summary?.querySelector('h1')?.textContent?.trim()).toBe('Práctica terminada');
+    expect(document.activeElement).toBe(summary?.querySelector('h1'));
     expect(summary?.textContent).toContain('Practicaste 3 ítems');
     expect(summary?.textContent).toContain('2 para reforzar con la IA');
     expect(summary?.textContent).not.toContain('Volver a Hoy');

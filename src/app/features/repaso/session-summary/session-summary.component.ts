@@ -2,12 +2,14 @@ import {
   Component,
   DOCUMENT,
   DestroyRef,
+  ElementRef,
   afterNextRender,
   computed,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 
 import type { RatingCounts } from '@domain/models/daily-stats.model';
@@ -27,7 +29,8 @@ const RATING_DOT_CLASS = {
 // El cierre de una sesión: un anillo que se completa, la marca, el título, cuántas se estudiaron
 // (el número sube mientras el anillo se cierra) y el conteo por calificación. Los textos los pone
 // quien la usa (el repaso, la práctica con IA). Con reducir movimiento todo aparece completo de
-// inmediato. El hueco `[practice]` es para el bloque de práctica con IA.
+// inmediato. El hueco `[practice]` es para el bloque de práctica con IA. Al aparecer, el foco va
+// al título: el lector de pantalla anuncia el cierre y Tab sigue por sus controles.
 @Component({
   selector: 'app-session-summary',
   imports: [IconComponent],
@@ -62,9 +65,13 @@ export class SessionSummaryComponent {
     })),
   );
 
+  private readonly titleHeading =
+    viewChild.required<ElementRef<HTMLHeadingElement>>('titleHeading');
+
   constructor() {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
+      this.titleHeading().nativeElement.focus();
       const stop = this.countUp();
       destroyRef.onDestroy(stop);
     });

@@ -195,6 +195,17 @@ describe('PracticaPageComponent', () => {
     expect(focused()?.textContent?.trim()).toBe('Ver resultado');
   });
 
+  it('al ver el resultado, el foco va al título del resumen', async () => {
+    const { click, write } = await open();
+    await click('rendirse');
+    await click('Siguiente');
+    await write('buscar');
+    await click('Ver resultado');
+
+    expect(document.activeElement?.tagName).toBe('H1');
+    expect(document.activeElement?.textContent?.trim()).toBe('¡Práctica completada!');
+  });
+
   it('el resumen vuelve al capítulo de origen', async () => {
     const { click, write, url } = await open();
     await click('buscar');

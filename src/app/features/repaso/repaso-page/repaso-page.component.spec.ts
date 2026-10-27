@@ -177,6 +177,15 @@ describe('RepasoPageComponent', () => {
     expect(grade).not.toHaveBeenCalled();
   });
 
+  it('al terminar, el foco va al título del cierre', async () => {
+    const { press } = await open({ cards: [A] });
+    await press(' ');
+    await press('4');
+
+    expect(document.activeElement?.tagName).toBe('H1');
+    expect(document.activeElement?.textContent?.trim()).toBe('Sesión terminada');
+  });
+
   it('"Salir" vuelve a Hoy sin preguntar y vacía la sesión', async () => {
     const { session, button, update, url } = await open();
 

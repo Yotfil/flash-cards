@@ -57,6 +57,15 @@ describe('SessionSummaryComponent', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
+  it('al aparecer, el foco va a su título (que no es una parada de Tab)', async () => {
+    const { fixture, element } = render();
+    await fixture.whenStable();
+    const title = element.querySelector('h1');
+
+    expect(document.activeElement).toBe(title);
+    expect(title?.getAttribute('tabindex')).toBe('-1');
+  });
+
   it('"Sesión terminada" con las tarjetas distintas y la nota', () => {
     const { element } = render();
 
