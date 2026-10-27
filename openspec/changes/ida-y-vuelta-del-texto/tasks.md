@@ -35,9 +35,9 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 6. Importar el esqueleto de un libro (EX-04)
 
-- [ ] 6.1 Pruebas: `import.service.spec` (texto con 2 encabezados y nada más → el repositorio falso recibe 2 capítulos vacíos y `cardCount 0`, y el resumen dice 2 capítulos y 0 tarjetas); `import.repository.integration.spec` (`importBook` con 2 capítulos sin tarjetas → libro y 2 capítulos, 0 tarjetas). Verificar: pasan ya (fijan la premisa); la integración con la puerta (8085).
-- [ ] 6.2 Pruebas en rojo: `importacion.copy.spec` (`importBookLabel(0, 1)` → "Importar 1 capítulo", `(0, 8)` → "Importar 8 capítulos", `(3, 2)` → "Importar 3"); `importar-libro-page.component.spec` (`# Unidad 1`/`# Unidad 2` → "2 capítulos · 0 tarjetas" y "Importar 2 capítulos" habilitado; texto vacío y solo inválidas → deshabilitado); `card-import-dialog.component.spec` (`# A`/`# B` → confirmar deshabilitado). Verificar: fallan las del libro.
-- [ ] 6.3 Implementar D7 en la página y en el copy. Verificar: 6.2 en verde.
+- [x] 6.1 Pruebas: `import.service.spec` (texto con 2 encabezados y nada más → el repositorio falso recibe 2 capítulos vacíos y `cardCount 0`, y el resumen dice 2 capítulos y 0 tarjetas); `import.repository.integration.spec` (`importBook` con 2 capítulos sin tarjetas → libro y 2 capítulos, 0 tarjetas). Verificar: pasan ya (fijan la premisa); la integración con la puerta (8085).
+- [x] 6.2 Pruebas en rojo: `importacion.copy.spec` (`importBookLabel(0, 1)` → "Importar 1 capítulo", `(0, 8)` → "Importar 8 capítulos", `(3, 2)` → "Importar 3"); `importar-libro-page.component.spec` (`# Unidad 1`/`# Unidad 2` → "2 capítulos · 0 tarjetas" y "Importar 2 capítulos" habilitado; texto vacío y solo inválidas → deshabilitado); `card-import-dialog.component.spec` (`# A`/`# B` → confirmar deshabilitado). Verificar: fallan las del libro.
+- [x] 6.3 Implementar D7 en la página y en el copy. Verificar: 6.2 en verde.
 
 ## 7. El aviso en el diálogo de exportar (UI, EX-01)
 

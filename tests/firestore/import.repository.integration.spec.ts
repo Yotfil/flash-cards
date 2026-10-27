@@ -128,6 +128,22 @@ describe('FirestoreImportRepository', () => {
     expect(new Set(byCreation.map((stored) => stored['createdAt'].toMillis())).size).toBe(4);
   });
 
+  it('el esqueleto de un libro: capítulos sin tarjetas, con el libro en 0', async () => {
+    const book = await repository.importBook(OWNER_UID, {
+      book: { ...bigBook().book, name: 'Francés A1', cardCount: 0 },
+      chapters: [
+        { name: 'Unidad 1', order: 0, cards: [] },
+        { name: 'Unidad 2', order: 1, cards: [] },
+      ],
+    });
+
+    const books = await docsOf('books');
+    expect(books.map((stored) => stored.data()['cardCount'])).toEqual([0]);
+    const chapters = (await docsOf('chapters', book.id)).map((chapter) => chapter.data());
+    expect(chapters.map((chapter) => chapter['name']).sort()).toEqual(['Unidad 1', 'Unidad 2']);
+    expect(await docsOf('cards', book.id)).toHaveLength(0);
+  });
+
   it('si un lote falla a mitad, se borra lo escrito y el libro nunca aparece', async () => {
     // Un documento de más de 1 MiB: Firestore rechaza el segundo lote entero.
     const huge = 'x'.repeat(1_100_000);

@@ -99,6 +99,32 @@ describe('ImportarLibroPageComponent', () => {
     expect(importButton()?.disabled).toBe(false);
   });
 
+  it('el esqueleto de un libro (capítulos sin tarjetas) se puede importar', async () => {
+    const { page, type, importButton, imports, update } = await open();
+
+    await type('#import-text', '# Unidad 1\n\n# Unidad 2\n');
+
+    expect(page().textContent).toContain('2 capítulos · 0 tarjetas');
+    expect(importButton()?.textContent?.trim()).toBe('Importar 2 capítulos');
+    expect(importButton()?.disabled).toBe(false);
+
+    importButton()?.click();
+    await update();
+    expect(imports.lastInput?.chapters.map((chapter) => chapter.name)).toEqual([
+      'Unidad 1',
+      'Unidad 2',
+    ]);
+  });
+
+  it('sin capítulos ni tarjetas no se puede importar', async () => {
+    const { type, importButton } = await open();
+
+    await type('#import-text', 'sin separador\n#\n');
+
+    expect(importButton()?.textContent?.trim()).toBe('Importar 0');
+    expect(importButton()?.disabled).toBe(true);
+  });
+
   it('cargar un archivo rellena el texto y propone el nombre; un nombre editado se respeta', async () => {
     const { input, type, loadFile } = await open();
 

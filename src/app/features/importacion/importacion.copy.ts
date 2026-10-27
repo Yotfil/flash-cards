@@ -87,6 +87,16 @@ export function importLabel(count: number): string {
   return `Importar ${count}`;
 }
 
+/**
+ * El botón de importar un libro: cuenta tarjetas y, si no trae ninguna pero sí capítulos (el
+ * esqueleto de un libro, como el que se exporta sin tarjetas), cuenta capítulos.
+ */
+export function importBookLabel(cards: number, chapters: number): string {
+  return cards === 0 && chapters > 0
+    ? `Importar ${pluralize(chapters, 'capítulo', 'capítulos')}`
+    : importLabel(cards);
+}
+
 /** El aviso de la confirmación de reemplazo. */
 export function replaceWarning(count: number): string {
   const what =

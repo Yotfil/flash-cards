@@ -19,7 +19,7 @@ import {
 } from '@shared/text/connection.copy';
 
 import { ImportPreviewComponent } from '../import-preview/import-preview.component';
-import { IMPORTACION_COPY, importLabel } from '../importacion.copy';
+import { IMPORTACION_COPY, importBookLabel } from '../importacion.copy';
 import {
   TextFilePickerComponent,
   type LoadedTextFile,
@@ -62,13 +62,21 @@ export class ImportarLibroPageComponent {
     ),
   );
   protected readonly validCount = computed(() => this.preview().parse.validCardCount);
+  private readonly chapterCount = computed(() => this.preview().parse.chapterCount);
   protected readonly importing = computed(() => this.importService.bookImport() !== null);
   protected readonly failed = signal(false);
+  /** Hay algo que importar: tarjetas, o al menos capítulos (el esqueleto de un libro). */
   protected readonly canImport = computed(
-    () => this.validCount() > 0 && this.bookForm().valid() && !this.importing() && this.online(),
+    () =>
+      (this.validCount() > 0 || this.chapterCount() > 0) &&
+      this.bookForm().valid() &&
+      !this.importing() &&
+      this.online(),
   );
   protected readonly importText = computed(() =>
-    this.importing() ? this.copy.importing : importLabel(this.validCount()),
+    this.importing()
+      ? this.copy.importing
+      : importBookLabel(this.validCount(), this.chapterCount()),
   );
   protected readonly nameError = computed(() => {
     const name = this.bookForm.name();

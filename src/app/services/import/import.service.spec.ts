@@ -102,6 +102,23 @@ describe('ImportService · libro', () => {
     expect(summary).toEqual({ bookId: 'importado-1', chapterCount: 2, cardCount: 3 });
   });
 
+  it('el esqueleto de un libro (solo capítulos) se importa con sus capítulos vacíos', async () => {
+    const { service, imports } = setup();
+
+    const summary = await service.importBook({
+      name: 'Francés A1',
+      subject: '',
+      text: '# Unidad 1\n\n# Unidad 2\n',
+    });
+
+    expect(imports.lastInput?.book.cardCount).toBe(0);
+    expect(imports.lastInput?.chapters).toEqual([
+      { name: 'Unidad 1', order: 0, cards: [] },
+      { name: 'Unidad 2', order: 1, cards: [] },
+    ]);
+    expect(summary).toEqual({ bookId: 'importado-1', chapterCount: 2, cardCount: 0 });
+  });
+
   it('nombre en blanco: "Libro importado"; materia escrita: recortada', async () => {
     const { service, imports } = setup();
 

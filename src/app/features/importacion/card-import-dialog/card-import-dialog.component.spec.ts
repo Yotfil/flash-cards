@@ -145,6 +145,15 @@ describe('CardImportDialogComponent', () => {
     expect(importDialog().textContent).not.toContain('capítulo ·');
   });
 
+  it('en un capítulo, solo encabezados no dan nada que importar', async () => {
+    const { type, importButton } = await open();
+
+    await type('# A\n# B');
+
+    expect(importButton()?.textContent?.trim()).toBe('Importar 0');
+    expect(importButton()?.disabled).toBe(true);
+  });
+
   it('agregar importa directo, con el ejemplo, y cierra con true', async () => {
     const { ref, service, type, importButton, confirmDialog } = await open();
     const importInto = vi.spyOn(service, 'importIntoChapter');

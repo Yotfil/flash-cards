@@ -2,6 +2,7 @@ import {
   IMPORTACION_COPY,
   chapterCountLine,
   countsLine,
+  importBookLabel,
   importLabel,
   omittedHeading,
   omittedLine,
@@ -33,6 +34,13 @@ describe('textos de la importación', () => {
 
   it('el botón dice cuántas importa', () => {
     expect(importLabel(4)).toBe('Importar 4');
+  });
+
+  it('al importar un libro sin tarjetas, el botón dice cuántos capítulos', () => {
+    expect(importBookLabel(3, 2)).toBe('Importar 3');
+    expect(importBookLabel(0, 1)).toBe('Importar 1 capítulo');
+    expect(importBookLabel(0, 8)).toBe('Importar 8 capítulos');
+    expect(importBookLabel(0, 0)).toBe('Importar 0');
   });
 
   it('el aviso de reemplazo, en singular y en plural, con el progreso y "Editar"', () => {
