@@ -43,6 +43,6 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 6. Cierre
 
-- [ ] 6.1 Puerta completa en verde sobre la rama (`bash ../flash-cards/docs/herramientas/puerta.sh`). Verificar: "PUERTA: VERDE" con los conteos anotados en la bitácora.
-- [ ] 6.2 `opsx:archive practica-quiz-respuestas` dentro de la rama: las specs base de `practica-quiz`, `tarjetas`, `sesion-de-repaso` y `practica-con-ia` llevan el delta y `openspec/changes/` queda sin el change. Verificar: `openspec validate --specs --strict` en verde y `openspec list` sin el change.
-- [ ] 6.3 Push de `feature/practica-quiz-respuestas`, link `https://github.com/Yotfil/flash-cards/compare/dev...feature/practica-quiz-respuestas?expand=1` y resumen del PR; actualizar `docs/retome.md` y la bitácora de `MEMORY.md`. Verificar: la rama está en GitHub.
+- [x] 6.1 Puerta completa en verde sobre la rama (`bash ../flash-cards/docs/herramientas/puerta.sh`). Verificar: "PUERTA: VERDE" con los conteos anotados en la bitácora.
+- [x] 6.2 `opsx:archive practica-quiz-respuestas` dentro de la rama: las specs base de `practica-quiz`, `tarjetas`, `sesion-de-repaso` y `practica-con-ia` llevan el delta y `openspec/changes/` queda sin el change. Verificar: `openspec validate --specs --strict` en verde y `openspec list` sin el change.
+- [x] 6.3 Actualizar `docs/retome.md` y la bitácora de `MEMORY.md`; el push y el link del PR van con la rama única `feature/pendientes-de-la-revision` (decisión del usuario del 2026-10-26: todo lo pendiente en una sola rama). Verificar: los dos archivos nombran este change como hecho.
