@@ -84,4 +84,17 @@ describe('buildBookPackage', () => {
 
     expect(pkg.chapters.map((chapter) => chapter.name)).toEqual(['Uno']);
   });
+
+  it('un capítulo sin nombre (de versiones anteriores) sale como «Capítulo sin nombre»', () => {
+    const empty = aChapter({ id: 'c2', bookId: 'b1', name: '', order: 1 });
+    const blank = aChapter({ id: 'c3', bookId: 'b1', name: '   ', order: 2 });
+
+    const pkg = buildBookPackage(BOOK, [ONE, empty, blank], []);
+
+    expect(pkg.chapters.map((chapter) => chapter.name)).toEqual([
+      'Uno',
+      'Capítulo sin nombre',
+      'Capítulo sin nombre',
+    ]);
+  });
 });
