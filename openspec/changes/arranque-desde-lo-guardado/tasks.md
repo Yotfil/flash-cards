@@ -9,8 +9,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 2. La sesión en dos fases (D2, D4)
 
-- [ ] 2.1 Fakes con lo guardado (D4) y pruebas en rojo en `session.service.spec` para cada escenario del plan. Verificar: fallan las que esperan arrancar con lo guardado.
-- [ ] 2.2 Implementar D2. Verificar: 2.1 en verde y las pruebas existentes de la sesión en verde.
+- [x] 2.1 Fakes con lo guardado (D4) y pruebas en rojo en `session.service.spec` para cada escenario del plan. Verificar: fallan las que esperan arrancar con lo guardado.
+- [x] 2.2 Implementar D2. Verificar: 2.1 en verde y las pruebas existentes de la sesión en verde.
 
 ## 3. La raíz lleva a "sin acceso" (D3)
 
