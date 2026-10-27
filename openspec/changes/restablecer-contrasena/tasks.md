@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 1. Puerto, adaptador y servicio (D1, D2)
 
-- [ ] 1.1 Pruebas en rojo en `session.service.spec`: `sendPasswordReset('  Ada@Ejemplo.com ')` → el puerto recibe `ada@ejemplo.com`; `invalidCredentials` del puerto → resuelve; `offline` → rechaza con ese error. Verificar: fallan (no existe).
-- [ ] 1.2 Implementar D1 y D2 (`AuthPort.sendPasswordReset`, `FirebaseAuthAdapter`, `FakeAuthPort`, `SessionService.sendPasswordReset`). Verificar: 1.1 en verde.
+- [x] 1.1 Pruebas en rojo en `session.service.spec`: `sendPasswordReset('  Ada@Ejemplo.com ')` → el puerto recibe `ada@ejemplo.com`; `invalidCredentials` del puerto → resuelve; `offline` → rechaza con ese error. Verificar: fallan (no existe).
+- [x] 1.2 Implementar D1 y D2 (`AuthPort.sendPasswordReset`, `FirebaseAuthAdapter`, `FakeAuthPort`, `SessionService.sendPasswordReset`). Verificar: 1.1 en verde.
 
 ## 2. Pantalla (D3)
 

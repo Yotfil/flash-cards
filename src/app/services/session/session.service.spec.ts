@@ -250,6 +250,31 @@ describe('SessionService · registro', () => {
   });
 });
 
+describe('SessionService · restablecer la contraseña', () => {
+  it('pide el correo de restablecimiento con el correo recortado y en minúsculas', async () => {
+    const { session, authPort } = setup();
+
+    await session.sendPasswordReset('  Ada@Ejemplo.com ');
+
+    expect(authPort.passwordResets).toEqual(['ada@ejemplo.com']);
+  });
+
+  it('un correo sin cuenta no se delata: "datos incorrectos" se calla', async () => {
+    const { session, authPort } = setup();
+    authPort.failWith.sendPasswordReset = new AuthError('invalidCredentials');
+
+    await expect(session.sendPasswordReset('nadie@ejemplo.com')).resolves.toBeUndefined();
+  });
+
+  it('sin red, el fallo sube para que la pantalla lo explique', async () => {
+    const { session, authPort } = setup();
+    const offline = new AuthError('offline');
+    authPort.failWith.sendPasswordReset = offline;
+
+    await expect(session.sendPasswordReset('ada@ejemplo.com')).rejects.toBe(offline);
+  });
+});
+
 describe('SessionService · inicio de sesión, Google y acceso retirado', () => {
   it('con credenciales correctas pide al proveedor y la sesión llega por el observador', async () => {
     const { session, authPort, users } = setup();

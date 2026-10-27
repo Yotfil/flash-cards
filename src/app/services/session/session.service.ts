@@ -132,6 +132,22 @@ export class SessionService {
     return 'registered';
   }
 
+  /**
+   * Pide el correo para crear una contraseña nueva, con el correo como lo guarda el proveedor. Un
+   * "datos incorrectos" (no hay cuenta con ese correo) se calla: la pantalla responde lo mismo haya
+   * o no cuenta, para no revelar quién la tiene. Los demás fallos suben.
+   */
+  async sendPasswordReset(email: string): Promise<void> {
+    try {
+      await this.authPort.sendPasswordReset(email.trim().toLowerCase());
+    } catch (error) {
+      if (error instanceof AuthError && error.kind === 'invalidCredentials') {
+        return;
+      }
+      throw error;
+    }
+  }
+
   /** Inicia sesión en el proveedor; la sesión de la app llega por el observador. */
   async signInWithEmail(credentials: EmailCredentials): Promise<void> {
     await this.authPort.signInWithEmail(credentials);
