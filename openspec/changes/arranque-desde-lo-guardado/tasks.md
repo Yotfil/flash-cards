@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 1. Lo guardado en los adaptadores (D1)
 
-- [ ] 1.1 Pruebas de integración en rojo: `allowlist.repository.integration.spec` (`'device'`: `false` antes de leer, `true` tras leer del servidor) y `user.repository.integration.spec` (`'device'`: `null` antes, el perfil después). Verificar con la puerta (8085): fallan (hoy el origen se ignora).
-- [ ] 1.2 Implementar D1 en los puertos y los adaptadores (`getDocFromCache`, `unavailable` → `false`/`null`). Verificar: 1.1 en verde.
+- [x] 1.1 Pruebas de integración en rojo: `allowlist.repository.integration.spec` (`'device'`: `false` antes de leer, `true` tras leer del servidor) y `user.repository.integration.spec` (`'device'`: `null` antes, el perfil después). Verificar con la puerta (8085): fallan (hoy el origen se ignora).
+- [x] 1.2 Implementar D1 en los puertos y los adaptadores (`getDocFromCache`, `unavailable` → `false`/`null`). Verificar: 1.1 en verde.
 
 ## 2. La sesión en dos fases (D2, D4)
 
