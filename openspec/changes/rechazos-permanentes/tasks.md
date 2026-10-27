@@ -16,8 +16,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 - [x] 3.1 Pruebas en rojo en `review-session-state.spec`: `dropGoneCard` (reencolada y no actual; actual; única → `finished`; con el cierre visible no suma pendientes; aviso sin duplicar) y `closeForLostAccess` (desde activa y terminada; los resultados tardíos no lo cambian). Verificar: fallan (no existen).
 - [x] 3.2 Implementar D2 en `review-session-state.ts`. Verificar: 3.1 en verde y el resto de la sesión en verde.
-- [ ] 3.3 Pruebas en rojo en `review-session.service.spec`: `CardGoneError` → tarjeta fuera y aviso `gone`; si era la última, `ended()` → `finished`; `AccessRevokedError` → `accessLost`; un `Error` cualquiera sigue reencolando; `acknowledgeLostAccess()` → sesión vacía y `markAccessRevoked`. Verificar: fallan.
-- [ ] 3.4 Implementar en `ReviewSessionService`. Verificar: 3.3 en verde.
+- [x] 3.3 Pruebas en rojo en `review-session.service.spec`: `CardGoneError` → tarjeta fuera y aviso `gone`; si era la última, `ended()` → `finished`; `AccessRevokedError` → `accessLost`; un `Error` cualquiera sigue reencolando; `acknowledgeLostAccess()` → sesión vacía y `markAccessRevoked`. Verificar: fallan.
+- [x] 3.4 Implementar en `ReviewSessionService`. Verificar: 3.3 en verde.
 
 ## 4. Núcleo de la práctica (D3)
 
