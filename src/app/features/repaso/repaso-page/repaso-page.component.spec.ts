@@ -4,9 +4,10 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import type { Card } from '@domain/models/card.model';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
-import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
+import { CardGoneError, GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
@@ -37,6 +38,8 @@ async function open(
     from?: string[];
   } = {},
 ) {
+  const persistence = new FakeGradePersistence();
+  const appSession = new FakeSessionService({ kind: 'active', user: aUser() });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -45,13 +48,10 @@ async function open(
         { path: '**', component: TodayStubComponent },
       ]),
       { provide: SchedulingPort, useValue: new FakeSchedulingPort() },
-      { provide: GradePersistencePort, useValue: new FakeGradePersistence() },
+      { provide: GradePersistencePort, useValue: persistence },
       { provide: Logger, useValue: new FakeLogger() },
       { provide: ConnectivityPort, useValue: new FakeConnectivity(options.online ?? true) },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
-      },
+      { provide: SessionService, useValue: appSession },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -92,7 +92,20 @@ async function open(
     await new Promise((resolve) => setTimeout(resolve, 60));
     await update();
   };
-  return { harness, handoff, session, update, page, press, button, ratingOption, url, back };
+  return {
+    harness,
+    handoff,
+    session,
+    persistence,
+    appSession,
+    update,
+    page,
+    press,
+    button,
+    ratingOption,
+    url,
+    back,
+  };
 }
 
 describe('RepasoPageComponent', () => {
@@ -207,6 +220,54 @@ describe('RepasoPageComponent', () => {
     expect(summary).not.toBeNull();
     expect(summary?.querySelector('[practice]')).toBeNull();
     expect(summary?.textContent).not.toContain('Copiar prompt');
+  });
+
+  it('una tarjeta borrada en otro dispositivo no vuelve y el aviso lo dice', async () => {
+    const { press, persistence, page, update } = await open();
+    await press(' ');
+    await press('3');
+
+    persistence.rejectNext(new CardGoneError('A'));
+    await update();
+
+    const alerts = Array.from(page().querySelectorAll('[role="alert"]'));
+    expect(alerts.map((alert) => alert.textContent?.trim())).toEqual([
+      'La tarjeta «to give up» se borró en otro dispositivo; su calificación no se guardó.',
+    ]);
+  });
+
+  it('sin acceso, la sesión se cierra con el aviso y "Continuar", sin tarjeta ni barra', async () => {
+    const { press, persistence, page, update, button } = await open();
+    await press(' ');
+    await press('3');
+
+    persistence.rejectNext(new AccessRevokedError());
+    await update();
+
+    const alert = page().querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Ya no tienes acceso');
+    expect(alert?.textContent).toContain('Lo que calificaste antes quedó guardado.');
+    expect(button('Continuar')).toBeDefined();
+    expect(page().querySelector('app-flip-card')).toBeNull();
+    expect(page().querySelector('app-session-top-bar')).toBeNull();
+  });
+
+  it('"Continuar" deja la sesión sin acceso y lleva a sin-acceso; "atrás" no vuelve al repaso', async () => {
+    const { press, persistence, update, button, url, back, appSession } = await open({
+      from: ['/biblioteca'],
+    });
+    await press(' ');
+    await press('3');
+    persistence.rejectNext(new AccessRevokedError());
+    await update();
+
+    button('Continuar')?.click();
+    await update();
+
+    expect(url()).toBe('/sin-acceso');
+    expect(appSession.state()).toEqual({ kind: 'noAccess', email: aUser().email });
+    await back();
+    expect(url()).toBe('/biblioteca');
   });
 
   it('al terminar, el foco va al título del cierre', async () => {

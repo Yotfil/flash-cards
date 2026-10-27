@@ -26,8 +26,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 5. Pantallas (D5)
 
-- [ ] 5.1 Pruebas en rojo: `repaso-page.component.spec` (aviso de tarjeta borrada; estado sin acceso con alerta, textos y "Continuar" sin tarjeta; "Continuar" → `noAccess`, `/sin-acceso` y "atrás" no vuelve a `/repaso`); `practice-ai-page.component.spec` (estado sin acceso y "Continuar"); `repaso.copy.spec` y `access-lost.copy.spec`. Verificar: fallan.
-- [ ] 5.2 Implementar D5 (copy compartido, `cardGoneMessage`, `@case ('accessLost')` en las dos páginas). Verificar: 5.1 en verde.
+- [x] 5.1 Pruebas en rojo: `repaso-page.component.spec` (aviso de tarjeta borrada; estado sin acceso con alerta, textos y "Continuar" sin tarjeta; "Continuar" → `noAccess`, `/sin-acceso` y "atrás" no vuelve a `/repaso`); `practice-ai-page.component.spec` (estado sin acceso y "Continuar"); `repaso.copy.spec` y `access-lost.copy.spec`. Verificar: fallan.
+- [x] 5.2 Implementar D5 (copy compartido, `cardGoneMessage`, `@case ('accessLost')` en las dos páginas). Verificar: 5.1 en verde.
 
 ## 6. La nota de hoy en el detalle (D6, IA-05)
 

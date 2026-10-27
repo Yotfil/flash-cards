@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import { CardRepository } from '@domain/ports/card.repository';
 import type { UserSettings } from '@domain/models/user.model';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
@@ -58,6 +59,10 @@ async function open(
   const stats = new FakeDailyStatsRepository();
   const grades = new FakeGradePersistence();
   const delivery = new FakeFileDelivery();
+  const appSession = new FakeSessionService({
+    kind: 'active',
+    user: { ...user, settings: { ...user.settings, ...options.settings } },
+  });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -71,13 +76,7 @@ async function open(
       { provide: FileDeliveryPort, useValue: delivery },
       { provide: ConnectivityPort, useValue: new FakeConnectivity(options.online ?? true) },
       { provide: Logger, useValue: new FakeLogger() },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({
-          kind: 'active',
-          user: { ...user, settings: { ...user.settings, ...options.settings } },
-        }),
-      },
+      { provide: SessionService, useValue: appSession },
     ],
   });
   const settle = async () => {
@@ -123,6 +122,7 @@ async function open(
     await update();
   };
   return {
+    appSession,
     back,
     harness,
     repository,
@@ -261,6 +261,25 @@ describe('PracticeAiPageComponent', () => {
     page().querySelector<HTMLAnchorElement>('a[href="/biblioteca"]')?.click();
     await update();
     expect(url()).toBe('/biblioteca');
+  });
+
+  it('sin acceso: aviso con "Continuar", sin cerebros; "Continuar" lleva a sin-acceso', async () => {
+    const { press, page, update, repository, button, url, appSession } = await open();
+    await press(' ');
+    await press('3');
+
+    repository.rejectNext(new AccessRevokedError());
+    await update();
+
+    const alert = page().querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Ya no tienes acceso');
+    expect(alert?.textContent).toContain('Lo que calificaste antes quedó guardado.');
+    expect(page().querySelector('app-flip-card')).toBeNull();
+    expect(page().querySelector('app-session-top-bar')).toBeNull();
+    button('Continuar')?.click();
+    await update();
+    expect(url()).toBe('/sin-acceso');
+    expect(appSession.state()).toEqual({ kind: 'noAccess', email: aUser().email });
   });
 
   it('si la práctica cruza el inicio del día, el prompt del cierre lista los difíciles que anuncia', async () => {

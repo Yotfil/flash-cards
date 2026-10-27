@@ -32,6 +32,11 @@ export function rejectedGradeMessage(front: string): string {
   return `No se guardó tu calificación de «${front}». Vuelve a calificarla.`;
 }
 
+/** Aviso accesible cuando la tarjeta calificada ya no existe: no vuelve a la sesión. */
+export function cardGoneMessage(front: string): string {
+  return `La tarjeta «${front}» se borró en otro dispositivo; su calificación no se guardó.`;
+}
+
 /** En el cierre, cuántas calificaciones no se guardaron. */
 export function rejectedAfterFinishLabel(count: number): string {
   return count === 1

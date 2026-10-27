@@ -4,14 +4,17 @@ import { Router } from '@angular/router';
 import type { Rating } from '@domain/models/rating';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { ReviewSessionService } from '@services/review/review-session.service';
+import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
 import { ReturnNavigation } from '@shared/navigation/return-navigation.service';
 import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.component';
+import { ACCESS_LOST_COPY } from '@shared/text/access-lost.copy';
 
 import { OfflineIndicatorComponent } from '../../shell/offline-indicator/offline-indicator.component';
 import { FlipCardComponent } from '../flip-card/flip-card.component';
 import { RatingBarComponent } from '../rating-bar/rating-bar.component';
 import {
   REPASO_COPY,
+  cardGoneMessage,
   rejectedGradeMessage,
   remainingLabel,
   reviewedCardsLabel,
@@ -22,10 +25,12 @@ const RATING_KEYS: Readonly<Record<string, Rating>> = { '1': 1, '2': 2, '3': 3, 
 
 // La sesión de repaso a pantalla completa. Cada entrada toma la lista entregada (una sola vez) y
 // arranca de cero; sin lista, vuelve a Hoy. Teclado: Espacio revela (o confirma la sugerencia),
-// Enter confirma la sugerencia, 1-4 califican con la respuesta revelada.
+// Enter confirma la sugerencia, 1-4 califican con la respuesta revelada. Si al usuario le retiran
+// el acceso, la sesión se cierra con un aviso y "Continuar" lleva a la pantalla de sin acceso.
 @Component({
   selector: 'app-repaso-page',
   imports: [
+    EmptyStateComponent,
     FlipCardComponent,
     OfflineIndicatorComponent,
     RatingBarComponent,
@@ -43,10 +48,15 @@ export class RepasoPageComponent implements OnInit {
   private readonly returnNavigation = inject(ReturnNavigation);
 
   protected readonly copy = REPASO_COPY;
+  protected readonly accessLost = ACCESS_LOST_COPY;
   protected readonly reviewedLabel = reviewedCardsLabel;
   protected readonly remainingText = computed(() => remainingLabel(this.session.remaining()));
   protected readonly alertMessages = computed(() =>
-    this.session.alerts().map((alert) => rejectedGradeMessage(alert.front)),
+    this.session
+      .alerts()
+      .map((alert) =>
+        alert.kind === 'gone' ? cardGoneMessage(alert.front) : rejectedGradeMessage(alert.front),
+      ),
   );
 
   ngOnInit(): void {
@@ -94,6 +104,12 @@ export class RepasoPageComponent implements OnInit {
   protected home(): void {
     this.session.reset();
     this.returnNavigation.leaveTo(['/hoy']);
+  }
+
+  /** Sin acceso: la sesión de la app pasa a "sin acceso"; el repaso no queda en el historial. */
+  protected continueWithoutAccess(): void {
+    this.session.acknowledgeLostAccess();
+    void this.router.navigateByUrl('/sin-acceso', { replaceUrl: true });
   }
 
   private confirmSuggestion(): void {
