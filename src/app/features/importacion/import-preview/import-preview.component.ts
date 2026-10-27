@@ -2,6 +2,7 @@ import { Component, computed, input } from '@angular/core';
 
 import type { ImportPreview } from '@services/import/import.service';
 import { IconComponent } from '@shared/icon/icon.component';
+import { andMore, limitList } from '@shared/text/limited-list';
 
 import {
   CARD_WORDING,
@@ -39,8 +40,16 @@ export class ImportPreviewComponent {
       this.wording(),
     ),
   );
+  /** Solo las primeras: un archivo equivocado de miles de líneas no debe congelar la pantalla. */
+  private readonly limitedErrors = computed(() => limitList(this.preview().parse.errors));
   protected readonly omitted = computed(() =>
-    this.preview().parse.errors.map((error) => omittedLine(error.line, error.reason)),
+    this.limitedErrors().shown.map((error) => omittedLine(error.line, error.reason)),
   );
-  protected readonly omittedTitle = computed(() => omittedHeading(this.omitted().length));
+  protected readonly omittedMore = computed(() => {
+    const hidden = this.limitedErrors().hiddenCount;
+    return hidden > 0 ? andMore(hidden) : null;
+  });
+  protected readonly omittedTitle = computed(() =>
+    omittedHeading(this.preview().parse.errors.length),
+  );
 }

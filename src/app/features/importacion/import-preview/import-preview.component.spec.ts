@@ -19,6 +19,9 @@ function render(value: ImportPreview, showChapters = true) {
 
 const FOUR_IN_TWO = ['# A', 'a | b', 'c | d', '# B', 'e | f', 'g | h'].join('\n');
 
+const omittedItems = (element: HTMLElement) =>
+  Array.from(element.querySelectorAll('[data-omitted-list] li'));
+
 describe('ImportPreviewComponent', () => {
   it('cuenta capítulos, tarjetas y repetidas en una región que se anuncia', () => {
     const element = render(preview(FOUR_IN_TWO, 1));
@@ -45,7 +48,7 @@ describe('ImportPreviewComponent', () => {
     const element = render(preview(['a | b', 'sin separador', '| vacío'].join('\n')));
 
     expect(element.textContent).toContain('2 líneas se omitirán:');
-    const items = Array.from(element.querySelectorAll('li'));
+    const items = omittedItems(element);
     expect(items.map((item) => item.textContent?.trim())).toEqual([
       'Línea 2: Línea sin separador ("|" o tabulador).',
       'Línea 3: Anverso o reverso vacío.',
@@ -56,7 +59,22 @@ describe('ImportPreviewComponent', () => {
   it('sin errores no hay lista; la superficie es sólida', () => {
     const element = render(preview('a | b'));
 
-    expect(element.querySelector('ul')).toBeNull();
+    expect(element.querySelector('[data-omitted-list]')).toBeNull();
     expect(element.firstElementChild?.classList).toContain('bg-surface');
+  });
+
+  it('un archivo equivocado de miles de líneas: el conteo exacto y solo las 100 primeras', () => {
+    const lines = Array.from({ length: 20000 }, (_, index) => `fila ${index + 1}, sin separador`);
+    const element = render(preview(lines.join('\n')));
+
+    expect(element.textContent).toContain('20000 líneas se omitirán:');
+    const items = omittedItems(element);
+    expect(items).toHaveLength(101);
+    expect(items[0]?.textContent?.trim()).toBe('Línea 1: Línea sin separador ("|" o tabulador).');
+    expect(items[99]?.textContent?.trim()).toBe(
+      'Línea 100: Línea sin separador ("|" o tabulador).',
+    );
+    expect(items.slice(0, 100).every((item) => item.querySelector('app-icon'))).toBe(true);
+    expect(items[100]?.textContent?.trim()).toBe('y 19900 más');
   });
 });

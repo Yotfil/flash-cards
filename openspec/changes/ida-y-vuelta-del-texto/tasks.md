@@ -23,10 +23,10 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 4. Las primeras 100 (UI compartida, IM-10)
 
-- [ ] 4.1 Pruebas en rojo en `@shared/text/limited-list.spec`: 3 elementos → todos y 0 ocultos; 100 → todos; 101 → 100 y 1; 20000 → 100 y 19900; `andMore(19900)` → "y 19900 más". Verificar: fallan (el archivo aún no exporta nada útil).
-- [ ] 4.2 Implementar D4 (`limitList`, `andMore`, `LISTED_AT_MOST`). Verificar: 4.1 en verde.
-- [ ] 4.3 Prueba en rojo en `import-preview.component.spec`: 20000 líneas sin separador → "20000 líneas se omitirán:", 100 `li` con icono en `[data-omitted-list]` ("Línea 1" a "Línea 100") y "y 19900 más"; adaptar las pruebas existentes de la lista a `[data-omitted-list]`. Verificar: falla (hoy 20000 `li`).
-- [ ] 4.4 Aplicar el tope en `ImportPreviewComponent` (mapear solo las mostradas). Verificar: 4.3 en verde.
+- [x] 4.1 Pruebas en rojo en `@shared/text/limited-list.spec`: 3 elementos → todos y 0 ocultos; 100 → todos; 101 → 100 y 1; 20000 → 100 y 19900; `andMore(19900)` → "y 19900 más". Verificar: fallan (el archivo aún no exporta nada útil).
+- [x] 4.2 Implementar D4 (`limitList`, `andMore`, `LISTED_AT_MOST`). Verificar: 4.1 en verde.
+- [x] 4.3 Prueba en rojo en `import-preview.component.spec`: 20000 líneas sin separador → "20000 líneas se omitirán:", 100 `li` con icono en `[data-omitted-list]` ("Línea 1" a "Línea 100") y "y 19900 más"; adaptar las pruebas existentes de la lista a `[data-omitted-list]`. Verificar: falla (hoy 20000 `li`).
+- [x] 4.4 Aplicar el tope en `ImportPreviewComponent` (mapear solo las mostradas). Verificar: 4.3 en verde.
 
 ## 5. Capítulos nombrados en la previsualización (UI, IM-11)
 
