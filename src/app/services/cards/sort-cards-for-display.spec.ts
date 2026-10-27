@@ -34,6 +34,19 @@ describe('sortCardsForDisplay', () => {
     expect(sortCardsForDisplay([newer, older]).map((card) => card.id)).toEqual(['vieja', 'nueva']);
   });
 
+  it('a igual texto normalizado y fecha, decide el texto tal cual, venga como venga', () => {
+    // Las importadas antes de escalonar sus fechas comparten instante: sin este desempate, el
+    // orden lo decidía el almacén (por id, al azar) y dos exportaciones salían distintas.
+    const sameInstant = new Date('2026-10-25T15:00:00Z');
+    const upper = aCard({ id: 'zz', front: 'Apple', back: 'manzana', createdAt: sameInstant });
+    const lower = aCard({ id: 'aa', front: 'apple', back: 'manzana', createdAt: sameInstant });
+
+    const oneWay = sortCardsForDisplay([upper, lower]).map((card) => card.id);
+    const otherWay = sortCardsForDisplay([lower, upper]).map((card) => card.id);
+
+    expect(otherWay).toEqual(oneWay);
+  });
+
   it('no muta la lista recibida', () => {
     const cards = [aCard({ id: 'b', front: 'b' }), aCard({ id: 'a', front: 'a' })];
 

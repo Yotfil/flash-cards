@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 1. El orden del listado no depende del almacén (cerebro, EX-05)
 
-- [ ] 1.1 Pruebas en rojo: `sort-cards-for-display.spec` (`Apple | manzana` y `apple | manzana` con la misma fecha, en los dos órdenes de entrada → mismo resultado); `build-book-package.spec` (las mismas en un capítulo, en los dos órdenes → mismo paquete). Verificar: fallan (hoy decide el orden de entrada).
-- [ ] 1.2 Implementar D8 en `compareCardsForDisplay` (desempate final por unidades de código) con su comentario. Verificar: 1.1 en verde y el resto de pruebas de tarjetas, cola y exportación en verde.
+- [x] 1.1 Pruebas en rojo: `sort-cards-for-display.spec` (`Apple | manzana` y `apple | manzana` con la misma fecha, en los dos órdenes de entrada → mismo resultado); `build-book-package.spec` (las mismas en un capítulo, en los dos órdenes → mismo paquete). Verificar: fallan (hoy decide el orden de entrada).
+- [x] 1.2 Implementar D8 en `compareCardsForDisplay` (desempate final por unidades de código) con su comentario. Verificar: 1.1 en verde y el resto de pruebas de tarjetas, cola y exportación en verde.
 
 ## 2. Repetidas por capítulo al importar un libro (cerebro, IM-06)
 

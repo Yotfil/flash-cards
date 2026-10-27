@@ -68,6 +68,17 @@ describe('buildBookPackage', () => {
     expect(pkg.chapters[1]?.cards.map((card) => card.front)).toEqual(['bye', 'to get by']);
   });
 
+  it('dos exportaciones del mismo contenido dan el mismo paquete, aunque compartan fecha', () => {
+    const sameInstant = new Date('2026-10-25T15:00:00Z');
+    const upper = aCard({ id: 'zz', front: 'Apple', back: 'manzana', createdAt: sameInstant });
+    const lower = aCard({ id: 'aa', front: 'apple', back: 'manzana', createdAt: sameInstant });
+
+    const first = buildBookPackage(BOOK, [ONE], [upper, lower]);
+    const second = buildBookPackage(BOOK, [ONE], [lower, upper]);
+
+    expect(second).toEqual(first);
+  });
+
   it('sin tarjetas huérfanas no aparece «Sin capítulo»', () => {
     const pkg = buildBookPackage(BOOK, [ONE], [aCard({ chapterId: 'c1' })]);
 

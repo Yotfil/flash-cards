@@ -86,7 +86,8 @@ describe('CardsService · recurso', () => {
     service.openChapter('c1');
     await settle();
 
-    expect(service.sorted().map((card) => card.front)).toEqual(['apple', 'Apple', 'banana']);
+    // Las dos "apple" empatan en texto normalizado y fecha: decide el texto tal cual.
+    expect(service.sorted().map((card) => card.front)).toEqual(['Apple', 'apple', 'banana']);
     expect([...service.duplicateIds()].sort()).toEqual(['a1', 'a2']);
   });
 });
