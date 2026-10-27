@@ -6,12 +6,15 @@ export type QuizQuestionType = 'multiple-choice' | 'written';
 export interface QuizQuestion {
   /** Único dentro de la práctica (la pregunta escrita vacía su campo al cambiar). */
   readonly id: string;
+  /** La primera tarjeta del anverso (una pregunta puede reunir varias). */
   readonly cardId: string;
   readonly type: QuizQuestionType;
   /** Lo que se pregunta: el anverso. */
   readonly prompt: string;
-  /** La respuesta correcta: el reverso. */
+  /** La respuesta que se muestra como correcta: en opción múltiple, la opción buena. */
   readonly answer: string;
+  /** Todos los reversos del anverso: al escribir vale cualquiera. */
+  readonly acceptedAnswers: readonly string[];
   /** Solo en opción múltiple: la respuesta y tres distractores, barajados. */
   readonly options?: readonly string[];
 }
@@ -24,41 +27,70 @@ export interface GenerateQuizOptions {
   readonly maxQuestions?: number;
 }
 
+/** Las tarjetas de un mismo anverso normalizado: una sola pregunta con todos sus reversos. */
+interface FrontGroup {
+  readonly frontKey: string;
+  readonly cardId: string;
+  readonly prompt: string;
+  /** Reversos distintos tras normalizar, con el texto de su primera aparición. */
+  readonly answers: [string, ...string[]];
+}
+
 const MAX_QUESTIONS = 10;
 const DISTRACTORS = 3;
 
 /**
- * Un mini-quiz con las tarjetas elegibles: barajadas, hasta 10. Las posiciones impares (1.ª, 3.ª…)
- * son de opción múltiple y las pares de escribir; si no hay 3 distractores, cae a escribir, que
- * siempre es posible. Los distractores son reversos distintos del pool (dos reversos iguales tras
- * normalizar cuentan como uno).
+ * Un mini-quiz con las tarjetas elegibles: una pregunta por anverso (las acepciones de "bank" y
+ * las tarjetas repetidas no se preguntan dos veces), barajadas, hasta 10. Las posiciones impares
+ * (1.ª, 3.ª…) son de opción múltiple y las pares de escribir; si no hay 3 distractores, cae a
+ * escribir, que siempre es posible. En opción múltiple sale una acepción al azar como correcta y
+ * ningún otro reverso del mismo anverso sirve de distractor. Los distractores son reversos
+ * distintos del pool (dos reversos iguales tras normalizar cuentan como uno).
  */
 export function generateQuiz(
   cards: readonly Card[],
   options: GenerateQuizOptions = {},
 ): QuizQuestion[] {
   const random = options.random ?? Math.random;
-  const answers = distinctAnswers(options.pool ?? cards);
-  return shuffle(cards, random)
+  const pool = options.pool ?? cards;
+  const poolAnswers = distinctAnswers(pool);
+  return shuffle(groupByFront(cards), random)
     .slice(0, options.maxQuestions ?? MAX_QUESTIONS)
-    .map((card, index) => {
+    .map((group, index) => {
       const base = {
-        id: `${index + 1}-${card.id}`,
-        cardId: card.id,
-        prompt: card.front,
-        answer: card.back,
+        id: `${index + 1}-${group.cardId}`,
+        cardId: group.cardId,
+        prompt: group.prompt,
+        acceptedAnswers: group.answers,
       };
-      const distractors = pickDistractors(answers, card.back, random);
+      const distractors = pickDistractors(poolAnswers, sameFrontAnswerKeys(group, pool), random);
       const isOddPosition = index % 2 === 0;
       if (isOddPosition && distractors.length === DISTRACTORS) {
+        const answer = pickOne(group.answers, random);
         return {
           ...base,
           type: 'multiple-choice' as const,
-          options: shuffle([card.back, ...distractors], random),
+          answer,
+          options: shuffle([answer, ...distractors], random),
         };
       }
-      return { ...base, type: 'written' as const };
+      return { ...base, type: 'written' as const, answer: group.answers[0] };
     });
+}
+
+/** Agrupa por anverso normalizado, en el orden de la primera aparición de cada anverso. */
+function groupByFront(cards: readonly Card[]): FrontGroup[] {
+  const groups = new Map<string, FrontGroup>();
+  for (const card of cards) {
+    const frontKey = normalizeCardText(card.front);
+    const group = groups.get(frontKey);
+    if (!group) {
+      groups.set(frontKey, { frontKey, cardId: card.id, prompt: card.front, answers: [card.back] });
+    } else if (!group.answers.some((answer) => sameText(answer, card.back))) {
+      group.answers.push(card.back);
+    }
+  }
+  return [...groups.values()];
 }
 
 /** Reversos distintos tras normalizar; de cada grupo se queda el texto de la primera aparición. */
@@ -75,10 +107,32 @@ function distinctAnswers(cards: readonly Card[]): string[] {
   return answers;
 }
 
-function pickDistractors(answers: readonly string[], correct: string, random: () => number) {
-  const correctKey = normalizeCardText(correct);
-  const candidates = answers.filter((answer) => normalizeCardText(answer) !== correctKey);
+/** Los reversos que no pueden ser distractores: los del mismo anverso, también en el pool. */
+function sameFrontAnswerKeys(group: FrontGroup, pool: readonly Card[]): Set<string> {
+  const keys = new Set(group.answers.map(normalizeCardText));
+  for (const card of pool) {
+    if (normalizeCardText(card.front) === group.frontKey) {
+      keys.add(normalizeCardText(card.back));
+    }
+  }
+  return keys;
+}
+
+function pickDistractors(
+  answers: readonly string[],
+  excludedKeys: ReadonlySet<string>,
+  random: () => number,
+): string[] {
+  const candidates = answers.filter((answer) => !excludedKeys.has(normalizeCardText(answer)));
   return shuffle(candidates, random).slice(0, DISTRACTORS);
+}
+
+function pickOne(items: readonly [string, ...string[]], random: () => number): string {
+  return items[Math.floor(random() * items.length)] ?? items[0];
+}
+
+function sameText(a: string, b: string): boolean {
+  return normalizeCardText(a) === normalizeCardText(b);
 }
 
 /** Fisher-Yates sobre una copia. */

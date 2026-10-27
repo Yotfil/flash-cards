@@ -28,9 +28,17 @@ const QUESTIONS: QuizQuestion[] = [
     type: 'multiple-choice',
     prompt: 'to give up',
     answer: 'rendirse',
+    acceptedAnswers: ['rendirse'],
     options: ['buscar', 'rendirse', 'posponer', 'continuar'],
   },
-  { id: 'q2', cardId: 'k2', type: 'written', prompt: 'to look up', answer: 'buscar' },
+  {
+    id: 'q2',
+    cardId: 'k2',
+    type: 'written',
+    prompt: 'to look up',
+    answer: 'buscar',
+    acceptedAnswers: ['buscar'],
+  },
 ];
 const CHAPTER: PracticeOrigin = { kind: 'chapter', bookId: 'b1', chapterId: 'c1' };
 

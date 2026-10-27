@@ -11,9 +11,17 @@ const QUESTIONS: QuizQuestion[] = [
     type: 'multiple-choice',
     prompt: 'to give up',
     answer: 'rendirse',
+    acceptedAnswers: ['rendirse'],
     options: ['rendirse', 'a', 'b', 'c'],
   },
-  { id: 'q2', cardId: 'k2', type: 'written', prompt: 'to look up', answer: 'buscar' },
+  {
+    id: 'q2',
+    cardId: 'k2',
+    type: 'written',
+    prompt: 'to look up',
+    answer: 'buscar',
+    acceptedAnswers: ['buscar'],
+  },
 ];
 const PREPARED: PreparedPractice = {
   questions: QUESTIONS,

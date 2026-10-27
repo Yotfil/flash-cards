@@ -74,7 +74,14 @@ async function navigate(
     } else if (url === '/practicar') {
       TestBed.inject(PracticeHandoffService).hand({
         questions: [
-          { id: 'q1', cardId: 'k1', type: 'written', prompt: 'to give up', answer: 'rendirse' },
+          {
+            id: 'q1',
+            cardId: 'k1',
+            type: 'written',
+            prompt: 'to give up',
+            answer: 'rendirse',
+            acceptedAnswers: ['rendirse'],
+          },
         ],
         origin: { kind: 'book', bookId: 'b1' },
       });

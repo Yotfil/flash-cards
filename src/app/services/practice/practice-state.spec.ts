@@ -16,6 +16,7 @@ const choice = (n: number): QuizQuestion => ({
   type: 'multiple-choice',
   prompt: `front ${n}`,
   answer: `back ${n}`,
+  acceptedAnswers: [`back ${n}`],
   options: [`back ${n}`, 'x', 'y', 'z'],
 });
 const written = (n: number, answer = `back ${n}`): QuizQuestion => ({
@@ -24,6 +25,7 @@ const written = (n: number, answer = `back ${n}`): QuizQuestion => ({
   type: 'written',
   prompt: `front ${n}`,
   answer,
+  acceptedAnswers: [answer],
 });
 
 describe('practice-state', () => {
