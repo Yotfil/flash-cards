@@ -2,15 +2,17 @@ import { DIALOG_DATA, Dialog, type DialogRef } from '@angular/cdk/dialog';
 import { hasModifierKey } from '@angular/cdk/keycodes';
 import type { ComponentType } from '@angular/cdk/portal';
 import { Injectable, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationStart, Router } from '@angular/router';
+import { filter, firstValueFrom } from 'rxjs';
 
 import { watchSlow } from './slow-save';
 
 // Diálogos modales abiertos por servicio, sobre el diálogo del CDK: el CDK resuelve la trampa y la
 // devolución del foco, el bloqueo del scroll, el apilado y `aria-modal`. Aquí se fija la política
-// de Cadence: nombre accesible obligatorio, tres tamaños, Escape cierra desde cualquier lugar salvo
-// que el contenido esté ocupado, y tocar el fondo NO cierra. El contenido solo se cierra con éxito
-// (o al cancelar): si su acción falla, sigue abierto mostrando el error.
+// de Cadence: nombre accesible obligatorio, tres tamaños, Escape y el "atrás" del sistema cierran
+// el de arriba salvo que el contenido esté ocupado, y tocar el fondo NO cierra. El contenido solo
+// se cierra con éxito (o al cancelar): si su acción falla, sigue abierto mostrando el error.
 
 export { DIALOG_DATA };
 
@@ -90,6 +92,21 @@ export class AppDialogRef<TResult = unknown> {
 @Injectable({ providedIn: 'root' })
 export class DialogService {
   private readonly dialog = inject(Dialog);
+  private readonly router = inject(Router);
+  /** Los abiertos, el de arriba al final (de cada uno basta saber si está ocupado y cerrarlo). */
+  private readonly openRefs: Pick<AppDialogRef, 'isPending' | 'close'>[] = [];
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter(
+          (event): event is NavigationStart =>
+            event instanceof NavigationStart && event.navigationTrigger === 'popstate',
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => this.closeOnBack(event));
+  }
 
   open<TResult, TData = void>(
     component: ComponentType<unknown>,
@@ -101,6 +118,8 @@ export class DialogService {
       ariaLabel: options.label,
       ariaModal: true,
       disableClose: true,
+      // El "atrás" lo maneja `closeOnBack`: cerrar solo el de arriba, sin cambiar de pantalla.
+      closeOnNavigation: false,
       autoFocus: 'first-tabbable',
       restoreFocus: true,
       hasBackdrop: true,
@@ -117,6 +136,8 @@ export class DialogService {
       throw new Error('El diálogo se abrió sin su referencia');
     }
     const ref = appRef;
+    this.openRefs.push(ref);
+    cdkRef.closed.subscribe(() => this.openRefs.splice(this.openRefs.indexOf(ref), 1));
     cdkRef.keydownEvents.subscribe((event) => {
       if (event.key === 'Escape' && !hasModifierKey(event)) {
         event.preventDefault();
@@ -126,5 +147,21 @@ export class DialogService {
       }
     });
     return ref;
+  }
+
+  /**
+   * "Atrás" con un diálogo abierto: no cambia de pantalla (la navegación se aborta y el router,
+   * con `canceledNavigationResolution: 'computed'`, devuelve el historial a su sitio) y cierra el
+   * de arriba, salvo que esté ocupado. La vuelta del historial llega a la misma URL y se ignora.
+   */
+  private closeOnBack(event: NavigationStart): void {
+    const top = this.openRefs.at(-1);
+    if (!top || event.url === this.router.url) {
+      return;
+    }
+    this.router.currentNavigation()?.abort();
+    if (!top.isPending) {
+      top.close();
+    }
   }
 }

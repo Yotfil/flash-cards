@@ -9,8 +9,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 
 ## 2. "Atrás" cierra el diálogo
 
-- [ ] 2.1 Pruebas en rojo en `dialog.service.spec` con `RouterTestingHarness` y `canceledNavigationResolution: 'computed'`: atrás cierra y no navega; ocupado no cierra; dos apilados cierra el de arriba; sin diálogos navega. Verificar: fallan (hoy el CDK cierra y el router navega).
-- [ ] 2.2 Implementar la pila de abiertos, la escucha de `popstate` con `abort()`, `closeOnNavigation: false` y `withRouterConfig` en `app.config.ts`. Verificar: 2.1 en verde y `app.routes.spec` en verde.
+- [x] 2.1 Pruebas en rojo en `dialog.service.spec` con `RouterTestingHarness` y `canceledNavigationResolution: 'computed'`: atrás cierra y no navega; ocupado no cierra; dos apilados cierra el de arriba; sin diálogos navega. Verificar: fallan (hoy el CDK cierra y el router navega).
+- [x] 2.2 Implementar la pila de abiertos, la escucha de `popstate` con `abort()`, `closeOnNavigation: false` y `withRouterConfig` en `app.config.ts`. Verificar: 2.1 en verde y `app.routes.spec` en verde.
 
 ## 3. Diálogos que guardan en el dispositivo
 
