@@ -19,5 +19,5 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 4. Cierre
 
-- [ ] 4.1 README (párrafo de acceso: el arranque con lo guardado) y `openspec archive arranque-desde-lo-guardado -y`. Verificar: `openspec validate --specs --strict` en verde.
-- [ ] 4.2 Bitácora de `MEMORY.md` y `docs/retome.md`.
+- [x] 4.1 README (párrafo de acceso: el arranque con lo guardado) y `openspec archive arranque-desde-lo-guardado -y`. Verificar: `openspec validate --specs --strict` en verde.
+- [x] 4.2 Bitácora de `MEMORY.md` y `docs/retome.md`.
