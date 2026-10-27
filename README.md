@@ -129,6 +129,10 @@ ts-fsrs, Zod, Signal Forms, Angular CDK, Vitest, Netlify.
   `/emulator/v1/projects/<proyecto>/oobCodes`.
 - Si un correo sale de la lista con la app abierta, la siguiente nota del repaso o de la práctica
   se rechaza por permisos: la sesión se cierra con "Ya no tienes acceso" y lleva a "sin acceso".
+- Al abrir la app, si el dispositivo ya guarda la entrada de la lista y el perfil, la sesión arranca
+  con eso al instante (`SessionService`, lecturas `'device'`) y el servidor confirma detrás: si el
+  correo ya no está, la raíz (`App`) lleva a `/sin-acceso`. Medido en Chrome con 3 s de retraso por
+  petición a Firestore: Hoy visible a los 92 ms (antes, 12,2 s en blanco).
 
 ## Caparazón y piezas compartidas
 

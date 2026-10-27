@@ -1,9 +1,11 @@
-import { deleteField, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
+import { deleteField, doc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
 import type { SettingsChanges, User, UserSettings } from '@domain/models/user.model';
+import type { ReadSource } from '@domain/ports/read-source';
 import { UserRepository } from '@domain/ports/user.repository';
 
 import { parseDocument } from './document-boundary';
+import { readDocFrom } from './read-from';
 import { userDocumentSchema, type UserDocument } from './schemas/user.schema';
 
 // Perfil del usuario en `users/{uid}`. Lee a través de la frontera (Zod + error con ruta), que
@@ -14,9 +16,9 @@ export class FirestoreUserRepository extends UserRepository {
     super();
   }
 
-  async findById(uid: string): Promise<User | null> {
-    const snapshot = await getDoc(this.profileRef(uid));
-    if (!snapshot.exists()) {
+  async findById(uid: string, source: ReadSource = 'server'): Promise<User | null> {
+    const snapshot = await readDocFrom(this.profileRef(uid), source);
+    if (!snapshot?.exists()) {
       return null;
     }
     return toUser(uid, parseDocument(userDocumentSchema, snapshot.ref.path, snapshot.data()));
