@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 
+import { AppUpdatePort } from '@domain/ports/app-update.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { ThemePort } from '@domain/ports/theme.port';
+import { ServiceWorkerUpdateAdapter } from '@infrastructure/browser/service-worker-update.adapter';
 import { TsFsrsSchedulingAdapter } from '@infrastructure/scheduling/ts-fsrs-scheduling.adapter';
 import { SessionService } from '@services/session/session.service';
 import { FakeSessionService } from '@testing/fake-session';
@@ -24,5 +26,9 @@ describe('provideCore', () => {
 
   it('el puerto de programación es el adaptador de ts-fsrs', () => {
     expect(TestBed.inject(SchedulingPort)).toBeInstanceOf(TsFsrsSchedulingAdapter);
+  });
+
+  it('el puerto de versión nueva es el adaptador del trabajador de servicio', () => {
+    expect(TestBed.inject(AppUpdatePort)).toBeInstanceOf(ServiceWorkerUpdateAdapter);
   });
 });

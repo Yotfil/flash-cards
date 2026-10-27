@@ -4,8 +4,8 @@ Orden TDD, puerta antes de cada commit (`bash ../flash-cards/docs/herramientas/p
 
 ## 1. Puerto y adaptador
 
-- [ ] 1.1 Pruebas en rojo: `service-worker-update.adapter.spec` (`VERSION_READY` → lista; otros eventos no; `SwUpdate` inactivo → nunca) y `fake-app-update` (lista a mano). Verificar: fallan.
-- [ ] 1.2 Crear `AppUpdatePort`, `ServiceWorkerUpdateAdapter`, `FakeAppUpdate` y enlazarlo en `provideCore`. Verificar: 1.1 en verde y `provide-core.spec` en verde.
+- [x] 1.1 Pruebas en rojo: `service-worker-update.adapter.spec` (`VERSION_READY` → lista; otros eventos no; `SwUpdate` inactivo → nunca) y `fake-app-update` (lista a mano). Verificar: fallan.
+- [x] 1.2 Crear `AppUpdatePort`, `ServiceWorkerUpdateAdapter`, `FakeAppUpdate` y enlazarlo en `provideCore`. Verificar: 1.1 en verde y `provide-core.spec` en verde.
 
 ## 2. Aviso en el caparazón
 
