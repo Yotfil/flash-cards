@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import type { Rating } from '@domain/models/rating';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
 import { ReviewSessionService } from '@services/review/review-session.service';
+import { ReturnNavigation } from '@shared/navigation/return-navigation.service';
 import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.component';
 
 import { OfflineIndicatorComponent } from '../../shell/offline-indicator/offline-indicator.component';
@@ -39,6 +40,7 @@ export class RepasoPageComponent implements OnInit {
   protected readonly session = inject(ReviewSessionService);
   private readonly handoff = inject(StudyHandoffService);
   private readonly router = inject(Router);
+  private readonly returnNavigation = inject(ReturnNavigation);
 
   protected readonly copy = REPASO_COPY;
   protected readonly reviewedLabel = reviewedCardsLabel;
@@ -83,14 +85,15 @@ export class RepasoPageComponent implements OnInit {
     }
   }
 
+  /** "Salir" y "Volver a Hoy" no dejan la sesión en el historial (ver `ReturnNavigation`). */
   protected exit(): void {
     this.session.exit();
-    void this.router.navigate(['/hoy']);
+    this.returnNavigation.leaveTo(['/hoy']);
   }
 
   protected home(): void {
     this.session.reset();
-    void this.router.navigate(['/hoy']);
+    this.returnNavigation.leaveTo(['/hoy']);
   }
 
   private confirmSuggestion(): void {

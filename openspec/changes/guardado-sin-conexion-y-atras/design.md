@@ -40,7 +40,7 @@ Alternativas descartadas: una entrada falsa con `pushState` al abrir (quitarla a
 `'computed'` solo cambia las navegaciones canceladas; las redirecciones de las guardias (sesión, bandejas de práctica y repaso) no son cancelaciones y siguen igual.
 
 ### D3. Salir de una pantalla completa sin dejar entradas muertas (UI compartida, `shared/navigation/`)
-`ReturnNavigation` (servicio de raíz) con `leaveTo(url)`: si la navegación anterior a la pantalla completa (la `previousNavigation` de la última navegación con éxito, leída al entrar con `remember()`) terminó en `url`, regresa con `Location.back()`; si no, navega a `url` con `replaceUrl: true`. Lo usan tres pantallas, que es lo que justifica la pieza:
+`ReturnNavigation` (servicio de raíz) con `leaveTo(url)`: si la navegación anterior a la pantalla completa (la `previousNavigation` de la última navegación con éxito: dentro de la pantalla completa no hay otras) terminó en `url`, regresa con `Location.back()`; si no, navega a `url` con `replaceUrl: true`. (Al implementar se vio que no hace falta recordar nada al entrar: se lee al salir.) Lo usan tres pantallas, que es lo que justifica la pieza:
 - práctica: `url` = su origen (capítulo o libro); siempre se abre desde ahí, así que regresa con el historial;
 - práctica con IA: `url` = `/paquetes/<id>`; desde el paquete regresa, desde Hoy reemplaza;
 - repaso: `url` = `/hoy`; desde Hoy regresa, desde un capítulo o un libro reemplaza.

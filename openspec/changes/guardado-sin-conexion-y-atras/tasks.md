@@ -24,8 +24,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 
 ## 5. Salir de las pantallas completas
 
-- [ ] 5.1 Pruebas en rojo: `return-navigation.service.spec` (regresa o reemplaza); `practica-page.component.spec` (Salir y Volver regresan; atrás y adelante como la spec); `practice-ai-page.component.spec` (desde el paquete y desde Hoy); `repaso-page.component.spec` (desde el capítulo y desde Hoy). Verificar: fallan.
-- [ ] 5.2 Implementar `ReturnNavigation` y usarlo en las tres pantallas. Verificar: 5.1 en verde.
+- [x] 5.1 Pruebas en rojo: `return-navigation.service.spec` (regresa o reemplaza); `practica-page.component.spec` (Salir y Volver regresan; atrás y adelante como la spec); `practice-ai-page.component.spec` (desde el paquete y desde Hoy); `repaso-page.component.spec` (desde el capítulo y desde Hoy). Verificar: fallan.
+- [x] 5.2 Implementar `ReturnNavigation` y usarlo en las tres pantallas. Verificar: 5.1 en verde.
 - [ ] 5.3 README: el plazo de los diálogos, el "atrás" y las salidas de pantalla completa (párrafo de navegación). Verificar: `npx prettier --check README.md`.
 
 ## 6. Cierre

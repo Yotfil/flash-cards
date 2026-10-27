@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -56,7 +57,13 @@ const THREE_QUESTIONS: QuizQuestion[] = [
 ];
 
 async function open(
-  options: { origin?: PracticeOrigin; handOff?: boolean; questions?: QuizQuestion[] } = {},
+  options: {
+    origin?: PracticeOrigin;
+    handOff?: boolean;
+    questions?: QuizQuestion[];
+    /** Pantallas por las que pasó antes de practicar (la última, el origen). */
+    from?: string[];
+  } = {},
 ) {
   const cards = new FakeCardRepository();
   const stats = new FakeDailyStatsRepository();
@@ -75,11 +82,16 @@ async function open(
     ],
   });
   const handoff = TestBed.inject(PracticeHandoffService);
+  const harness = await RouterTestingHarness.create();
+  // Lo hace el arranque de la app; sin esto el router de las pruebas no oye el "atrás".
+  TestBed.inject(Router).setUpLocationChangeListener();
+  for (const url of options.from ?? []) {
+    await harness.navigateByUrl(url);
+  }
   if (options.handOff ?? true) {
     handoff.hand({ questions: options.questions ?? QUESTIONS, origin: options.origin ?? CHAPTER });
   }
   const session = TestBed.inject(PracticeSessionService);
-  const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/practicar');
   const update = async () => {
     await new Promise((resolve) => setTimeout(resolve));
@@ -106,7 +118,13 @@ async function open(
     await update();
   };
   const url = () => TestBed.inject(Router).url;
+  const history = async (move: 'back' | 'forward') => {
+    TestBed.inject(Location)[move]();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await update();
+  };
   return {
+    history,
     harness,
     handoff,
     session,
@@ -204,6 +222,40 @@ describe('PracticaPageComponent', () => {
 
     expect(document.activeElement?.tagName).toBe('H1');
     expect(document.activeElement?.textContent?.trim()).toBe('¡Práctica completada!');
+  });
+
+  it('"Salir" regresa al capítulo con el historial: atrás lleva al libro y adelante no muestra la práctica', async () => {
+    const { click, history, url } = await open({
+      from: ['/biblioteca', '/biblioteca/b1', '/biblioteca/b1/c1'],
+    });
+
+    await click('Salir');
+    expect(url()).toBe('/biblioteca/b1/c1');
+
+    await history('back');
+    expect(url()).toBe('/biblioteca/b1');
+
+    await history('forward');
+    await history('forward');
+    expect(url()).toBe('/biblioteca');
+  });
+
+  it('"Volver al libro" regresa con el historial: atrás lleva a lo anterior al libro', async () => {
+    const { click, write, history, url } = await open({
+      origin: { kind: 'book', bookId: 'b1' },
+      // Antes del libro, otro libro: así no se confunde con la redirección a la Biblioteca.
+      from: ['/biblioteca/b2', '/biblioteca/b1'],
+    });
+    await click('rendirse');
+    await click('Siguiente');
+    await write('buscar');
+    await click('Ver resultado');
+
+    await click('Volver al libro');
+    expect(url()).toBe('/biblioteca/b1');
+
+    await history('back');
+    expect(url()).toBe('/biblioteca/b2');
   });
 
   it('el resumen vuelve al capítulo de origen', async () => {

@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -28,12 +29,20 @@ const T0 = new Date('2026-10-24T15:00:00Z');
 const A = aCard({ id: 'A', front: 'to give up', back: 'rendirse' });
 const B = aCard({ id: 'B', front: 'to look up', back: 'buscar' });
 
-async function open(options: { cards?: Card[]; online?: boolean } = {}) {
+async function open(
+  options: {
+    cards?: Card[];
+    online?: boolean;
+    /** Pantallas por las que pasó antes de la sesión (la última, desde donde se abrió). */
+    from?: string[];
+  } = {},
+) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'repaso', component: RepasoPageComponent },
         { path: 'hoy', component: TodayStubComponent },
+        { path: '**', component: TodayStubComponent },
       ]),
       { provide: SchedulingPort, useValue: new FakeSchedulingPort() },
       { provide: GradePersistencePort, useValue: new FakeGradePersistence() },
@@ -45,10 +54,15 @@ async function open(options: { cards?: Card[]; online?: boolean } = {}) {
       },
     ],
   });
+  const harness = await RouterTestingHarness.create();
+  // Lo hace el arranque de la app; sin esto el router de las pruebas no oye el "atrás".
+  TestBed.inject(Router).setUpLocationChangeListener();
+  for (const url of options.from ?? []) {
+    await harness.navigateByUrl(url);
+  }
   const handoff = TestBed.inject(StudyHandoffService);
   handoff.hand({ cards: options.cards ?? [A, B], source: { kind: 'today' } });
   const session = TestBed.inject(ReviewSessionService);
-  const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/repaso');
   const update = async () => {
     await new Promise((resolve) => setTimeout(resolve));
@@ -73,7 +87,12 @@ async function open(options: { cards?: Card[]; online?: boolean } = {}) {
       (candidate) => candidate.querySelector('[data-label]')?.textContent?.trim() === label,
     );
   const url = () => TestBed.inject(Router).url;
-  return { harness, handoff, session, update, page, press, button, ratingOption, url };
+  const back = async () => {
+    TestBed.inject(Location).back();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await update();
+  };
+  return { harness, handoff, session, update, page, press, button, ratingOption, url, back };
 }
 
 describe('RepasoPageComponent', () => {
@@ -184,6 +203,35 @@ describe('RepasoPageComponent', () => {
 
     expect(document.activeElement?.tagName).toBe('H1');
     expect(document.activeElement?.textContent?.trim()).toBe('Sesión terminada');
+  });
+
+  it('abierta desde un capítulo, "Salir" reemplaza la sesión por Hoy: atrás vuelve al capítulo', async () => {
+    const { button, update, back, url } = await open({
+      from: ['/biblioteca/b1', '/biblioteca/b1/c1'],
+    });
+
+    button('Salir')?.click();
+    await update();
+    expect(url()).toBe('/hoy');
+
+    await back();
+    expect(url()).toBe('/biblioteca/b1/c1');
+  });
+
+  it('abierta desde Hoy, "Volver a Hoy" regresa con el historial: atrás va a lo anterior a Hoy', async () => {
+    const { press, button, update, back, url } = await open({
+      cards: [A],
+      from: ['/biblioteca', '/hoy'],
+    });
+    await press(' ');
+    await press('4');
+
+    button('Volver a Hoy')?.click();
+    await update();
+    expect(url()).toBe('/hoy');
+
+    await back();
+    expect(url()).toBe('/biblioteca');
   });
 
   it('"Salir" vuelve a Hoy sin preguntar y vacía la sesión', async () => {

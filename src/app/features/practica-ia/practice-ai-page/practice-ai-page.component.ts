@@ -6,6 +6,7 @@ import { PracticeAiHandoffService } from '@services/practice-ai/practice-ai-hand
 import { PracticeAiSessionService } from '@services/practice-ai/practice-ai-session.service';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
+import { ReturnNavigation } from '@shared/navigation/return-navigation.service';
 import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.component';
 
 import { positionLabel } from '../../practica/practica.copy';
@@ -44,6 +45,7 @@ export class PracticeAiPageComponent implements OnInit {
   private readonly packages = inject(PracticePackagesService);
   private readonly handoff = inject(PracticeAiHandoffService);
   private readonly router = inject(Router);
+  private readonly returnNavigation = inject(ReturnNavigation);
 
   protected readonly copy = PRACTICA_IA_COPY;
   protected readonly practicedLabel = practicedLabel;
@@ -99,8 +101,11 @@ export class PracticeAiPageComponent implements OnInit {
     }
   }
 
-  /** "Salir" y "Volver al paquete": al detalle del paquete; la práctica se vacía al salir. */
+  /**
+   * "Salir" y "Volver al paquete": al detalle del paquete sin dejar la práctica en el historial
+   * (regresa si se abrió desde el paquete; la reemplaza si se abrió desde Hoy). Se vacía al salir.
+   */
   protected backToPackage(): void {
-    void this.router.navigate(this.packageId ? ['/paquetes', this.packageId] : ['/biblioteca']);
+    this.returnNavigation.leaveTo(this.packageId ? ['/paquetes', this.packageId] : ['/biblioteca']);
   }
 }
