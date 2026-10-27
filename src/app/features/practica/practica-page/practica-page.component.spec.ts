@@ -41,8 +41,23 @@ const QUESTIONS: QuizQuestion[] = [
   },
 ];
 const CHAPTER: PracticeOrigin = { kind: 'chapter', bookId: 'b1', chapterId: 'c1' };
+/** Opción múltiple, escribir y otra vez opción múltiple: para seguir el foco al avanzar. */
+const THREE_QUESTIONS: QuizQuestion[] = [
+  ...QUESTIONS,
+  {
+    id: 'q3',
+    cardId: 'k3',
+    type: 'multiple-choice',
+    prompt: 'to put off',
+    answer: 'posponer',
+    acceptedAnswers: ['posponer'],
+    options: ['posponer', 'rendirse', 'buscar', 'continuar'],
+  },
+];
 
-async function open(options: { origin?: PracticeOrigin; handOff?: boolean } = {}) {
+async function open(
+  options: { origin?: PracticeOrigin; handOff?: boolean; questions?: QuizQuestion[] } = {},
+) {
   const cards = new FakeCardRepository();
   const stats = new FakeDailyStatsRepository();
   const grades = new FakeGradePersistence();
@@ -61,7 +76,7 @@ async function open(options: { origin?: PracticeOrigin; handOff?: boolean } = {}
   });
   const handoff = TestBed.inject(PracticeHandoffService);
   if (options.handOff ?? true) {
-    handoff.hand({ questions: QUESTIONS, origin: options.origin ?? CHAPTER });
+    handoff.hand({ questions: options.questions ?? QUESTIONS, origin: options.origin ?? CHAPTER });
   }
   const session = TestBed.inject(PracticeSessionService);
   const harness = await RouterTestingHarness.create();
@@ -159,6 +174,25 @@ describe('PracticaPageComponent', () => {
     expect(page().querySelector('app-practice-summary')?.textContent).toContain(
       'Acertaste 2 de 2.',
     );
+  });
+
+  it('el foco acompaña a la práctica: enunciado, "Siguiente", campo y enunciado de la siguiente', async () => {
+    const { page, click, write } = await open({ questions: THREE_QUESTIONS });
+    const focused = () => document.activeElement as HTMLElement | null;
+
+    expect(focused()?.tagName).toBe('H2');
+    expect(focused()?.textContent?.trim()).toBe('to give up');
+    await click('rendirse');
+    expect(focused()?.textContent?.trim()).toBe('Siguiente');
+    await click('Siguiente');
+    expect(focused()).toBe(page().querySelector('app-written-question input'));
+    await write('buscar');
+    expect(focused()?.textContent?.trim()).toBe('Siguiente');
+    await click('Siguiente');
+    expect(focused()?.tagName).toBe('H2');
+    expect(focused()?.textContent?.trim()).toBe('to put off');
+    await click('posponer');
+    expect(focused()?.textContent?.trim()).toBe('Ver resultado');
   });
 
   it('el resumen vuelve al capítulo de origen', async () => {

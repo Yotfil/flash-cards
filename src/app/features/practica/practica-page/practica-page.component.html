@@ -15,6 +15,7 @@
 
     @if (question.type === 'multiple-choice') {
       <app-multiple-choice-question
+        [questionId]="question.id"
         [prompt]="question.prompt"
         [options]="question.options ?? []"
         [answered]="answered()"

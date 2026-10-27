@@ -6,6 +6,7 @@ const OPTIONS = ['rendirse', 'buscar', 'posponer', 'continuar'];
 
 function render(answered: { chosen: string; answer: string } | null = null) {
   const fixture = TestBed.createComponent(MultipleChoiceQuestionComponent);
+  fixture.componentRef.setInput('questionId', 'q1');
   fixture.componentRef.setInput('prompt', 'to give up');
   fixture.componentRef.setInput('options', OPTIONS);
   fixture.componentRef.setInput('answered', answered);
@@ -17,7 +18,7 @@ function render(answered: { chosen: string; answer: string } | null = null) {
     Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent?.trim() === text,
     );
-  return { element, choose, option };
+  return { fixture, element, choose, option };
 }
 
 describe('MultipleChoiceQuestionComponent', () => {
@@ -30,6 +31,21 @@ describe('MultipleChoiceQuestionComponent', () => {
     ).toEqual(OPTIONS);
     option('buscar')?.click();
     expect(choose).toHaveBeenCalledWith('buscar');
+  });
+
+  it('al aparecer, y con cada pregunta nueva, el foco va al enunciado (que no es una parada de Tab)', () => {
+    const { fixture, element, option } = render();
+    const prompt = element.querySelector('h2');
+
+    expect(document.activeElement).toBe(prompt);
+    expect(prompt?.getAttribute('tabindex')).toBe('-1');
+
+    option('buscar')?.focus();
+    fixture.componentRef.setInput('questionId', 'q3');
+    fixture.componentRef.setInput('prompt', 'to put off');
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(element.querySelector('h2'));
   });
 
   it('respondida con error: todo bloqueado, la correcta con acento y ✓, la elegida atenuada con ✗', () => {
