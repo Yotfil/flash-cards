@@ -1,4 +1,6 @@
 import {
+  IMPORTACION_COPY,
+  chapterCountLine,
   countsLine,
   importLabel,
   omittedHeading,
@@ -21,6 +23,12 @@ describe('textos de la importación', () => {
     expect(omittedHeading(1)).toBe('1 línea se omitirá:');
     expect(omittedHeading(2)).toBe('2 líneas se omitirán:');
     expect(omittedLine(3, 'Anverso o reverso vacío.')).toBe('Línea 3: Anverso o reverso vacío.');
+  });
+
+  it('cada capítulo con su número de tarjetas, bajo su título', () => {
+    expect(IMPORTACION_COPY.chaptersTitle).toBe('Tarjetas por capítulo');
+    expect(chapterCountLine('Unidad 1', 24)).toBe('Unidad 1 · 24');
+    expect(chapterCountLine('Pendiente', 0)).toBe('Pendiente · 0');
   });
 
   it('el botón dice cuántas importa', () => {

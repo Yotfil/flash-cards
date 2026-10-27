@@ -30,8 +30,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 5. Capítulos nombrados en la previsualización (UI, IM-11)
 
-- [ ] 5.1 Pruebas en rojo: `importacion.copy.spec` (`chapterCountLine('Unidad 1', 24)` → "Unidad 1 · 24"); `import-preview.component.spec` ("Tarjetas por capítulo" con "Unidad 1 · 2" y "Unidad 2 · 0"; Preprocesador → "Preprocesador · 0" e "include | incluye un archivo · 1"; 12 capítulos → `details` cerrado con 12 `li`; 5 → sin `details`; con `showChapters=false`, sin lista). Verificar: fallan.
-- [ ] 5.2 Implementar D6 (copy, `computed` de las líneas de capítulo, plantilla con `<details>` por encima de 5). Verificar: 5.1 en verde.
+- [x] 5.1 Pruebas en rojo: `importacion.copy.spec` (`chapterCountLine('Unidad 1', 24)` → "Unidad 1 · 24"); `import-preview.component.spec` ("Tarjetas por capítulo" con "Unidad 1 · 2" y "Unidad 2 · 0"; Preprocesador → "Preprocesador · 0" e "include | incluye un archivo · 1"; 12 capítulos → `details` cerrado con 12 `li`; 5 → sin `details`; con `showChapters=false`, sin lista). Verificar: fallan.
+- [x] 5.2 Implementar D6 (copy, `computed` de las líneas de capítulo, plantilla con `<details>` por encima de 5). Verificar: 5.1 en verde.
 
 ## 6. Importar el esqueleto de un libro (EX-04)
 

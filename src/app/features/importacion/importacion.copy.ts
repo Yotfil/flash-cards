@@ -29,6 +29,7 @@ export const IMPORTACION_COPY = {
   replaceConfirm: 'Reemplazar todo',
   replacing: 'Reemplazando…',
   repeatedNote: 'Se importarán igual. Las verás marcadas como repetidas.',
+  chaptersTitle: 'Tarjetas por capítulo',
 } as const;
 
 export interface ImportCounts {
@@ -67,6 +68,11 @@ export function countsLine(
       ? [pluralize(counts.repeated, wording.repeatedOne, wording.repeatedMany)]
       : []),
   ].join(' · ');
+}
+
+/** "Unidad 1 · 24": un capítulo con su número de tarjetas, bajo "Tarjetas por capítulo". */
+export function chapterCountLine(name: string, cards: number): string {
+  return `${name} · ${cards}`;
 }
 
 export function omittedHeading(count: number): string {

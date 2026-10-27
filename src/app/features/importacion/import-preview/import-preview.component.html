@@ -3,6 +3,21 @@
   @if (preview().repeatedCount > 0) {
     <p class="text-sm text-text-dim">{{ wording().repeatedNote }}</p>
   }
+  @if (chapterLines().length > 0) {
+    @if (chaptersFolded()) {
+      <details class="flex flex-col gap-2">
+        <summary class="cursor-pointer text-sm font-semibold text-text-dim">
+          {{ copy.chaptersTitle }}
+        </summary>
+        <ng-container [ngTemplateOutlet]="chapterList" />
+      </details>
+    } @else {
+      <div class="flex flex-col gap-2">
+        <p class="text-sm font-semibold text-text-dim">{{ copy.chaptersTitle }}</p>
+        <ng-container [ngTemplateOutlet]="chapterList" />
+      </div>
+    }
+  }
   @if (omitted().length > 0) {
     <div class="flex flex-col gap-2">
       <p class="text-sm font-semibold text-text-dim">{{ omittedTitle() }}</p>
@@ -23,3 +38,11 @@
     </div>
   }
 </div>
+
+<ng-template #chapterList>
+  <ul data-chapter-list class="flex max-h-60 flex-col gap-1 overflow-y-auto text-sm text-text-dim">
+    @for (line of chapterLines(); track $index) {
+      <li>{{ line }}</li>
+    }
+  </ul>
+</ng-template>
