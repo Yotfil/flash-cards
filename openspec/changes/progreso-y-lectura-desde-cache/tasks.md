@@ -45,6 +45,6 @@ Orden TDD: cada tarea de código va precedida por su prueba en rojo. Puerta ante
 
 ## 6. Cierre
 
-- [ ] 6.1 Puerta completa (lint, formato, tipos, unitarias, integración con el 8085 y `demo-cadence-test`, build) en verde en el último commit. Verificar: salida de cada comando sin errores; anotar los números en la bitácora.
-- [ ] 6.2 Comprobación por CDP (Chrome headless contra el emulador del 8085 con datos sembrados): en la segunda visita a Biblioteca y a Hoy no aparece el esqueleto y el conteo de Progreso no se repite entre dos visitas sin cambios (contar `runAggregationQuery` en la red). Verificar: captura o conteo anotado en la bitácora.
-- [ ] 6.3 Actualizar `README.md` (sección de desarrollo: "las pantallas pintan primero lo guardado") si aplica, y la bitácora de `MEMORY.md`. Push de `feature/progreso-y-lectura-desde-cache` y link del PR hacia `dev` con el resumen. Verificar: link entregado.
+- [x] 6.1 Puerta completa (lint, formato, tipos, unitarias, integración con el 8085 y `demo-cadence-test`, build) en verde en el último commit. Verificar: salida de cada comando sin errores; anotar los números en la bitácora.
+- [x] 6.2 Comprobación por CDP (Chrome headless contra el emulador del 8085 con datos sembrados): en la segunda visita a Biblioteca y a Hoy no aparece el esqueleto y el conteo de Progreso no se repite entre dos visitas sin cambios (contar `runAggregationQuery` en la red). Verificar: captura o conteo anotado en la bitácora.
+- [x] 6.3 Actualizar `README.md` (sección de desarrollo: "las pantallas pintan primero lo guardado") si aplica, y la bitácora de `MEMORY.md`. Push de `feature/progreso-y-lectura-desde-cache` y link del PR hacia `dev` con el resumen. Verificar: link entregado.
