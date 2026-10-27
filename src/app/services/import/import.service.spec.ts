@@ -244,4 +244,13 @@ describe('ImportService · capítulo y previsualización', () => {
     expect(service.previewForChapter(text, 'Cap', existing).repeatedCount).toBe(1);
     expect(service.previewForChapter(text, 'Cap', existing).parse.validCardCount).toBe(2);
   });
+
+  it('al importar un libro, las repetidas se cuentan dentro de cada capítulo, como las marca el listado', () => {
+    const { service } = setup();
+    const inTwoChapters = ['# Unidad 1', 'to get | conseguir', '# Unidad 5', 'to get | conseguir'];
+    const inOneChapter = ['# Unidad 1', 'to get | conseguir', 'To Get | conseguir'];
+
+    expect(service.previewForBook(inTwoChapters.join('\n'), 'Libro').repeatedCount).toBe(0);
+    expect(service.previewForBook(inOneChapter.join('\n'), 'Libro').repeatedCount).toBe(2);
+  });
 });

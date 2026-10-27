@@ -9,8 +9,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 2. Repetidas por capítulo al importar un libro (cerebro, IM-06)
 
-- [ ] 2.1 Prueba en rojo en `import.service.spec`: `# Unidad 1`/`to get | conseguir`/`# Unidad 5`/`to get | conseguir` → `repeatedCount` 0; la misma línea dos veces en un capítulo → 2. Verificar: la primera falla (hoy 2).
-- [ ] 2.2 Implementar D5 en `previewForBook`. Verificar: 2.1 en verde y la prueba existente de "Repetidas al importar un libro" en verde.
+- [x] 2.1 Prueba en rojo en `import.service.spec`: `# Unidad 1`/`to get | conseguir`/`# Unidad 5`/`to get | conseguir` → `repeatedCount` 0; la misma línea dos veces en un capítulo → 2. Verificar: la primera falla (hoy 2).
+- [x] 2.2 Implementar D5 en `previewForBook`. Verificar: 2.1 en verde y la prueba existente de "Repetidas al importar un libro" en verde.
 
 ## 3. Capítulo sin nombre y la comprobación de la ida y vuelta (cerebro, EX-01)
 
