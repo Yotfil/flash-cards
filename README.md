@@ -157,6 +157,12 @@ paquete (transacciones) no se apuntan. Con un diálogo abierto, el "atrás" del 
 el de arriba: `DialogService` aborta la navegación y el router, con
 `canceledNavigationResolution: 'computed'`, devuelve el historial a su sitio.
 
+**Versión nueva.** En producción, el trabajador de servicio descarga la versión nueva en segundo
+plano. `AppUpdatePort` (adaptador sobre `SwUpdate`, `infrastructure/browser/`) la marca lista con
+`VERSION_READY` y el caparazón muestra "Hay una versión nueva · Recargar" (`features/shell/update-notice`):
+no obliga y no aparece en las pantallas completas, que no usan el caparazón. En desarrollo no hay
+trabajador de servicio y el aviso nunca sale.
+
 **Salir de una pantalla completa.** Repaso, práctica y práctica con IA salen con
 `ReturnNavigation.leaveTo(destino)` (`shared/navigation/`): si se abrieron desde el destino,
 regresan con "atrás"; si no, se reemplazan por él. Así ningún "atrás" posterior cae en la pantalla

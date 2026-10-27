@@ -14,5 +14,5 @@ Orden TDD, puerta antes de cada commit (`bash ../flash-cards/docs/herramientas/p
 
 ## 3. Cierre
 
-- [ ] 3.1 Puerta completa en verde y README (párrafo del aviso). Verificar: "PUERTA: VERDE".
-- [ ] 3.2 Archivar el change. Verificar: `openspec validate --specs --strict`.
+- [x] 3.1 Puerta completa en verde y README (párrafo del aviso). Verificar: "PUERTA: VERDE".
+- [x] 3.2 Archivar el change. Verificar: `openspec validate --specs --strict`.
