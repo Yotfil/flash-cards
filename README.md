@@ -276,16 +276,24 @@ tabulador) es una tarjeta básica; un texto con huecos `{{así}}` es una cloze; 
 espacio a cada lado añade un ejemplo al final (`to give up | rendirse :: I gave up smoking.`). El parser
 (`services/import/parse-import-text.ts`) valida con los mismos esquemas Zod que los formularios y
 nunca aborta: cada línea que no entra se omite con su motivo y su número, y la previsualización lo
-muestra antes de escribir nada. El libro se escribe en lotes con su documento en el último (nunca
-aparece a medias) y, si un lote falla, se borra lo escrito; reemplazar un capítulo es atómico si
-cabe en un lote (`writeInCountedBatches` con delta por operación).
+muestra antes de escribir nada (las 100 primeras y "y N más", con `limitList` de `@shared/text`).
+Al importar un libro, la previsualización nombra cada capítulo con sus tarjetas ("Unidad 1 · 24",
+plegada con más de 5), cuenta las repetidas dentro de cada capítulo (como las marcará el listado)
+y deja importar el esqueleto de un libro: capítulos sin tarjetas ("Importar 8 capítulos"). El
+libro se escribe en lotes con su documento en el último (nunca aparece a medias) y, si un lote
+falla, se borra lo escrito; reemplazar un capítulo es atómico si cabe en un lote
+(`writeInCountedBatches` con delta por operación).
 
 **Exportar.** El inverso de importar: el botón de compartir del detalle del libro arma, con
 `services/export/`, el mismo texto que la importación acepta (capítulos en orden, tarjetas en el
 orden del listado, suspendidas incluidas, sin progreso; importarlo da los mismos capítulos y
 tarjetas) y lo entrega con `FileDeliveryPort`: "Compartir" con la hoja del sistema donde el
 navegador comparte archivos, o "Descargar .txt" donde no, y siempre "Copiar texto". Lee el libro
-del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita.
+del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita. La
+convención no tiene escapes, así que antes de entregar la exportación relee cada línea con el
+mismo parser (`cardsThatWontReturn`) y el diálogo nombra las tarjetas que no volverán igual (un
+`#` al inicio, un `|` en el anverso, un `::` en el reverso…); un capítulo sin nombre sale como
+"Capítulo sin nombre".
 
 **Práctica con IA.** Una rama aparte de los libros: **paquetes de práctica** (`/users/{uid}/practicePackages`,
 un documento por paquete con sus ítems dentro) que el usuario llena con lo que se cruza en el día,

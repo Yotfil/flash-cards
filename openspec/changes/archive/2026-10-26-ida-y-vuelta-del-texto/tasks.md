@@ -46,6 +46,6 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 8. Cierre
 
-- [ ] 8.1 README: los párrafos "Importar" y "Exportar" dicen lo nuevo (repetidas por capítulo, tope de 100, capítulos nombrados, esqueleto; la exportación se relee y avisa). Verificar: `npx prettier --check README.md`.
-- [ ] 8.2 `openspec archive ida-y-vuelta-del-texto -y` dentro de la rama: las specs base de `exportacion-de-libros`, `importacion` y `tarjetas` llevan el delta. Verificar: `openspec validate --specs --strict` en verde y `openspec list` sin el change.
-- [ ] 8.3 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 6 hecho. Verificar: los dos nombran el change como hecho.
+- [x] 8.1 README: los párrafos "Importar" y "Exportar" dicen lo nuevo (repetidas por capítulo, tope de 100, capítulos nombrados, esqueleto; la exportación se relee y avisa). Verificar: `npx prettier --check README.md`.
+- [x] 8.2 `openspec archive ida-y-vuelta-del-texto -y` dentro de la rama: las specs base de `exportacion-de-libros`, `importacion` y `tarjetas` llevan el delta. Verificar: `openspec validate --specs --strict` en verde y `openspec list` sin el change.
+- [x] 8.3 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 6 hecho. Verificar: los dos nombran el change como hecho.
