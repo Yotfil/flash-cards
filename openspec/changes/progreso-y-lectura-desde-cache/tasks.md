@@ -40,8 +40,8 @@ Orden TDD: cada tarea de código va precedida por su prueba en rojo. Puerta ante
 
 ## 5. Pantallas (comprobación, sin cambios de plantilla previstos)
 
-- [ ] 5.1 Pruebas en rojo de componente: `biblioteca-page.component.spec` (con `onDevice` vacío, esqueleto hasta resolver y nunca "Aún no tienes libros" antes; con `onDevice=[a]`, la lista sale sin esqueleto) y `libro-detail-page.component.spec` (servidor falla con capítulos guardados a la vista → la lista se queda, sin "No pudimos cargar los capítulos"). Verificar: la de "lista sin esqueleto" falla si algún componente mira `status()==='loading'` en vez de `hasValue()`; corregir solo lo que falle.
-- [ ] 5.2 Pasar las pruebas de 5.1 ajustando, si hace falta, cómo cada página deriva "cargando" (debe ser "sin valor", no "en curso"). Verificar: 5.1 en verde; `npm test` y `build` en verde.
+- [x] 5.1 Pruebas en rojo de componente: `biblioteca-page.component.spec` (con `onDevice` vacío, esqueleto hasta resolver y nunca "Aún no tienes libros" antes; con `onDevice=[a]`, la lista sale sin esqueleto) y `libro-detail-page.component.spec` (servidor falla con capítulos guardados a la vista → la lista se queda, sin "No pudimos cargar los capítulos"). Verificar: la de "lista sin esqueleto" falla si algún componente mira `status()==='loading'` en vez de `hasValue()`; corregir solo lo que falle.
+- [x] 5.2 Pasar las pruebas de 5.1 ajustando, si hace falta, cómo cada página deriva "cargando" (debe ser "sin valor", no "en curso"). Verificar: 5.1 en verde; `npm test` y `build` en verde.
 
 ## 6. Cierre
 

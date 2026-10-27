@@ -58,8 +58,10 @@ export class BibliotecaPageComponent {
     if (status === 'error') {
       return 'error';
     }
+    // Mientras carga o se relee, lo que ya hay se queda (sin volver al esqueleto); el vacío solo
+    // lo decide una lectura terminada.
     if (status !== 'resolved' && status !== 'local') {
-      return 'loading';
+      return this.books().length > 0 ? 'list' : 'loading';
     }
     return this.books().length === 0 ? 'empty' : 'list';
   });

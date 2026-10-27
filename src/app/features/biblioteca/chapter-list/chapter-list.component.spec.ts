@@ -15,6 +15,7 @@ import {
   openDialog,
   typeInto,
 } from '@testing/dialog-test-helpers';
+import { ChaptersService } from '@services/chapters/chapters.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeCardRepository } from '@testing/fake-card-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
@@ -26,10 +27,18 @@ import { aUser } from '@testing/fake-user-repository';
 import { ChapterListComponent } from './chapter-list.component';
 
 async function render(
-  options: { chapters?: Chapter[]; online?: boolean; failWith?: unknown; holdList?: boolean } = {},
+  options: {
+    chapters?: Chapter[];
+    /** Lo que el dispositivo ya tiene guardado. */
+    onDevice?: Chapter[];
+    online?: boolean;
+    failWith?: unknown;
+    holdList?: boolean;
+  } = {},
 ) {
   const repository = new FakeChapterRepository();
   repository.seed(...(options.chapters ?? []));
+  repository.seedOnDevice(...(options.onDevice ?? []));
   if (options.failWith) {
     repository.failWith.listByBook = options.failWith;
   }
@@ -122,6 +131,38 @@ describe('ChapterListComponent', () => {
     button('Reintentar')?.click();
     await update();
     expect(repository.calls.listByBook).toBe(2);
+  });
+
+  it('si el servidor falla con capítulos guardados a la vista, la lista se queda y no sale el error', async () => {
+    const { element } = await render({
+      onDevice: [aChapter({ id: 'c1', bookId: 'b1', name: 'Unidad 1' })],
+      failWith: new Error('unavailable'),
+    });
+
+    expect(element.textContent).toContain('Unidad 1');
+    expect(element.textContent).not.toContain('No pudimos cargar los capítulos');
+  });
+
+  it('al volver al libro no vuelve el esqueleto: los capítulos que había se quedan mientras se relee', async () => {
+    const { element, fixture, repository, names, update } = await render({ chapters: THREE });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const list = repository.listByBook.bind(repository);
+    repository.listByBook = async (uid, bookId, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, bookId, source);
+    };
+
+    TestBed.inject(ChaptersService).openBook('b1');
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
+    expect(element.querySelector('app-skeleton')).toBeNull();
+    expect(names()).toEqual(['Básicos', 'Medios', 'Altos']);
+    release();
+    await update();
   });
 
   it('vacío: invita a crear el primero', async () => {

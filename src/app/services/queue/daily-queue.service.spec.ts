@@ -260,6 +260,20 @@ describe('DailyQueueService · lo guardado en el dispositivo primero', () => {
     ]);
   });
 
+  it('volver a Hoy con la cola ya pintada no vuelve a "cargando" mientras se relee', async () => {
+    const { service, cards, settle } = setup();
+    service.refresh();
+    await settle();
+    const release = holdServerReady(cards);
+
+    service.refresh();
+    await tick();
+
+    expect(service.status()).toBe('ready');
+    release();
+    await settle();
+  });
+
   it('"Estudiar ahora" con lo guardado a la vista espera la cola del servidor, sin repetir la lectura', async () => {
     const { service, books, cards, settle } = setup();
     books.seedOnDevice(INGLES, MEDICINA);

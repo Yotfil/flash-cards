@@ -114,11 +114,11 @@ export class DailyQueueService {
   private readonly snapshot = computed(() => (this.data.hasValue() ? this.data.value() : null));
 
   readonly status = computed<DailyQueueStatus>(() => {
-    const status = this.data.status();
-    if (status === 'error') {
+    if (this.data.status() === 'error') {
       return 'error';
     }
-    return status === 'resolved' || status === 'local' ? 'ready' : 'loading';
+    // Mientras se relee, la cola ya pintada se queda; sin ninguna, se está cargando.
+    return this.data.hasValue() ? 'ready' : 'loading';
   });
   readonly hasBooks = computed(() => (this.snapshot()?.books.length ?? 0) > 0);
   /** Los indicadores del día de estudio en curso (`null` si hoy no hubo actividad). */

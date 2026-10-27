@@ -28,10 +28,18 @@ import { BibliotecaPageComponent } from './biblioteca-page.component';
 class BlankPageComponent {}
 
 async function open(
-  options: { books?: Book[]; online?: boolean; holdList?: boolean; failList?: boolean } = {},
+  options: {
+    books?: Book[];
+    /** Lo que el dispositivo ya tiene guardado. */
+    onDevice?: Book[];
+    online?: boolean;
+    holdList?: boolean;
+    failList?: boolean;
+  } = {},
 ) {
   const repository = new FakeBookRepository();
   repository.seed(...(options.books ?? []));
+  repository.seedOnDevice(...(options.onDevice ?? []));
   if (options.failList) {
     repository.failWith.listByUser = new Error('offline');
   }
@@ -117,6 +125,52 @@ describe('BibliotecaPageComponent', () => {
     await update();
     expect(repository.calls.listByUser).toBe(1);
     expect(page().querySelector('app-skeleton')).toBeNull();
+  });
+
+  it('con libros guardados en el dispositivo, la lista sale sin esqueleto y luego llegan los del servidor', async () => {
+    const { page, names, releaseList, update } = await open({
+      books: [aBook({ id: 'b1', name: 'Inglés' }), aBook({ id: 'b2', name: 'Química', order: 1 })],
+      onDevice: [aBook({ id: 'b1', name: 'Inglés' })],
+      holdList: true,
+    });
+
+    expect(page().querySelector('app-skeleton')).toBeNull();
+    expect(names()).toEqual(['Inglés']);
+
+    releaseList();
+    await update();
+    expect(names()).toEqual(['Inglés', 'Química']);
+  });
+
+  it('sin nada guardado: esqueleto, y nunca "Aún no tienes libros" antes de que responda el servidor', async () => {
+    const { page } = await open({ books: [aBook()], holdList: true });
+
+    expect(page().querySelector('app-skeleton')).not.toBeNull();
+    expect(page().textContent).not.toContain('Aún no tienes libros');
+  });
+
+  it('al volver a la Biblioteca no vuelve el esqueleto: los libros que había se quedan mientras se relee', async () => {
+    const { harness, page, names, repository, update } = await open({
+      books: [aBook({ name: 'Inglés' })],
+    });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const list = repository.listByUser.bind(repository);
+    repository.listByUser = async (uid, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, source);
+    };
+
+    await harness.navigateByUrl('/importar');
+    await harness.navigateByUrl('/biblioteca');
+    await update(false);
+
+    expect(page().querySelector('app-skeleton')).toBeNull();
+    expect(names()).toEqual(['Inglés']);
+    release();
+    await update();
   });
 
   it('si la lectura falla lo dice (nunca como vacía) y Reintentar vuelve a leer', async () => {
