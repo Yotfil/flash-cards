@@ -9,8 +9,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 2. "Sin acceso" con la app abierta (D4)
 
-- [ ] 2.1 Pruebas en rojo en `session.service.spec`: `markAccessRevoked()` con sesión activa → `noAccess` con el correo; sin sesión activa → igual. Verificar: fallan (no existe).
-- [ ] 2.2 Implementar D4 en `SessionService` y en `FakeSessionService`. Verificar: 2.1 en verde.
+- [x] 2.1 Pruebas en rojo en `session.service.spec`: `markAccessRevoked()` con sesión activa → `noAccess` con el correo; sin sesión activa → igual. Verificar: fallan (no existe).
+- [x] 2.2 Implementar D4 en `SessionService` y en `FakeSessionService`. Verificar: 2.1 en verde.
 
 ## 3. Núcleo del repaso (D2)
 

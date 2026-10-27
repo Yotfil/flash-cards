@@ -362,6 +362,29 @@ describe('SessionService · inicio de sesión, Google y acceso retirado', () => 
     expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
   });
 
+  it('con la app abierta, un permiso negado por el servidor deja la sesión sin acceso con su correo', async () => {
+    const { session, authPort, users } = setup();
+    users.seed(aUser({ id: 'u1', email: 'ada@ejemplo.com' }));
+    authPort.emit(anIdentity({ uid: 'u1', email: 'ada@ejemplo.com' }));
+    await settle();
+
+    session.markAccessRevoked();
+
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
+    expect(session.user()).toBeNull();
+    expect(authPort.deletions).toBe(0);
+  });
+
+  it('sin sesión activa, marcar el acceso retirado no cambia nada', async () => {
+    const { session, authPort } = setup();
+    authPort.emit(null);
+    await settle();
+
+    session.markAccessRevoked();
+
+    expect(session.state()).toEqual({ kind: 'signedOut' });
+  });
+
   it('si borrar la identidad falla, se registra y la sesión queda igual sin acceso', async () => {
     const { session, authPort, logger } = setup([]);
     authPort.failWith.deleteCurrentIdentity = new Error('auth/requires-recent-login');

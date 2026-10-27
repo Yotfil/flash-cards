@@ -157,6 +157,18 @@ export class SessionService {
   }
 
   /**
+   * El servidor negó el permiso a una escritura con la app abierta: el correo salió de la lista
+   * (las reglas no niegan por otra cosa al dueño). La sesión queda "sin acceso" con ese correo,
+   * como si se hubiera comprobado al arrancar; la identidad se conserva. Sin sesión activa, nada.
+   */
+  markAccessRevoked(): void {
+    const user = this.user();
+    if (user) {
+      this.setState({ kind: 'noAccess', email: user.email });
+    }
+  }
+
+  /**
    * Cierra la sesión del proveedor y deja la app sin sesión, limpiando el correo sin acceso y
    * cualquier error de perfil. Tras borrar una identidad de Google, el proveedor ya no tiene sesión
    * y su cierre es inocuo: el estado pasa igualmente a "sin sesión".
