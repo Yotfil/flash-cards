@@ -1,6 +1,7 @@
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+import { Timestamp, deleteDoc, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import {
   PackageCompletedError,
   PackageFullError,
@@ -225,6 +226,18 @@ describe('FirestorePracticePackageRepository · ítems', () => {
       .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(PracticePackageGoneError);
+  });
+
+  it('calificar sin acceso (el correo salió de la lista) se rechaza con "acceso retirado"', async () => {
+    const pkg = await repository.create(OWNER_UID, { name: 'Película', capacity: 20 });
+    const [item] = await repository.addItems(OWNER_UID, pkg.id, [basic('a', 'b')]);
+    await asAdmin((db) => deleteDoc(doc(db, 'allowlist', OWNER_EMAIL)));
+
+    const failure = await repository
+      .recordGrade(OWNER_UID, pkg.id, item?.id ?? '', { grade: 3, dayId: '2026-10-26' })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(AccessRevokedError);
   });
 
   it('calificar cambia solo la última calificación y el día de ese ítem', async () => {

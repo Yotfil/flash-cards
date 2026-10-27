@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 1. Los adaptadores nombran los rechazos permanentes (D1)
 
-- [ ] 1.1 Pruebas de integración en rojo: `grade-persistence.integration.spec` (tarjeta borrada → `CardGoneError`; correo fuera de la lista → `AccessRevokedError`; nada escrito) y `practice-package.repository.integration.spec` (`recordGrade` sin lista → `AccessRevokedError`). Verificar con la puerta (8085): fallan (hoy, errores del SDK).
-- [ ] 1.2 Implementar D1: `AccessRevokedError`, `CardGoneError`, `hasFirestoreCode` en su módulo y las dos traducciones. Verificar: 1.1 en verde.
+- [x] 1.1 Pruebas de integración en rojo: `grade-persistence.integration.spec` (tarjeta borrada → `CardGoneError`; correo fuera de la lista → `AccessRevokedError`; nada escrito) y `practice-package.repository.integration.spec` (`recordGrade` sin lista → `AccessRevokedError`). Verificar con la puerta (8085): fallan (hoy, errores del SDK).
+- [x] 1.2 Implementar D1: `AccessRevokedError`, `CardGoneError`, `hasFirestoreCode` en su módulo y las dos traducciones. Verificar: 1.1 en verde.
 
 ## 2. "Sin acceso" con la app abierta (D4)
 

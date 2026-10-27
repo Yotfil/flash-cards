@@ -9,9 +9,9 @@ import {
   updateDoc,
   type DocumentReference,
   type Firestore,
-  type FirestoreErrorCode,
 } from 'firebase/firestore';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import type { CardContentDraft } from '@domain/models/card.model';
 import type { PracticeItem, PracticePackage, TodaySet } from '@domain/models/practice-package';
 import type { Rating } from '@domain/models/rating';
@@ -26,6 +26,7 @@ import {
 } from '@domain/ports/practice-package.repository';
 
 import { parseDocument, parseDocuments } from './document-boundary';
+import { hasFirestoreCode } from './firestore-error-code';
 import { readFrom } from './read-from';
 import {
   packageItemOrderSchema,
@@ -150,7 +151,8 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
   }
 
   // Sin transacción: tiene que funcionar sin red y no esperar al servidor. `not-found` solo puede
-  // significar que el paquete ya no existe; se traduce para que la práctica no la reintente.
+  // significar que el paquete ya no existe y `permission-denied`, que la cuenta ya no tiene acceso:
+  // se traducen para que la práctica no las reintente.
   async recordGrade(
     uid: string,
     packageId: string,
@@ -165,6 +167,9 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
     } catch (error) {
       if (hasFirestoreCode(error, 'not-found')) {
         throw new PracticePackageGoneError(packageId);
+      }
+      if (hasFirestoreCode(error, 'permission-denied')) {
+        throw new AccessRevokedError(error);
       }
       throw error;
     }
@@ -193,14 +198,6 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
   private packageRef(uid: string, packageId: string): DocumentReference {
     return doc(this.packagesOf(uid), packageId);
   }
-}
-
-/**
- * ¿Es un error de Firestore con ese código? Se mira `code` y no la clase: el SDK puede llegar en
- * más de una copia (la API de compatibilidad de las pruebas trae la suya) y `instanceof` fallaría.
- */
-function hasFirestoreCode(error: unknown, code: FirestoreErrorCode): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
 /** Un ítem nuevo: sin calificación; la cloze sin reverso y el ejemplo recortado (vacío = sin él). */
