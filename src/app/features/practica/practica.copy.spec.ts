@@ -34,6 +34,9 @@ describe('textos de la práctica', () => {
     expect(PRACTICA_COPY.seeResult).toBe('Ver resultado');
     expect(PRACTICA_COPY.completedTitle).toBe('¡Práctica completada!');
     expect(PRACTICA_COPY.nothingToPractice).toBe('Nada que practicar aún.');
+    expect(PRACTICA_COPY.nothingOnDeviceOffline).toBe(
+      'Sin conexión, este dispositivo aún no tiene tarjetas de este libro.',
+    );
     expect(PRACTICA_COPY.prepareError).toBe('No se pudo preparar la práctica. Inténtalo de nuevo.');
   });
 });

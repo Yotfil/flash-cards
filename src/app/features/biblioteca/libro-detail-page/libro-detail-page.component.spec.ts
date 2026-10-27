@@ -367,6 +367,34 @@ describe('LibroDetailPageComponent · practicar', () => {
     expect(TestBed.inject(Router).url).toBe('/biblioteca/b1');
   });
 
+  it('sin red y sin tarjetas del libro en el dispositivo: lo dice y no sale', async () => {
+    const { page, button, update } = await open('b1', { online: false });
+
+    button('Practicar')?.click();
+    await update();
+
+    expect(page().querySelector('[data-book-actions] [role="status"]')?.textContent?.trim()).toBe(
+      'Sin conexión, este dispositivo aún no tiene tarjetas de este libro.',
+    );
+    expect(TestBed.inject(Router).url).toBe('/biblioteca/b1');
+  });
+
+  it('sin red con solo cloze guardadas: "Nada que practicar aún."', async () => {
+    const { page, button, update } = await open('b1', {
+      online: false,
+      cards: [
+        aCard({ id: 'z1', bookId: 'b1', chapterId: 'c1', cardType: 'cloze', front: 'El {{gato}}' }),
+      ],
+    });
+
+    button('Practicar')?.click();
+    await update();
+
+    expect(page().querySelector('[data-book-actions] [role="status"]')?.textContent?.trim()).toBe(
+      'Nada que practicar aún.',
+    );
+  });
+
   it('si la lectura falla: el error de la práctica y no sale', async () => {
     const { page, cards, button, update } = await open('b1');
     cards.failWith.listByBook = new Error('sin red');

@@ -478,6 +478,46 @@ describe('FirestoreCardRepository · tarjetas de un libro', () => {
   });
 });
 
+describe('FirestoreCardRepository · tarjetas de un libro sin red', () => {
+  // Practicar un libro lee con listByBook: sin red, el mensaje de vacío depende de esto.
+  async function seedBookFromAnotherDevice() {
+    const otherDevice = new FirestoreCardRepository(
+      modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    );
+    await otherDevice.createMany(
+      OWNER_UID,
+      ['a', 'b', 'c'].map((front) => newCard({ front })),
+    );
+  }
+
+  it('leído con red, sin red da las mismas tarjetas desde lo guardado', async () => {
+    await seedBookFromAnotherDevice();
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const device = new FirestoreCardRepository(modularFirestore(context));
+    const online = await device.listByBook(OWNER_UID, 'b1');
+
+    await context.firestore().disableNetwork();
+    const offline = await device.listByBook(OWNER_UID, 'b1');
+    await context.firestore().enableNetwork();
+
+    expect(offline.map((card) => card.front).sort()).toEqual(['a', 'b', 'c']);
+    expect(offline.length).toBe(online.length);
+  });
+
+  it('nunca leído en este dispositivo, sin red da una lista vacía sin error', async () => {
+    await seedBookFromAnotherDevice();
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const device = new FirestoreCardRepository(modularFirestore(context));
+
+    await context.firestore().disableNetwork();
+    const offline = await device.listByBook(OWNER_UID, 'b1');
+    await context.firestore().enableNetwork();
+
+    expect(offline).toEqual([]);
+    expect(await device.listByBook(OWNER_UID, 'b1')).toHaveLength(3);
+  });
+});
+
 describe('FirestoreCardRepository · lo guardado en el dispositivo', () => {
   const END_OF_DAY = new Date('2026-10-25T09:00:00Z');
 

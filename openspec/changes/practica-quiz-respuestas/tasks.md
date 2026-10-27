@@ -24,11 +24,11 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 4. Libro sin red y sin nada guardado (PQ-06)
 
-- [ ] 4.1 Pruebas de integración en `tests/firestore/card.repository.integration.spec.ts`: leído con red y después sin red → mismas tarjetas; nunca leído y sin red → `[]` sin error. Verificar: pasan ya (fijan la premisa del mensaje); correr con la puerta (8085).
-- [ ] 4.2 Pruebas en rojo en `practice.service.spec` con `FakeConnectivity`: sin red y libro vacío → `{ questions: 0, nothingOnDevice: true }`; sin red y solo cloze → `nothingOnDevice: false`; con red y vacío → `false`; con tarjetas → `questions > 0`. Verificar: fallan (hoy devuelve un número).
-- [ ] 4.3 Implementar D4 en `PracticeService.prepareBookPractice` (inyecta `ConnectivityPort`). Verificar: 4.2 en verde y las pruebas del libro existentes adaptadas al resultado nuevo.
-- [ ] 4.4 Pruebas en rojo en `libro-detail-page.component.spec`: sin red y libro sin nada guardado, "Practicar" → "Sin conexión, este dispositivo aún no tiene tarjetas de este libro." y la URL no cambia; sin red con solo cloze → "Nada que practicar aún."; el texto nuevo en `practica.copy.spec`. Verificar: fallan.
-- [ ] 4.5 Implementar en el detalle del libro (envoltorio de `preparePractice` + señal del texto vacío) y `PRACTICA_COPY.nothingOnDeviceOffline`. Verificar: 4.4 en verde y las pruebas existentes de "Practicar" del libro en verde.
+- [x] 4.1 Pruebas de integración en `tests/firestore/card.repository.integration.spec.ts`: leído con red y después sin red → mismas tarjetas; nunca leído y sin red → `[]` sin error. Verificar: pasan ya (fijan la premisa del mensaje); correr con la puerta (8085).
+- [x] 4.2 Pruebas en rojo en `practice.service.spec` con `FakeConnectivity`: sin red y libro vacío → `{ questions: 0, nothingOnDevice: true }`; sin red y solo cloze → `nothingOnDevice: false`; con red y vacío → `false`; con tarjetas → `questions > 0`. Verificar: fallan (hoy devuelve un número).
+- [x] 4.3 Implementar D4 en `PracticeService.prepareBookPractice` (inyecta `ConnectivityPort`). Verificar: 4.2 en verde y las pruebas del libro existentes adaptadas al resultado nuevo.
+- [x] 4.4 Pruebas en rojo en `libro-detail-page.component.spec`: sin red y libro sin nada guardado, "Practicar" → "Sin conexión, este dispositivo aún no tiene tarjetas de este libro." y la URL no cambia; sin red con solo cloze → "Nada que practicar aún."; el texto nuevo en `practica.copy.spec`. Verificar: fallan.
+- [x] 4.5 Implementar en el detalle del libro (envoltorio de `preparePractice` + señal del texto vacío) y `PRACTICA_COPY.nothingOnDeviceOffline`. Verificar: 4.4 en verde y las pruebas existentes de "Practicar" del libro en verde.
 
 ## 5. Campo y foco (UI, PQ-03 y PQ-07)
 

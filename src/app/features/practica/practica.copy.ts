@@ -2,6 +2,7 @@
 export const PRACTICA_COPY = {
   practice: 'Practicar',
   nothingToPractice: 'Nada que practicar aún.',
+  nothingOnDeviceOffline: 'Sin conexión, este dispositivo aún no tiene tarjetas de este libro.',
   prepareError: 'No se pudo preparar la práctica. Inténtalo de nuevo.',
   chooseAnswer: 'Elige la respuesta',
   writeAnswer: 'Escribe la respuesta',

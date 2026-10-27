@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
@@ -105,7 +105,17 @@ export class LibroDetailPageComponent {
     this.studyHandoff.take();
   };
   protected readonly practiceCopy = PRACTICA_COPY;
-  protected readonly preparePractice = () => this.practice.prepareBookPractice(this.bookId());
+  /** El aviso de vacío de "Practicar": sin red y sin nada del libro en el dispositivo, otro texto. */
+  protected readonly practiceEmptyMessage = signal<string>(PRACTICA_COPY.nothingToPractice);
+  protected readonly preparePractice = async () => {
+    const prepared = await this.practice.prepareBookPractice(this.bookId());
+    this.practiceEmptyMessage.set(
+      prepared.nothingOnDevice
+        ? PRACTICA_COPY.nothingOnDeviceOffline
+        : PRACTICA_COPY.nothingToPractice,
+    );
+    return prepared.questions;
+  };
   protected readonly practiceDestination = ['/practicar'];
   protected readonly discardPractice = () => this.practice.discardPrepared();
 

@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 
 import { CardRepository } from '@domain/ports/card.repository';
+import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SessionService } from '@services/session/session.service';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
+import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeLogger } from '@testing/fake-logger';
 import { FakeSessionService } from '@testing/fake-session';
 import { aUser } from '@testing/fake-user-repository';
@@ -23,13 +25,14 @@ const basics = (count: number, bookId = 'b1', chapterId = 'c1') =>
   );
 const cloze = aCard({ id: 'cz', cardType: 'cloze', front: 'El {{gato}}', back: '' });
 
-function setup() {
+function setup(options: { online?: boolean } = {}) {
   const cards = new FakeCardRepository();
   const logger = new FakeLogger();
   TestBed.configureTestingModule({
     providers: [
       { provide: CardRepository, useValue: cards },
       { provide: Logger, useValue: logger },
+      { provide: ConnectivityPort, useValue: new FakeConnectivity(options.online ?? true) },
       {
         provide: SessionService,
         useValue: new FakeSessionService({ kind: 'active', user: aUser({ id: 'u9' }) }),
@@ -99,7 +102,10 @@ describe('PracticeService · libro', () => {
       cloze,
     );
 
-    expect(await service.prepareBookPractice('b1')).toBe(10);
+    expect(await service.prepareBookPractice('b1')).toEqual({
+      questions: 10,
+      nothingOnDevice: false,
+    });
 
     expect(cards.calls.listByBook).toBe(1);
     expect(cards.listedUids).toEqual(['u9']);
@@ -112,8 +118,40 @@ describe('PracticeService · libro', () => {
     const { service, handoff, cards } = setup();
     cards.seed(cloze);
 
-    expect(await service.prepareBookPractice('b1')).toBe(0);
+    expect(await service.prepareBookPractice('b1')).toEqual({
+      questions: 0,
+      nothingOnDevice: false,
+    });
     expect(handoff.prepared()).toBeNull();
+  });
+
+  it('sin red y sin ninguna tarjeta del libro en el dispositivo: lo dice aparte', async () => {
+    const { service, handoff } = setup({ online: false });
+
+    expect(await service.prepareBookPractice('b1')).toEqual({
+      questions: 0,
+      nothingOnDevice: true,
+    });
+    expect(handoff.prepared()).toBeNull();
+  });
+
+  it('sin red con solo cloze guardadas: no es "nada en el dispositivo"', async () => {
+    const { service, cards } = setup({ online: false });
+    cards.seed(cloze);
+
+    expect(await service.prepareBookPractice('b1')).toEqual({
+      questions: 0,
+      nothingOnDevice: false,
+    });
+  });
+
+  it('con red y un libro vacío: no es "nada en el dispositivo"', async () => {
+    const { service } = setup({ online: true });
+
+    expect(await service.prepareBookPractice('b1')).toEqual({
+      questions: 0,
+      nothingOnDevice: false,
+    });
   });
 
   it('si la lectura falla, la registra y la relanza', async () => {
