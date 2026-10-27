@@ -9,8 +9,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 2. El redondeo que llega al tramo siguiente (cerebro, PE-02)
 
-- [ ] 2.1 Pruebas en rojo en `format-interval.spec`: 59,6 min → "1 h"; 23,7 h → "1 día"; 345 y 364 días → "1 año"; 59,4 min → "59 min"; 23,4 h → "23 h". Verificar: fallan las tres primeras.
-- [ ] 2.2 Implementar D3. Verificar: 2.1 en verde y el resto de `format-interval.spec` en verde.
+- [x] 2.1 Pruebas en rojo en `format-interval.spec`: 59,6 min → "1 h"; 23,7 h → "1 día"; 345 y 364 días → "1 año"; 59,4 min → "59 min"; 23,4 h → "23 h". Verificar: fallan las tres primeras.
+- [x] 2.2 Implementar D3. Verificar: 2.1 en verde y el resto de `format-interval.spec` en verde.
 
 ## 3. Pruebas que fijan las specs corregidas (SR-02, SR-01)
 
