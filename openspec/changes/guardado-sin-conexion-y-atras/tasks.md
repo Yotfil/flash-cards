@@ -19,8 +19,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 
 ## 4. Importar
 
-- [ ] 4.1 Pruebas en rojo: `card-import-dialog.component.spec` (aviso de importar y "Cerrar"); `confirm-dialog.component.spec` (con `slowNotice` lo muestra y se deja cerrar; sin él, sigue ocupado); `importar-libro-page.component.spec` (aviso con "Importando…"). Verificar: fallan.
-- [ ] 4.2 Implementar en el diálogo de importar, la confirmación (`slowNotice`, que pasa la confirmación de reemplazo) y la pantalla "Importar libro" (`watchSlow`). Verificar: 4.1 en verde.
+- [x] 4.1 Pruebas en rojo: `card-import-dialog.component.spec` (aviso de importar y "Cerrar"); `confirm-dialog.component.spec` (con `slowNotice` lo muestra y se deja cerrar; sin él, sigue ocupado); `importar-libro-page.component.spec` (aviso con "Importando…"). Verificar: fallan.
+- [x] 4.2 Implementar en el diálogo de importar, la confirmación (`slowNotice`, que pasa la confirmación de reemplazo) y la pantalla "Importar libro" (`watchSlow`). Verificar: 4.1 en verde.
 
 ## 5. Salir de las pantallas completas
 

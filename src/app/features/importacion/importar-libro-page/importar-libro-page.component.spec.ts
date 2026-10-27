@@ -144,6 +144,24 @@ describe('ImportarLibroPageComponent', () => {
     release();
   });
 
+  it('si no confirma en 6 s, sigue en "Importando…" y avisa sin prometer', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { imports, type, importButton, update, page } = await open();
+    imports.gate = new Promise<void>(() => undefined);
+    await type('#import-text', VALID);
+    importButton()?.click();
+    await update();
+
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(importButton()?.textContent?.trim()).toBe('Importando…');
+    expect(page().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app.',
+    );
+    vi.useRealTimers();
+  });
+
   it('un archivo con un nombre de más de 120 caracteres dice por qué no se puede importar', async () => {
     const { page, loadFile, importButton } = await open();
 

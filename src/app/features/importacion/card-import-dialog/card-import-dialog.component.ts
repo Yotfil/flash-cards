@@ -9,7 +9,11 @@ import {
   type ConfirmDialogData,
 } from '@shared/confirm-dialog/confirm-dialog.component';
 import { AppDialogRef, DIALOG_DATA, DialogService } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  IMPORT_WAITS_FOR_CONNECTION_MESSAGE,
+  NEEDS_CONNECTION_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { ImportPreviewComponent } from '../import-preview/import-preview.component';
 import {
@@ -75,6 +79,10 @@ export class CardImportDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = IMPORTACION_COPY;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly waitsForConnection = IMPORT_WAITS_FOR_CONNECTION_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: la importación seguirá al volver la red; se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly text = signal('');
   protected readonly mode = signal<ImportMode>('append');
   protected readonly isPackage = this.target.kind === 'package';
@@ -133,7 +141,8 @@ export class CardImportDialogComponent {
     }
     this.importing.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    // En un paquete se guarda por transacción, que no sigue sola: ahí no se promete nada.
+    this.dialogRef.setPending(true, { releaseWhenSlow: target.kind === 'chapter' });
     try {
       if (target.kind === 'package') {
         await target.save(this.importable());
@@ -178,6 +187,7 @@ export class CardImportDialogComponent {
         confirmLabel: this.copy.replaceConfirm,
         pendingLabel: this.copy.replacing,
         errorMessage: this.copy.cardsError,
+        slowNotice: IMPORT_WAITS_FOR_CONNECTION_MESSAGE,
         action: () =>
           this.importService.importIntoChapter(target.bookId, target.chapterId, drafts, 'replace'),
       },

@@ -12,7 +12,11 @@ import {
   ImportService,
   type ImportBookSummary,
 } from '@services/import/import.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import { watchSlow } from '@shared/dialog/slow-save';
+import {
+  IMPORT_WAITS_FOR_CONNECTION_MESSAGE,
+  NEEDS_CONNECTION_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { ImportPreviewComponent } from '../import-preview/import-preview.component';
 import { IMPORTACION_COPY, importLabel } from '../importacion.copy';
@@ -42,6 +46,9 @@ export class ImportarLibroPageComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = IMPORTACION_COPY;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly waitsForConnection = IMPORT_WAITS_FOR_CONNECTION_MESSAGE;
+  /** La importación lleva el plazo sin confirmar (wifi sin internet): se avisa sin prometer. */
+  protected readonly slow = signal(false);
 
   private readonly model = signal<ImportBookFormValue>({ name: '', subject: '' });
   protected readonly bookForm = form(this.model, (path) =>
@@ -108,6 +115,7 @@ export class ImportarLibroPageComponent {
   /** Espera la importación y, si la página sigue abierta, lleva al libro o explica el fallo. */
   private async follow(done: Promise<ImportBookSummary>): Promise<void> {
     this.failed.set(false);
+    const stopWatching = watchSlow(() => this.slow.set(true));
     try {
       const summary = await done;
       if (this.open) {
@@ -116,6 +124,9 @@ export class ImportarLibroPageComponent {
     } catch {
       // El servicio ya registró el detalle; aquí se explica y se deja todo para reintentar.
       this.failed.set(true);
+    } finally {
+      stopWatching();
+      this.slow.set(false);
     }
   }
 }

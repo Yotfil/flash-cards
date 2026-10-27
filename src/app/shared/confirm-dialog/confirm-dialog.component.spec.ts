@@ -33,7 +33,7 @@ function button(text: string): HTMLButtonElement | undefined {
   );
 }
 
-function open(action: () => Promise<void>, online = true) {
+function open(action: () => Promise<void>, online = true, extra: Partial<ConfirmDialogData> = {}) {
   const connectivity = new FakeConnectivity(online);
   TestBed.configureTestingModule({
     providers: [
@@ -49,6 +49,7 @@ function open(action: () => Promise<void>, online = true) {
     pendingLabel: 'Borrando…',
     errorMessage: 'No se pudo borrar el libro. Inténtalo de nuevo.',
     action,
+    ...extra,
   };
   const ref: AppDialogRef<boolean> = TestBed.inject(DialogService).open<boolean, ConfirmDialogData>(
     ConfirmDialogComponent,
@@ -112,6 +113,43 @@ describe('ConfirmDialogComponent', () => {
     button('Borrar')?.click();
     await expect(ref.closed).resolves.toBe(true);
     expect(attempts).toBe(2);
+  });
+
+  describe('una acción que no confirma en 6 s', () => {
+    beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+    afterEach(() => vi.useRealTimers());
+
+    it('con su aviso (reemplazar), lo muestra y deja cerrar', async () => {
+      const { ref, update } = open(() => new Promise<void>(() => undefined), true, {
+        slowNotice:
+          'No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app.',
+      });
+      button('Borrar')?.click();
+      await update();
+
+      vi.advanceTimersByTime(6000);
+      await update();
+
+      expect(overlay().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+        'No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app.',
+      );
+      expect(button('Borrando…')?.disabled).toBe(true);
+      button('Cerrar')?.click();
+      await expect(ref.closed).resolves.toBe(false);
+    });
+
+    it('sin aviso (borrar), sigue ocupada', async () => {
+      const { ref, update } = open(() => new Promise<void>(() => undefined));
+      button('Borrar')?.click();
+      await update();
+
+      vi.advanceTimersByTime(6000);
+      await update();
+
+      expect(overlay().querySelector('[role="status"]')).toBeNull();
+      expect(button('Cancelar')?.disabled).toBe(true);
+      expect(ref.isPending).toBe(true);
+    });
   });
 
   it('Cancelar cierra con false sin ejecutar la acción', async () => {
