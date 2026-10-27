@@ -31,10 +31,34 @@ const good = (id: string) => anItem({ id, lastGrade: 3, lastPracticedDayId: YEST
 const fresh = (id: string) => anItem({ id, front: `front ${id}`, back: `back ${id}` });
 
 async function setup(
-  options: { packages?: PracticePackage[]; settings?: Partial<UserSettings> } = {},
+  options: {
+    packages?: PracticePackage[];
+    settings?: Partial<UserSettings>;
+    /** Lo que el dispositivo ya tiene guardado. */
+    onDevice?: PracticePackage[];
+    /** Deja en espera la lectura del servidor hasta `releaseServer`. */
+    holdServer?: boolean;
+    /** Hace fallar la lectura del servidor. */
+    failServer?: unknown;
+  } = {},
 ) {
   const repository = new FakePracticePackageRepository();
   repository.seed(...(options.packages ?? []));
+  repository.seedOnDevice(...(options.onDevice ?? []));
+  if (options.failServer !== undefined) {
+    repository.failWith.listByUser = options.failServer;
+  }
+  let releaseServer: () => void = () => undefined;
+  if (options.holdServer) {
+    const gate = new Promise<void>((resolve) => (releaseServer = resolve));
+    const list = repository.listByUser.bind(repository);
+    repository.listByUser = async (uid, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, source);
+    };
+  }
   const cards = new FakeCardRepository();
   const logger = new FakeLogger();
   const user = aUser({ id: 'u9' });
@@ -66,6 +90,7 @@ async function setup(
     cards,
     logger,
     settle,
+    releaseServer,
     handoff: TestBed.inject(PracticeAiHandoffService),
   };
 }
@@ -299,5 +324,42 @@ describe('PracticePackagesService · práctica de hoy', () => {
     expect(service.promptFor('p1')).toBe(
       'R:to call it a day | dar el día por terminado\nfront b | back b D:',
     );
+  });
+});
+
+describe('PracticePackagesService · lo guardado en el dispositivo primero', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('pinta al instante los paquetes guardados y después los del servidor', async () => {
+    const { service, repository, releaseServer, settle } = await setup({
+      onDevice: [aPackage({ id: 'p1' })],
+      packages: [aPackage({ id: 'p1' }), aPackage({ id: 'p2', name: 'Entrevista' })],
+      holdServer: true,
+    });
+
+    expect(service.open().map((pkg) => pkg.id)).toEqual(['p1']);
+
+    releaseServer();
+    await settle();
+    expect(service.open().map((pkg) => pkg.id)).toEqual(['p1', 'p2']);
+    expect(repository.calls.listByUser).toBe(1);
+  });
+
+  it('si el servidor falla con lo guardado a la vista, la lista se queda y el fallo se registra', async () => {
+    const failure = new Error('unavailable');
+    const { service, logger } = await setup({
+      onDevice: [aPackage({ id: 'p1' })],
+      failServer: failure,
+    });
+
+    expect(service.status()).toBe('ready');
+    expect(service.open().map((pkg) => pkg.id)).toEqual(['p1']);
+    expect(logger.entries).toEqual([
+      { level: 'error', message: 'No se pudieron cargar los paquetes de práctica', cause: failure },
+    ]);
   });
 });

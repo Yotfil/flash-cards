@@ -1,5 +1,6 @@
 import type { Book, BookContents, BookDraft, CardStateTotals } from '@domain/models/book.model';
 import { BookRepository } from '@domain/ports/book.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 type FailableMethod =
   | 'listByUser'
@@ -39,10 +40,25 @@ export class FakeBookRepository extends BookRepository {
     }
   }
 
-  async listByUser(uid: string): Promise<Book[]> {
+  /** Lo que el dispositivo tiene guardado: aparte de lo del servidor (`seed`). */
+  readonly onDevice = new Map<string, Book>();
+  /** Lecturas del dispositivo (las del servidor las cuenta `calls`). */
+  readonly deviceCalls = { listByUser: 0 };
+
+  seedOnDevice(...books: Book[]): void {
+    for (const book of books) {
+      this.onDevice.set(book.id, book);
+    }
+  }
+
+  async listByUser(uid: string, source: ReadSource = 'server'): Promise<Book[]> {
+    if (source === 'device') {
+      this.deviceCalls.listByUser++;
+      return byOrder(this.onDevice);
+    }
     this.record('listByUser');
     this.listedUids.push(uid);
-    return [...this.books.values()].sort((a, b) => a.order - b.order);
+    return byOrder(this.books);
   }
 
   async create(_uid: string, draft: BookDraft & { order: number }): Promise<Book> {
@@ -105,6 +121,11 @@ export class FakeBookRepository extends BookRepository {
 }
 
 /** Libro de prueba con valores razonables; se sobrescribe lo que haga falta. */
+
+function byOrder(books: ReadonlyMap<string, Book>): Book[] {
+  return [...books.values()].sort((a, b) => a.order - b.order);
+}
+
 export function aBook(overrides: Partial<Book> = {}): Book {
   return {
     id: 'b1',

@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getCountFromServer,
-  getDocs,
   getDocsFromServer,
   increment,
   orderBy,
@@ -16,9 +15,11 @@ import {
 
 import type { Book, BookContents, BookDraft, CardStateTotals } from '@domain/models/book.model';
 import { BookRepository } from '@domain/ports/book.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 import { BatchWriter } from './batch-writer';
 import { parseDocuments } from './document-boundary';
+import { readFrom } from './read-from';
 import { bookDocumentSchema, type BookDocument } from './schemas/book.schema';
 
 // Libros del usuario en `users/{uid}/books`. Lee a través de la frontera (Zod + error con ruta).
@@ -27,8 +28,8 @@ export class FirestoreBookRepository extends BookRepository {
     super();
   }
 
-  async listByUser(uid: string): Promise<Book[]> {
-    const snapshot = await getDocs(query(this.booksOf(uid), orderBy('order')));
+  async listByUser(uid: string, source: ReadSource = 'server'): Promise<Book[]> {
+    const snapshot = await readFrom(query(this.booksOf(uid), orderBy('order')), source);
     return parseDocuments(bookDocumentSchema, snapshot.docs).map(toBook);
   }
 

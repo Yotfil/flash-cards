@@ -477,3 +477,32 @@ describe('FirestoreCardRepository · tarjetas de un libro', () => {
     expect(cards.map((card) => card.front).sort()).toEqual(['a0', 'a1', 'a2']);
   });
 });
+
+describe('FirestoreCardRepository · lo guardado en el dispositivo', () => {
+  const END_OF_DAY = new Date('2026-10-25T09:00:00Z');
+
+  async function createdOnAnotherDevice() {
+    const otherDevice = new FirestoreCardRepository(
+      modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    );
+    await otherDevice.create(OWNER_UID, newCard({ front: 'to give up' }));
+  }
+
+  it('las tarjetas de un capítulo: nada antes de leer, lo leído después', async () => {
+    await createdOnAnotherDevice();
+
+    expect(await repository.listByChapter(OWNER_UID, 'c1', 'device')).toEqual([]);
+    const fromServer = await repository.listByChapter(OWNER_UID, 'c1');
+    expect(fromServer.map((card) => card.front)).toEqual(['to give up']);
+    expect(await repository.listByChapter(OWNER_UID, 'c1', 'device')).toEqual(fromServer);
+  });
+
+  it('las tarjetas listas hasta el fin del día: nada antes de leer, lo leído después', async () => {
+    await createdOnAnotherDevice();
+
+    expect(await repository.listReady(OWNER_UID, END_OF_DAY, 'device')).toEqual([]);
+    const fromServer = await repository.listReady(OWNER_UID, END_OF_DAY);
+    expect(fromServer.map((card) => card.front)).toEqual(['to give up']);
+    expect(await repository.listReady(OWNER_UID, END_OF_DAY, 'device')).toEqual(fromServer);
+  });
+});

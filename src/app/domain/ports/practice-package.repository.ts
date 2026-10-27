@@ -1,6 +1,7 @@
 import type { CardContentDraft } from '../models/card.model';
 import type { PracticeItem, PracticePackage, TodaySet } from '../models/practice-package';
 import type { Rating } from '../models/rating';
+import type { ReadSource } from './read-source';
 
 /** Ya no cabe lo que se quería agregar: no se escribió nada. */
 export class PackageFullError extends Error {
@@ -33,7 +34,7 @@ export class PracticeItemGoneError extends Error {
 // Ninguna operación toca libros, tarjetas, historial ni indicadores del día.
 export abstract class PracticePackageRepository {
   /** Todos los paquetes, por fecha de creación. Lanza si un documento no es válido. */
-  abstract listByUser(uid: string): Promise<PracticePackage[]>;
+  abstract listByUser(uid: string, source?: ReadSource): Promise<PracticePackage[]>;
   abstract create(uid: string, input: { name: string; capacity: number }): Promise<PracticePackage>;
   abstract rename(uid: string, packageId: string, name: string): Promise<void>;
   abstract delete(uid: string, packageId: string): Promise<void>;

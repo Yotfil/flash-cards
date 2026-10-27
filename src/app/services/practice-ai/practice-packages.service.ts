@@ -9,6 +9,7 @@ import {
 import type { Rating } from '@domain/models/rating';
 import { Logger } from '@domain/ports/logger.port';
 import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
+import { readDeviceThenServer } from '@services/data-loading/read-device-then-server';
 import { requireSessionUid, requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 import { studyDayId } from '@services/study-day/study-day';
@@ -34,15 +35,19 @@ export class PracticePackagesService {
   /** El recurso no lee nada hasta que una pantalla lo pide (`reload`); relee al cambiar de usuario. */
   private readonly loadRequested = signal(false);
 
+  /** Pinta primero lo guardado en el dispositivo y lo cambia por la lectura del servidor al llegar. */
   readonly packages = resource({
     params: () => (this.loadRequested() ? (this.session.user()?.id ?? NO_SESSION) : undefined),
-    loader: async () => {
-      try {
-        return await this.repository.listByUser(requireSessionUid(this.session.user()));
-      } catch (error) {
-        this.logger.error('No se pudieron cargar los paquetes de práctica', error);
-        throw error;
-      }
+    stream: async ({ abortSignal }) => {
+      const uid = requireSessionUid(this.session.user());
+      return readDeviceThenServer({
+        fromDevice: () => this.repository.listByUser(uid, 'device'),
+        fromServer: () => this.repository.listByUser(uid),
+        hasContent: (packages) => packages.length > 0,
+        logger: this.logger,
+        errorMessage: 'No se pudieron cargar los paquetes de práctica',
+        abortSignal,
+      });
     },
   });
 

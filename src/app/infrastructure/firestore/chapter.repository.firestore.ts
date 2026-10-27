@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getCountFromServer,
-  getDocs,
   getDocsFromServer,
   query,
   setDoc,
@@ -13,9 +12,11 @@ import {
 
 import type { Chapter } from '@domain/models/chapter.model';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 import { writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
+import { readFrom } from './read-from';
 import { chapterDocumentSchema } from './schemas/chapter.schema';
 
 // Capítulos del usuario en `users/{uid}/chapters`. Se filtran por libro y se ordenan en memoria:
@@ -25,8 +26,11 @@ export class FirestoreChapterRepository extends ChapterRepository {
     super();
   }
 
-  async listByBook(uid: string, bookId: string): Promise<Chapter[]> {
-    const snapshot = await getDocs(query(this.chaptersOf(uid), where('bookId', '==', bookId)));
+  async listByBook(uid: string, bookId: string, source: ReadSource = 'server'): Promise<Chapter[]> {
+    const snapshot = await readFrom(
+      query(this.chaptersOf(uid), where('bookId', '==', bookId)),
+      source,
+    );
     return parseDocuments(chapterDocumentSchema, snapshot.docs).sort((a, b) => a.order - b.order);
   }
 

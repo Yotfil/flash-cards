@@ -12,8 +12,10 @@ import {
 import { ratingCountKey, type DailyStats } from '@domain/models/daily-stats.model';
 import type { GradeRecord } from '@domain/models/grade-record';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 import { parseDocuments } from './document-boundary';
+import { readFrom } from './read-from';
 import { dailyStatsDocumentSchema } from './schemas/daily-stats.schema';
 
 // Indicadores diarios en `users/{uid}/dailyStats/{YYYY-MM-DD}`, lado de lectura. Los recientes se
@@ -26,8 +28,15 @@ export class FirestoreDailyStatsRepository extends DailyStatsRepository {
   // Una consulta y no `getDoc`: sin red, `getDoc` de un documento que nunca pasó por la caché (el
   // de un día nuevo, sin actividad todavía) lanza "client is offline", y Hoy caería en error justo
   // al empezar el día. La consulta responde con lo que haya en la caché: vacío = sin actividad.
-  async getByDay(uid: string, dayId: string): Promise<DailyStats | null> {
-    const snapshot = await getDocs(query(this.daysOf(uid), where('date', '==', dayId), limit(1)));
+  async getByDay(
+    uid: string,
+    dayId: string,
+    source: ReadSource = 'server',
+  ): Promise<DailyStats | null> {
+    const snapshot = await readFrom(
+      query(this.daysOf(uid), where('date', '==', dayId), limit(1)),
+      source,
+    );
     return parseDocuments(dailyStatsDocumentSchema, snapshot.docs)[0] ?? null;
   }
 

@@ -5,6 +5,7 @@ import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import type { PreparedStudy } from '@services/queue/study-handoff.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { SessionService } from '@services/session/session.service';
 import { aCard } from '@testing/fake-card-repository';
 import { FakeGradePersistence } from '@testing/fake-grade-persistence';
@@ -195,5 +196,40 @@ describe('ReviewSessionService · rechazo tardío, fin y salida', () => {
     expect(service.difficultCards()).toEqual([]);
     expect(service.alerts()).toEqual([]);
     expect(service.distinctCount()).toBe(2);
+  });
+});
+
+describe('ReviewSessionService · avisa que la colección cambió', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('calificar avisa al enviar la nota y otra vez cuando el servidor responde', async () => {
+    const { service, persistence } = setup();
+    const changes = TestBed.inject(CardCollectionChanges);
+    service.start(prepared());
+    service.reveal();
+
+    service.grade(3);
+    expect(changes.version()).toBe(1);
+
+    persistence.resolveNext();
+    await flush();
+    expect(changes.version()).toBe(2);
+  });
+
+  it('un rechazo también avisa: el conteo siguiente refleja lo que de verdad quedó', async () => {
+    const { service, persistence } = setup();
+    const changes = TestBed.inject(CardCollectionChanges);
+    service.start(prepared());
+    service.reveal();
+
+    service.grade(3);
+    persistence.rejectNext(new Error('permiso'));
+    await flush();
+
+    expect(changes.version()).toBe(2);
   });
 });

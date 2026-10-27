@@ -1,9 +1,10 @@
 import type { Book, BookContents, BookDraft, CardStateTotals } from '../models/book.model';
+import type { ReadSource } from './read-source';
 
 // Libros del usuario en el almacén. Los conteos son agregaciones en el servidor: no leen tarjetas.
 export abstract class BookRepository {
   /** Los libros del usuario ordenados por `order`. Lanza si un documento no es válido. */
-  abstract listByUser(uid: string): Promise<Book[]>;
+  abstract listByUser(uid: string, source?: ReadSource): Promise<Book[]>;
   abstract create(uid: string, draft: BookDraft & { order: number }): Promise<Book>;
   /** Cambia solo los campos indicados (y la fecha de actualización). */
   abstract update(uid: string, bookId: string, changes: Partial<BookDraft>): Promise<void>;

@@ -14,6 +14,7 @@ import {
   openDialog,
   typeInto,
 } from '@testing/dialog-test-helpers';
+import { CardsService } from '@services/cards/cards.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
@@ -35,9 +36,12 @@ async function render(
   if (options.holdList) {
     const gate = new Promise<void>((resolve) => (releaseList = resolve));
     const list = repository.listByChapter.bind(repository);
-    repository.listByChapter = async (uid, chapterId) => {
-      await gate;
-      return list(uid, chapterId);
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    repository.listByChapter = async (uid, chapterId, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, chapterId, source);
     };
   }
   TestBed.configureTestingModule({
@@ -123,6 +127,30 @@ const FIVE = [
 ];
 
 describe('CardListComponent · estados', () => {
+  it('al volver al capítulo no vuelve el esqueleto: las tarjetas que había se quedan mientras se relee', async () => {
+    const { element, fixture, repository, rows, update } = await render({
+      cards: [aCard({ id: 'k1', chapterId: 'c1', front: 'to give up' })],
+    });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const list = repository.listByChapter.bind(repository);
+    repository.listByChapter = async (uid, chapterId, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, chapterId, source);
+    };
+
+    TestBed.inject(CardsService).openChapter('c1');
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
+    expect(element.querySelector('app-skeleton')).toBeNull();
+    expect(rows()).toHaveLength(1);
+    release();
+    await update();
+  });
+
   it('al iniciar lee las tarjetas del capítulo y, mientras tanto, solo muestra el esqueleto', async () => {
     const { element, button, repository, releaseList, update } = await render({
       cards: FIVE,

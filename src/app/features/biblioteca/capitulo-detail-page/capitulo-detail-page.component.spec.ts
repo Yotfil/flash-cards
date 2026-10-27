@@ -97,9 +97,12 @@ async function open(
   if (options.holdBooks) {
     const gate = new Promise<void>((resolve) => (releaseBooks = resolve));
     const list = books.listByUser.bind(books);
-    books.listByUser = async (uid) => {
-      await gate;
-      return list(uid);
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    books.listByUser = async (uid, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, source);
     };
   }
   const harness = await RouterTestingHarness.create();
