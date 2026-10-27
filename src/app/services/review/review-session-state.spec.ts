@@ -97,6 +97,15 @@ describe('review-session-state · arranque y revelar', () => {
     expect(start([A], LEAVES, new Date('2026-10-25T06:30:00Z')).day.id).toBe('2026-10-24');
   });
 
+  it('una sesión no cruza al día siguiente: lo calificado tras la hora de inicio va al día de la sesión', () => {
+    // Empieza a las 03:55 en Bogotá del domingo 25 y califica a las 04:20.
+    const dawn = start([A, B], LEAVES, new Date('2026-10-25T08:55:00Z'));
+
+    const { record } = revealAndGrade(dawn, 3, new Date('2026-10-25T09:20:00Z'), LEAVES);
+
+    expect(record?.dayId).toBe('2026-10-24');
+  });
+
   it('revelar a los 3 s sugiere "Bien"; con la sugerencia apagada no sugiere nada', () => {
     const revealed = reveal(start(), at(3 * SECOND_MS), true);
     expect(revealed.revealed).toBe(true);

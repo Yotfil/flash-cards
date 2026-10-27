@@ -196,6 +196,19 @@ describe('RepasoPageComponent', () => {
     expect(grade).not.toHaveBeenCalled();
   });
 
+  it('el cierre de un repaso no lleva bloque de práctica con IA, aunque haya difíciles', async () => {
+    const { press, page } = await open({ cards: [A] });
+    await press(' ');
+    await press('1');
+    await press(' ');
+    await press('4');
+
+    const summary = page().querySelector('app-session-summary');
+    expect(summary).not.toBeNull();
+    expect(summary?.querySelector('[practice]')).toBeNull();
+    expect(summary?.textContent).not.toContain('Copiar prompt');
+  });
+
   it('al terminar, el foco va al título del cierre', async () => {
     const { press } = await open({ cards: [A] });
     await press(' ');

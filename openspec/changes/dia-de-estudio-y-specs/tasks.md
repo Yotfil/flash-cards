@@ -14,8 +14,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 3. Pruebas que fijan las specs corregidas (SR-02, SR-01)
 
-- [ ] 3.1 Prueba en `review-session-state.spec`: arranque a las 03:55 de Bogotá, calificar a las 04:20 → `dayId` del día anterior. Verificar: pasa ya (fija la decisión 18).
-- [ ] 3.2 Prueba en `repaso-page.component.spec`: al terminar un repaso con un "Otra vez", el cierre no tiene `[practice]` ni "Copiar prompt". Verificar: pasa ya (fija la decisión 20).
+- [x] 3.1 Prueba en `review-session-state.spec`: arranque a las 03:55 de Bogotá, calificar a las 04:20 → `dayId` del día anterior. Verificar: pasa ya (fija la decisión 18).
+- [x] 3.2 Prueba en `repaso-page.component.spec`: al terminar un repaso con un "Otra vez", el cierre no tiene `[practice]` ni "Copiar prompt". Verificar: pasa ya (fija la decisión 20).
 
 ## 4. Cierre
 
