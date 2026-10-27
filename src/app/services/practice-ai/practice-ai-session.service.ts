@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import type { CardFace } from '@domain/models/card.model';
 import { ratingCountKey, type RatingCounts } from '@domain/models/daily-stats.model';
 import type { Rating } from '@domain/models/rating';
@@ -14,6 +15,7 @@ import { SessionService } from '@services/session/session.service';
 import type { PreparedPracticeAi } from './practice-ai-handoff.service';
 import { PracticePackagesService } from './practice-packages.service';
 import {
+  closeBecauseAccessIsLost,
   closeBecausePackageIsGone,
   gradeCurrent,
   progress,
@@ -23,7 +25,7 @@ import {
   type PracticeAiSessionState,
 } from './practice-ai-session-state';
 
-export type PracticeAiSessionStatus = 'idle' | 'active' | 'finished' | 'gone';
+export type PracticeAiSessionStatus = 'idle' | 'active' | 'finished' | 'gone' | 'accessLost';
 
 /** "Otra vez" o "Difícil": lo que se refuerza con la IA. */
 const HARD_GRADE = 2;
@@ -31,7 +33,8 @@ const HARD_GRADE = 2;
 // La práctica de un paquete en curso, efímera. Cada nota se guarda sin esperar (solo la última
 // nota y el día del ítem, en su paquete): nunca toca tarjetas, historial ni el día de los libros.
 // Si el servidor rechaza una nota, el ítem vuelve al final con un aviso, como en el repaso; si la
-// rechaza porque el paquete ya no existe, la práctica se cierra (repetirla no serviría de nada).
+// rechaza porque el paquete ya no existe o porque al usuario le retiraron el acceso, la práctica
+// se cierra (repetirla no serviría de nada).
 @Injectable({ providedIn: 'root' })
 export class PracticeAiSessionService {
   private readonly packages = inject(PracticePackageRepository);
@@ -126,6 +129,10 @@ export class PracticeAiSessionService {
           this.state.set(closeBecausePackageIsGone(current));
           return;
         }
+        if (error instanceof AccessRevokedError) {
+          this.state.set(closeBecauseAccessIsLost(current));
+          return;
+        }
         this.state.set(requeueRejected(current, item.id));
         this.alertsSignal.update((alerts) => [...alerts, { front: item.front }]);
       });
@@ -135,5 +142,11 @@ export class PracticeAiSessionService {
     this.sessionNumber++;
     this.state.set(null);
     this.alertsSignal.set([]);
+  }
+
+  /** "Continuar" tras perder el acceso: vacía la práctica y deja la sesión en "sin acceso". */
+  acknowledgeLostAccess(): void {
+    this.reset();
+    this.session.markAccessRevoked();
   }
 }

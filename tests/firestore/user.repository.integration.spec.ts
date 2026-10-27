@@ -103,6 +103,22 @@ describe('FirestoreUserRepository', () => {
     expect((failure as InvalidDocumentError).path).toBe('users/u1');
   });
 
+  it('lo guardado en el dispositivo: nada antes de leer; el perfil leído, después', async () => {
+    await seedProfile(OWNER_UID, {
+      displayName: 'Ada',
+      email: OWNER_EMAIL,
+      createdAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00.000Z')),
+      isSearchable: false,
+      settings: { timezone: 'America/Bogota', dayStartHour: 4, theme: 'dark' },
+    });
+    const repository = repositoryAs(OWNER_UID, OWNER_EMAIL);
+
+    expect(await repository.findById(OWNER_UID, 'device')).toBeNull();
+    const fromServer = await repository.findById(OWNER_UID);
+    expect(fromServer?.displayName).toBe('Ada');
+    expect(await repository.findById(OWNER_UID, 'device')).toEqual(fromServer);
+  });
+
   it('un perfil que todavía no existe se lee como null', async () => {
     expect(await repositoryAs('u2', 'luis@ejemplo.com').findById('u2')).toBeNull();
   });

@@ -1,11 +1,13 @@
+import { Location } from '@angular/common';
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import type { Card } from '@domain/models/card.model';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
-import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
+import { CardGoneError, GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { StudyHandoffService } from '@services/queue/study-handoff.service';
@@ -28,27 +30,39 @@ const T0 = new Date('2026-10-24T15:00:00Z');
 const A = aCard({ id: 'A', front: 'to give up', back: 'rendirse' });
 const B = aCard({ id: 'B', front: 'to look up', back: 'buscar' });
 
-async function open(options: { cards?: Card[]; online?: boolean } = {}) {
+async function open(
+  options: {
+    cards?: Card[];
+    online?: boolean;
+    /** Pantallas por las que pasó antes de la sesión (la última, desde donde se abrió). */
+    from?: string[];
+  } = {},
+) {
+  const persistence = new FakeGradePersistence();
+  const appSession = new FakeSessionService({ kind: 'active', user: aUser() });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'repaso', component: RepasoPageComponent },
         { path: 'hoy', component: TodayStubComponent },
+        { path: '**', component: TodayStubComponent },
       ]),
       { provide: SchedulingPort, useValue: new FakeSchedulingPort() },
-      { provide: GradePersistencePort, useValue: new FakeGradePersistence() },
+      { provide: GradePersistencePort, useValue: persistence },
       { provide: Logger, useValue: new FakeLogger() },
       { provide: ConnectivityPort, useValue: new FakeConnectivity(options.online ?? true) },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({ kind: 'active', user: aUser() }),
-      },
+      { provide: SessionService, useValue: appSession },
     ],
   });
+  const harness = await RouterTestingHarness.create();
+  // Lo hace el arranque de la app; sin esto el router de las pruebas no oye el "atrás".
+  TestBed.inject(Router).setUpLocationChangeListener();
+  for (const url of options.from ?? []) {
+    await harness.navigateByUrl(url);
+  }
   const handoff = TestBed.inject(StudyHandoffService);
   handoff.hand({ cards: options.cards ?? [A, B], source: { kind: 'today' } });
   const session = TestBed.inject(ReviewSessionService);
-  const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/repaso');
   const update = async () => {
     await new Promise((resolve) => setTimeout(resolve));
@@ -73,7 +87,25 @@ async function open(options: { cards?: Card[]; online?: boolean } = {}) {
       (candidate) => candidate.querySelector('[data-label]')?.textContent?.trim() === label,
     );
   const url = () => TestBed.inject(Router).url;
-  return { harness, handoff, session, update, page, press, button, ratingOption, url };
+  const back = async () => {
+    TestBed.inject(Location).back();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await update();
+  };
+  return {
+    harness,
+    handoff,
+    session,
+    persistence,
+    appSession,
+    update,
+    page,
+    press,
+    button,
+    ratingOption,
+    url,
+    back,
+  };
 }
 
 describe('RepasoPageComponent', () => {
@@ -175,6 +207,105 @@ describe('RepasoPageComponent', () => {
     await press('4');
 
     expect(grade).not.toHaveBeenCalled();
+  });
+
+  it('el cierre de un repaso no lleva bloque de práctica con IA, aunque haya difíciles', async () => {
+    const { press, page } = await open({ cards: [A] });
+    await press(' ');
+    await press('1');
+    await press(' ');
+    await press('4');
+
+    const summary = page().querySelector('app-session-summary');
+    expect(summary).not.toBeNull();
+    expect(summary?.querySelector('[practice]')).toBeNull();
+    expect(summary?.textContent).not.toContain('Copiar prompt');
+  });
+
+  it('una tarjeta borrada en otro dispositivo no vuelve y el aviso lo dice', async () => {
+    const { press, persistence, page, update } = await open();
+    await press(' ');
+    await press('3');
+
+    persistence.rejectNext(new CardGoneError('A'));
+    await update();
+
+    const alerts = Array.from(page().querySelectorAll('[role="alert"]'));
+    expect(alerts.map((alert) => alert.textContent?.trim())).toEqual([
+      'La tarjeta «to give up» se borró en otro dispositivo; su calificación no se guardó.',
+    ]);
+  });
+
+  it('sin acceso, la sesión se cierra con el aviso y "Continuar", sin tarjeta ni barra', async () => {
+    const { press, persistence, page, update, button } = await open();
+    await press(' ');
+    await press('3');
+
+    persistence.rejectNext(new AccessRevokedError());
+    await update();
+
+    const alert = page().querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Ya no tienes acceso');
+    expect(alert?.textContent).toContain('Lo que calificaste antes quedó guardado.');
+    expect(button('Continuar')).toBeDefined();
+    expect(page().querySelector('app-flip-card')).toBeNull();
+    expect(page().querySelector('app-session-top-bar')).toBeNull();
+  });
+
+  it('"Continuar" deja la sesión sin acceso y lleva a sin-acceso; "atrás" no vuelve al repaso', async () => {
+    const { press, persistence, update, button, url, back, appSession } = await open({
+      from: ['/biblioteca'],
+    });
+    await press(' ');
+    await press('3');
+    persistence.rejectNext(new AccessRevokedError());
+    await update();
+
+    button('Continuar')?.click();
+    await update();
+
+    expect(url()).toBe('/sin-acceso');
+    expect(appSession.state()).toEqual({ kind: 'noAccess', email: aUser().email });
+    await back();
+    expect(url()).toBe('/biblioteca');
+  });
+
+  it('al terminar, el foco va al título del cierre', async () => {
+    const { press } = await open({ cards: [A] });
+    await press(' ');
+    await press('4');
+
+    expect(document.activeElement?.tagName).toBe('H1');
+    expect(document.activeElement?.textContent?.trim()).toBe('Sesión terminada');
+  });
+
+  it('abierta desde un capítulo, "Salir" reemplaza la sesión por Hoy: atrás vuelve al capítulo', async () => {
+    const { button, update, back, url } = await open({
+      from: ['/biblioteca/b1', '/biblioteca/b1/c1'],
+    });
+
+    button('Salir')?.click();
+    await update();
+    expect(url()).toBe('/hoy');
+
+    await back();
+    expect(url()).toBe('/biblioteca/b1/c1');
+  });
+
+  it('abierta desde Hoy, "Volver a Hoy" regresa con el historial: atrás va a lo anterior a Hoy', async () => {
+    const { press, button, update, back, url } = await open({
+      cards: [A],
+      from: ['/biblioteca', '/hoy'],
+    });
+    await press(' ');
+    await press('4');
+
+    button('Volver a Hoy')?.click();
+    await update();
+    expect(url()).toBe('/hoy');
+
+    await back();
+    expect(url()).toBe('/biblioteca');
   });
 
   it('"Salir" vuelve a Hoy sin preguntar y vacía la sesión', async () => {

@@ -96,7 +96,7 @@ El sistema SHALL considerar "para hoy" los ítems del paquete que nunca se han p
 - **THEN** la práctica tiene exactamente los mismos ítems que la primera, en orden barajado
 
 ### Requirement: La práctica usa la pantalla de repaso con los cuatro cerebros, sin programación
-"Practicar hoy" SHALL abrir la pantalla de repaso a pantalla completa (anverso, revelar, cuatro cerebros con los textos "Otra vez", "Difícil", "Bien", "Fácil") con los ítems del conjunto del día en orden barajado. NO SHALL mostrarse intervalos de retorno bajo los cerebros ni sugerencia por tiempo. Cada calificación SHALL guardarse de inmediato sin esperar al servidor, como en el repaso; si el servidor la rechaza, el ítem vuelve al final con el aviso del repaso. Si el servidor la rechaza porque el paquete ya no existe (se borró en otro dispositivo), el ítem NO SHALL volver: la práctica SHALL cerrarse con "Este paquete ya no existe" y un enlace a la Biblioteca, sin cierre ni prompt. "Salir" SHALL volver al detalle del paquete sin cerrar nada. Entrar a la pantalla sin una práctica preparada SHALL redirigir a la Biblioteca. La práctica es efímera: nunca se retoma una anterior.
+"Practicar hoy" SHALL abrir la pantalla de repaso a pantalla completa (anverso, revelar, cuatro cerebros con los textos "Otra vez", "Difícil", "Bien", "Fácil") con los ítems del conjunto del día en orden barajado. NO SHALL mostrarse intervalos de retorno bajo los cerebros ni sugerencia por tiempo. Cada calificación SHALL guardarse de inmediato sin esperar al servidor, como en el repaso; si el servidor la rechaza por un fallo pasajero, el ítem vuelve al final con el aviso del repaso. Si el servidor la rechaza porque el paquete ya no existe (se borró en otro dispositivo), el ítem NO SHALL volver: la práctica SHALL cerrarse con "Este paquete ya no existe" y un enlace a la Biblioteca, sin cierre ni prompt. Si la rechaza porque el usuario ya no tiene permiso (le retiraron el acceso), la práctica SHALL cerrarse en ese momento, también con el cierre ya visible, con el mismo aviso del repaso ("Ya no tienes acceso", "Lo que calificaste antes quedó guardado." y "Continuar", que deja la sesión de la app en "sin acceso" y lleva a `/sin-acceso`). "Salir" SHALL volver al detalle del paquete sin cerrar nada. Entrar a la pantalla sin una práctica preparada SHALL redirigir a la Biblioteca. La práctica es efímera: nunca se retoma una anterior.
 
 #### Scenario: Calificar un ítem
 - **WHEN** el usuario revela un ítem y toca "Difícil"
@@ -113,6 +113,10 @@ El sistema SHALL considerar "para hoy" los ítems del paquete que nunca se han p
 #### Scenario: El paquete se borró en otro dispositivo
 - **WHEN** el usuario practica en el móvil, borra el paquete desde el computador y el servidor rechaza la siguiente calificación del móvil porque el paquete ya no existe
 - **THEN** la práctica del móvil se cierra con "Este paquete ya no existe" y el enlace a la Biblioteca, y el ítem no vuelve a la cola
+
+#### Scenario: Acceso retirado a mitad de la práctica
+- **WHEN** al usuario le retiran el acceso y el servidor rechaza la siguiente calificación por permisos
+- **THEN** la práctica se cierra con "Ya no tienes acceso", "Lo que calificaste antes quedó guardado." y "Continuar", que lleva a `/sin-acceso`
 
 ### Requirement: El cierre de la práctica ofrece el prompt y vuelve al paquete
 Al terminar la práctica, la pantalla de cierre SHALL mostrar "Práctica terminada", "Practicaste N ítems" (plural real), las pastillas por calificación y, en el bloque de práctica con IA, cuántos salieron difíciles ("5 para reforzar con la IA" o "Ninguno difícil esta vez"), el botón "Copiar prompt" y el botón "Volver al paquete". El prompt del cierre SHALL armarse con el día de estudio de la práctica, aunque el día de estudio cambie mientras se practica, de modo que sus difíciles coincidan con los que el cierre anuncia. Al salir o terminar, el cierre NO SHALL ofrecer "Volver a Hoy".
@@ -227,7 +231,7 @@ El detalle de un paquete abierto SHALL ofrecer "Marcar como completado", que tra
 - **THEN** el paquete sigue abierto sin cambios
 
 ### Requirement: Los paquetes viven en la Biblioteca y el detalle muestra lo de hoy
-La Biblioteca SHALL mostrar, debajo de los libros, la sección "Práctica con IA" con los paquetes abiertos como filas (nombre, "ítems / capacidad", "N para hoy" o "Ya practicaste hoy" o "Nada para hoy"), el botón "Nuevo paquete" y el enlace "Paquetes completados" al historial. Sin paquetes, la sección SHALL mostrar "Guarda aquí las palabras y frases que te cruces en el día y practícalas con tu IA." y "Nuevo paquete". El detalle de un paquete SHALL mostrar su nombre, "ítems / capacidad", la lista de ítems con la etiqueta "Para hoy" en los que tocan y la última calificación en los demás, y las acciones "Practicar hoy", "Agregar", "Importar", "Copiar prompt de hoy" y "Marcar como completado". El paquete SHALL poder renombrarse y borrarse (confirmación "¿Borrar este paquete? Se pierden sus N ítems. No se puede deshacer.").
+La Biblioteca SHALL mostrar, debajo de los libros, la sección "Práctica con IA" con los paquetes abiertos como filas (nombre, "ítems / capacidad", "N para hoy" o "Ya practicaste hoy" o "Nada para hoy"), el botón "Nuevo paquete" y el enlace "Paquetes completados" al historial. Sin paquetes, la sección SHALL mostrar "Guarda aquí las palabras y frases que te cruces en el día y practícalas con tu IA." y "Nuevo paquete". El detalle de un paquete SHALL mostrar su nombre, "ítems / capacidad", la lista de ítems y, en cada uno: si es del conjunto de hoy y ya se calificó hoy, su nota de hoy ("Otra vez · hoy"); si es del conjunto de hoy y falta calificarlo, "Para hoy"; si no, su última calificación ("Bien · ayer"). Y las acciones "Practicar hoy", "Agregar", "Importar", "Copiar prompt de hoy" y "Marcar como completado". El paquete SHALL poder renombrarse y borrarse (confirmación "¿Borrar este paquete? Se pierden sus N ítems. No se puede deshacer.").
 
 #### Scenario: Sección con paquetes
 - **WHEN** el usuario tiene el paquete A (14 / 20, 8 para hoy) y el B (3 / 20, ya practicado hoy)
@@ -240,6 +244,10 @@ La Biblioteca SHALL mostrar, debajo de los libros, la sección "Práctica con IA
 #### Scenario: Historial
 - **WHEN** el usuario tiene dos paquetes completados, uno del 2026-10-10 y otro del 2026-10-15
 - **THEN** "Paquetes completados" lista primero el del 2026-10-15, cada uno con nombre, fecha y "ítems", y sin historial muestra "Aún no has completado ningún paquete."
+
+#### Scenario: Detalle tras practicar
+- **WHEN** el conjunto de hoy tiene 8 ítems, el usuario calificó «to give up» "Otra vez" y «to look up» "Bien" y salió sin calificar los demás
+- **THEN** el detalle muestra "Otra vez · hoy" en «to give up», "Bien · hoy" en «to look up» y "Para hoy" en los otros 6
 
 ### Requirement: Hoy avisa de lo pendiente en los paquetes sin robar el foco
 Hoy SHALL mostrar, debajo de las filas por libro, el bloque "Práctica con IA" con una fila por paquete abierto que tenga ítems para hoy ("Película del viernes · 11 para hoy") y su botón de practicar; un paquete ya practicado hoy SHALL mostrarse como "Ya practicaste hoy · Volver a practicar" sin aviso; sin paquetes con pendientes ni practicados hoy, el bloque SHALL decir "Nada pendiente en tus paquetes." con el enlace "Ver paquetes". Sin ningún paquete, el bloque NO SHALL mostrarse. Si la lectura de los paquetes falla, el bloque SHALL mostrar "No pudimos cargar tus paquetes." con "Reintentar" y el resto de Hoy SHALL seguir funcionando.
@@ -296,3 +304,21 @@ Al leer paquetes del almacén, el sistema SHALL validar cada documento antes de 
 #### Scenario: Reintentar
 - **WHEN** el usuario toca "Reintentar" y la lectura tiene éxito
 - **THEN** la sección muestra los paquetes
+
+### Requirement: El cierre de la práctica con IA recibe el foco
+Al mostrarse el cierre de la práctica de un paquete, el sistema SHALL mover el foco a su título, como en el cierre del repaso, para que un lector de pantalla lo anuncie y Tab siga por "Copiar prompt" y "Volver al paquete".
+
+#### Scenario: Cierre con teclado
+- **WHEN** el usuario califica con el teclado el último ítem de la práctica y aparece el cierre
+- **THEN** el foco está en el título "Práctica terminada" y Tab lleva a "Copiar prompt" y después a "Volver al paquete"
+
+### Requirement: Salir y volver al paquete no dejan la práctica en el historial
+"Salir" y "Volver al paquete" SHALL llevar al detalle del paquete sin dejar la práctica detrás en el historial: si la práctica se abrió desde ese detalle, regresan a él como la entrada anterior del historial; si se abrió desde otra pantalla (por ejemplo, "Practicar hoy" en Hoy), la práctica SHALL reemplazarse por el detalle del paquete, de modo que el siguiente "atrás" lleve a la pantalla desde la que se abrió.
+
+#### Scenario: Desde el detalle del paquete
+- **WHEN** el usuario abre "Película del viernes", toca "Practicar hoy", toca "Salir" y pulsa "atrás"
+- **THEN** llega a la pantalla anterior al detalle del paquete, no otra vez al paquete
+
+#### Scenario: Desde Hoy
+- **WHEN** el usuario toca "Practicar hoy" en Hoy, termina, toca "Volver al paquete" y pulsa "atrás"
+- **THEN** vuelve a Hoy, sin pasar por la práctica

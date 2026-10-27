@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import type { Book } from '@domain/models/book.model';
@@ -96,12 +96,21 @@ export class BibliotecaPageComponent {
     });
   }
 
+  /** El libro cuyo borrado se está preparando (contando lo que se pierde): ignora más toques. */
+  protected readonly preparingDelete = signal<string | null>(null);
+
   /**
    * Con red cuenta capítulos y tarjetas para que la confirmación diga qué se pierde; sin red, o si
-   * el conteo falla, la confirmación se abre igual con el texto sin números.
+   * el conteo falla, la confirmación se abre igual con el texto sin números. Mientras cuenta, otro
+   * toque no abre una segunda confirmación.
    */
   protected async askDelete(book: Book): Promise<void> {
+    if (this.preparingDelete() !== null) {
+      return;
+    }
+    this.preparingDelete.set(book.id);
     const counts = this.online() ? await this.countContents(book) : null;
+    this.preparingDelete.set(null);
     this.dialogs.open<boolean, ConfirmDialogData>(ConfirmDialogComponent, {
       label: this.copy.deleteBook.title,
       size: 'sm',

@@ -11,7 +11,7 @@ import {
 
 import { PRACTICA_COPY } from '../practica.copy';
 
-// Una pregunta de escribir: el anverso, un campo sin autocompletar ni autocapitalizar y
+// Una pregunta de escribir: el anverso, un campo sin autocompletar, autocapitalizar ni autocorregir y
 // "Comprobar" (o Enter), deshabilitado mientras no haya texto. Respondida, todo se bloquea; una
 // pregunta nueva vacía el campo y le da el foco.
 @Component({

@@ -29,6 +29,7 @@ export const IMPORTACION_COPY = {
   replaceConfirm: 'Reemplazar todo',
   replacing: 'Reemplazando…',
   repeatedNote: 'Se importarán igual. Las verás marcadas como repetidas.',
+  chaptersTitle: 'Tarjetas por capítulo',
 } as const;
 
 export interface ImportCounts {
@@ -69,6 +70,11 @@ export function countsLine(
   ].join(' · ');
 }
 
+/** "Unidad 1 · 24": un capítulo con su número de tarjetas, bajo "Tarjetas por capítulo". */
+export function chapterCountLine(name: string, cards: number): string {
+  return `${name} · ${cards}`;
+}
+
 export function omittedHeading(count: number): string {
   return count === 1 ? '1 línea se omitirá:' : `${count} líneas se omitirán:`;
 }
@@ -79,6 +85,16 @@ export function omittedLine(line: number, reason: string): string {
 
 export function importLabel(count: number): string {
   return `Importar ${count}`;
+}
+
+/**
+ * El botón de importar un libro: cuenta tarjetas y, si no trae ninguna pero sí capítulos (el
+ * esqueleto de un libro, como el que se exporta sin tarjetas), cuenta capítulos.
+ */
+export function importBookLabel(cards: number, chapters: number): string {
+  return cards === 0 && chapters > 0
+    ? `Importar ${pluralize(chapters, 'capítulo', 'capítulos')}`
+    : importLabel(cards);
 }
 
 /** El aviso de la confirmación de reemplazo. */

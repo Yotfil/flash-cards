@@ -58,6 +58,7 @@
           <li>
             <app-book-card
               [book]="book"
+              [preparingDelete]="preparingDelete() === book.id"
               (opened)="openBook(book)"
               (settingsRequested)="openSettings(book)"
               (deleteRequested)="askDelete(book)"

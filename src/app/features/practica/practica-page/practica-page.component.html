@@ -1,4 +1,4 @@
-<main class="safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4 pt-4">
+<main class="safe-top-gap safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4">
   @if (session.finished()) {
     <app-practice-summary
       [score]="session.score()"
@@ -15,6 +15,7 @@
 
     @if (question.type === 'multiple-choice') {
       <app-multiple-choice-question
+        [questionId]="question.id"
         [prompt]="question.prompt"
         [options]="question.options ?? []"
         [answered]="answered()"

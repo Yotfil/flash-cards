@@ -67,10 +67,17 @@ export class ImportService {
    */
   readonly bookImport = this.bookImportSignal.asReadonly();
 
-  /** Al importar un libro, las repetidas se cuentan solo dentro del texto. */
+  /**
+   * Al importar un libro, las repetidas se cuentan dentro de cada capítulo del texto: es donde el
+   * listado las marcará (la misma línea en dos capítulos no sale como repetida en ninguno).
+   */
   previewForBook(text: string, bookName: string): ImportPreview {
     const parse = parseImportText(text, bookName);
-    return { parse, repeatedCount: countRepeatedLines(draftsOf(parse), []) };
+    const repeatedCount = parse.package.chapters.reduce(
+      (sum, chapter) => sum + countRepeatedLines(chapter.cards, []),
+      0,
+    );
+    return { parse, repeatedCount };
   }
 
   /**

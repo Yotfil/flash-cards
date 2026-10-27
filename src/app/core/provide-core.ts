@@ -13,6 +13,7 @@ import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { PracticePackageRepository } from '@domain/ports/practice-package.repository';
+import { AppUpdatePort } from '@domain/ports/app-update.port';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
@@ -26,6 +27,7 @@ import { FirebaseAuthAdapter } from '@infrastructure/auth/firebase-auth.adapter'
 import { BrowserFileDeliveryAdapter } from '@infrastructure/browser/browser-file-delivery.adapter';
 import { DocumentThemeAdapter } from '@infrastructure/browser/document-theme.adapter';
 import { NavigatorConnectivityAdapter } from '@infrastructure/browser/navigator-connectivity.adapter';
+import { ServiceWorkerUpdateAdapter } from '@infrastructure/browser/service-worker-update.adapter';
 import { FIREBASE_AUTH, FIRESTORE } from '@infrastructure/firebase/firebase.tokens';
 import { FirestoreAllowlistRepository } from '@infrastructure/firestore/allowlist.repository.firestore';
 import { FirestoreBookRepository } from '@infrastructure/firestore/book.repository.firestore';
@@ -51,6 +53,7 @@ export function provideCore(): EnvironmentProviders {
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: ThemePort, useClass: DocumentThemeAdapter },
     { provide: ConnectivityPort, useClass: NavigatorConnectivityAdapter },
+    { provide: AppUpdatePort, useClass: ServiceWorkerUpdateAdapter },
     { provide: FileDeliveryPort, useFactory: () => browserFileDelivery(inject(DOCUMENT)) },
     // El algoritmo de programación no inyecta nada: se construye como una clase cualquiera.
     { provide: SchedulingPort, useFactory: () => new TsFsrsSchedulingAdapter() },

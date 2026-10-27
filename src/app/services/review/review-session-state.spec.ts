@@ -4,7 +4,9 @@ import type { SchedulingPreview } from '@domain/ports/scheduling.port';
 import { aCard } from '@testing/fake-card-repository';
 
 import {
+  closeForLostAccess,
   confirmSaved,
+  dropGoneCard,
   grade,
   rejectSaved,
   progressPercent,
@@ -95,6 +97,15 @@ describe('review-session-state · arranque y revelar', () => {
     expect(start().day).toEqual({ id: '2026-10-24', endOfDay: END_OF_DAY });
     // 01:30 en Bogotá del domingo 25.
     expect(start([A], LEAVES, new Date('2026-10-25T06:30:00Z')).day.id).toBe('2026-10-24');
+  });
+
+  it('una sesión no cruza al día siguiente: lo calificado tras la hora de inicio va al día de la sesión', () => {
+    // Empieza a las 03:55 en Bogotá del domingo 25 y califica a las 04:20.
+    const dawn = start([A, B], LEAVES, new Date('2026-10-25T08:55:00Z'));
+
+    const { record } = revealAndGrade(dawn, 3, new Date('2026-10-25T09:20:00Z'), LEAVES);
+
+    expect(record?.dayId).toBe('2026-10-24');
   });
 
   it('revelar a los 3 s sugiere "Bien"; con la sugerencia apagada no sugiere nada', () => {
@@ -270,7 +281,7 @@ describe('review-session-state · confirmar y rechazar', () => {
     expect(rejected.ratingCounts.good).toBe(0);
     expect(rejected.queue.map((appearance) => appearance.card.id)).toEqual(['B', 'C', 'A']);
     expect(rejected.queue.at(-1)?.card.scheduling).toEqual(A.scheduling);
-    expect(rejected.alerts).toEqual([{ cardId: 'A', front: 'to give up' }]);
+    expect(rejected.alerts).toEqual([{ cardId: 'A', front: 'to give up', kind: 'failed' }]);
     expect(rejected.inFlight.size).toBe(0);
   });
 
@@ -319,5 +330,109 @@ describe('review-session-state · confirmar y rechazar', () => {
     const retried = revealAndGrade(afterB, 3, at(4 * SECOND_MS), LEAVES).state;
 
     expect(confirmSaved(retried, retriedId).alerts).toEqual([]);
+  });
+});
+
+describe('review-session-state · rechazos permanentes', () => {
+  it('tarjeta borrada que había vuelto: sale de la sesión, sin su nota y con su aviso', () => {
+    const before = start([A, B, C], COMES_BACK);
+    const graded = revealAndGrade(before, 1, at(SECOND_MS), COMES_BACK).state;
+    expect(graded.queue.map((appearance) => appearance.card.id)).toEqual(['B', 'C', 'A']);
+
+    const dropped = dropGoneCard(graded, before.queue[0]?.id ?? '', at(2 * SECOND_MS), COMES_BACK);
+
+    expect(dropped.queue.map((appearance) => appearance.card.id)).toEqual(['B', 'C']);
+    expect(dropped.exitedCardIds.has('A')).toBe(true);
+    expect(dropped.ratingCounts.again).toBe(0);
+    expect(dropped.difficult).toEqual([]);
+    expect(dropped.inFlight.size).toBe(0);
+    expect(dropped.alerts).toEqual([{ cardId: 'A', front: 'to give up', kind: 'gone' }]);
+    expect(dropped.queue[0]).toBe(graded.queue[0]);
+  });
+
+  it('si la borrada es la que se muestra, pasa a la siguiente sin revelar', () => {
+    const before = start([A, B], COMES_BACK);
+    const afterA = revealAndGrade(before, 3, at(SECOND_MS), COMES_BACK).state;
+    const afterB = revealAndGrade(afterA, 3, at(2 * SECOND_MS), COMES_BACK).state;
+    const showingA = reveal(afterB, at(3 * SECOND_MS), false);
+    expect(showingA.queue[0]?.card.id).toBe('A');
+
+    const dropped = dropGoneCard(
+      showingA,
+      before.queue[0]?.id ?? '',
+      at(4 * SECOND_MS),
+      COMES_BACK,
+    );
+
+    expect(dropped.queue.map((appearance) => appearance.card.id)).toEqual(['B']);
+    expect(dropped.revealed).toBe(false);
+    expect(dropped.shownAt).toBe(at(4 * SECOND_MS).getTime());
+    expect(dropped.previews).not.toBeNull();
+    expect(dropped.status).toBe('active');
+  });
+
+  it('si la borrada era la única que quedaba, la sesión termina', () => {
+    const before = start([A], COMES_BACK);
+    const graded = revealAndGrade(before, 3, at(SECOND_MS), COMES_BACK).state;
+
+    const dropped = dropGoneCard(graded, before.queue[0]?.id ?? '', at(2 * SECOND_MS), COMES_BACK);
+
+    expect(dropped.status).toBe('finished');
+    expect(dropped.queue).toEqual([]);
+    expect(dropped.previews).toBeNull();
+  });
+
+  it('con el cierre visible, una borrada no se cuenta como pendiente', () => {
+    const before = start([A]);
+    const graded = revealAndGrade(before, 3, at(SECOND_MS), LEAVES).state;
+    expect(graded.status).toBe('finished');
+
+    const dropped = dropGoneCard(graded, before.queue[0]?.id ?? '', at(2 * SECOND_MS), LEAVES);
+
+    expect(dropped.status).toBe('finished');
+    expect(dropped.rejectedAfterFinish).toBe(0);
+    expect(dropped.ratingCounts.good).toBe(0);
+  });
+
+  it('el aviso de la borrada sustituye al de un rechazo anterior de la misma tarjeta', () => {
+    const before = start([A, B], COMES_BACK);
+    const afterA = revealAndGrade(before, 3, at(SECOND_MS), COMES_BACK).state;
+    const failed = rejectSaved(afterA, before.queue[0]?.id ?? '', at(2 * SECOND_MS), COMES_BACK);
+    const afterB = revealAndGrade(failed, 3, at(3 * SECOND_MS), COMES_BACK).state;
+    const retriedId = afterB.queue[0]?.id ?? '';
+    const retried = revealAndGrade(afterB, 3, at(4 * SECOND_MS), COMES_BACK).state;
+
+    const dropped = dropGoneCard(retried, retriedId, at(5 * SECOND_MS), COMES_BACK);
+
+    expect(dropped.alerts).toEqual([{ cardId: 'A', front: 'to give up', kind: 'gone' }]);
+  });
+
+  it('sin acceso, la sesión se cierra: sin tarjeta revelada ni previsualizaciones', () => {
+    const revealed = reveal(start(), at(SECOND_MS), true);
+
+    const closed = closeForLostAccess(revealed);
+
+    expect(closed.status).toBe('accessLost');
+    expect(closed.revealed).toBe(false);
+    expect(closed.previews).toBeNull();
+    expect(closed.suggested).toBeNull();
+  });
+
+  it('sin acceso también con el cierre visible', () => {
+    const finished = revealAndGrade(start([A]), 3, at(SECOND_MS), LEAVES).state;
+
+    expect(closeForLostAccess(finished).status).toBe('accessLost');
+  });
+
+  it('cerrada por falta de acceso, los resultados que llegan después no la reabren', () => {
+    const before = start([A, B, C], COMES_BACK);
+    const graded = revealAndGrade(before, 3, at(SECOND_MS), COMES_BACK).state;
+    const closed = closeForLostAccess(graded);
+    const appearanceId = before.queue[0]?.id ?? '';
+
+    expect(rejectSaved(closed, appearanceId, at(2 * SECOND_MS), COMES_BACK)).toBe(closed);
+    expect(dropGoneCard(closed, appearanceId, at(2 * SECOND_MS), COMES_BACK)).toBe(closed);
+    expect(confirmSaved(closed, appearanceId)).toBe(closed);
+    expect(grade(closed, 3, at(2 * SECOND_MS), COMES_BACK).record).toBeNull();
   });
 });

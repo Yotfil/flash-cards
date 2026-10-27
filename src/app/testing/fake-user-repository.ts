@@ -1,4 +1,5 @@
 import { applySettingsChanges, type SettingsChanges, type User } from '@domain/models/user.model';
+import type { ReadSource } from '@domain/ports/read-source';
 import { UserRepository } from '@domain/ports/user.repository';
 
 /** Una escritura parcial de ajustes, tal como la pidió el servicio. */
@@ -10,25 +11,52 @@ export interface SettingsUpdate {
 // Fake en memoria del repositorio de perfiles. `failOnFind`, `failOnSave` y `failOnUpdateSettings`
 // simulan una lectura o una escritura que falla (sin red, documento inválido); `saved` y
 // `settingsUpdates` dejan ver cada escritura. Como el real, `updateSettings` solo toca los ajustes
-// indicados del perfil guardado.
+// indicados del perfil guardado. Lo guardado en el dispositivo va aparte (`seedOnDevice`);
+// `holdServerFind` retiene una lectura del servidor ya hecha (devuelve lo que había al pedirla).
+// `failOnFindOnDevice` simula un perfil guardado que no se puede leer.
 export class FakeUserRepository extends UserRepository {
   readonly saved: User[] = [];
   readonly settingsUpdates: SettingsUpdate[] = [];
   failOnFind: unknown = null;
+  failOnFindOnDevice: unknown = null;
   failOnSave: unknown = null;
   failOnUpdateSettings: unknown = null;
   private readonly users = new Map<string, User>();
   private settingsGate: Promise<void> | null = null;
+  private findGate: Promise<void> | null = null;
+  private readonly onDevice = new Map<string, User>();
 
   seed(user: User): void {
     this.users.set(user.id, user);
   }
 
-  async findById(uid: string): Promise<User | null> {
+  seedOnDevice(user: User): void {
+    this.onDevice.set(user.id, user);
+  }
+
+  /** Retiene las lecturas del servidor siguientes (como una red lenta) hasta soltar. */
+  holdServerFind(): () => void {
+    let release!: () => void;
+    this.findGate = new Promise((resolve) => (release = resolve));
+    return () => {
+      this.findGate = null;
+      release();
+    };
+  }
+
+  async findById(uid: string, source: ReadSource = 'server'): Promise<User | null> {
+    if (source === 'device') {
+      if (this.failOnFindOnDevice !== null) {
+        throw this.failOnFindOnDevice;
+      }
+      return this.onDevice.get(uid) ?? null;
+    }
     if (this.failOnFind !== null) {
       throw this.failOnFind;
     }
-    return this.users.get(uid) ?? null;
+    const stored = this.users.get(uid) ?? null;
+    await this.findGate;
+    return stored;
   }
 
   async save(user: User): Promise<void> {

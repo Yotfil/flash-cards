@@ -35,6 +35,9 @@ import { requireSessionUser } from './require-session';
 //        │ ok
 //        ▼
 //   con sesión (perfil)
+//
+// Si el dispositivo ya guarda la entrada de la lista y el perfil, la sesión pasa a "con sesión" al
+// instante con lo guardado, y el camino de arriba la confirma (o la corrige) con el servidor.
 /** El día de estudio empieza a las 4: un repaso de madrugada cuenta para el día anterior. */
 const DEFAULT_DAY_START_HOUR = 4;
 const FALLBACK_DISPLAY_NAME = 'Estudiante';
@@ -42,6 +45,11 @@ const FALLBACK_DISPLAY_NAME = 'Estudiante';
 /** La parte del correo antes de la arroba, o "Estudiante" si no hay. */
 function displayNameFromEmail(email: string | null): string {
   return email?.split('@')[0] || FALLBACK_DISPLAY_NAME;
+}
+
+/** Mismo perfil por valor: confirmar con el servidor no debe recalcular nada si no cambió. */
+function sameProfile(a: User, b: User): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 /** Si la ventana de Google dijo que la identidad es nueva. Ante la duda, no lo es (no se borra). */
@@ -113,21 +121,39 @@ export class SessionService {
 
   /**
    * Crea una cuenta con correo y contraseña, solo si el correo está en la lista: fuera de ella no se
-   * crea ninguna identidad. La sesión llega después por el observador.
+   * crea ninguna identidad. La sesión llega después por el observador. El correo se recorta y pasa
+   * a minúsculas, como lo guarda el proveedor: la lista se escribe así y la comparación es literal.
    */
   async register(registration: Registration): Promise<'registered' | 'notAllowlisted'> {
-    if (!(await this.isAllowedForRegistration(registration.email))) {
+    const email = registration.email.trim().toLowerCase();
+    if (!(await this.isAllowedForRegistration(email))) {
       return 'notAllowlisted';
     }
-    const displayName = registration.displayName.trim() || displayNameFromEmail(registration.email);
+    const displayName = registration.displayName.trim() || displayNameFromEmail(email);
     this.pendingDisplayName = displayName;
     try {
-      await this.authPort.registerWithEmail({ ...registration, displayName });
+      await this.authPort.registerWithEmail({ ...registration, email, displayName });
     } catch (error) {
       this.pendingDisplayName = null;
       throw error;
     }
     return 'registered';
+  }
+
+  /**
+   * Pide el correo para crear una contraseña nueva, con el correo como lo guarda el proveedor. Un
+   * "datos incorrectos" (no hay cuenta con ese correo) se calla: la pantalla responde lo mismo haya
+   * o no cuenta, para no revelar quién la tiene. Los demás fallos suben.
+   */
+  async sendPasswordReset(email: string): Promise<void> {
+    try {
+      await this.authPort.sendPasswordReset(email.trim().toLowerCase());
+    } catch (error) {
+      if (error instanceof AuthError && error.kind === 'invalidCredentials') {
+        return;
+      }
+      throw error;
+    }
   }
 
   /** Inicia sesión en el proveedor; la sesión de la app llega por el observador. */
@@ -152,6 +178,18 @@ export class SessionService {
   /** Repite la carga del perfil de la identidad actual tras un error de perfil. */
   async retryProfile(): Promise<void> {
     await this.handleIdentity(this.currentIdentity);
+  }
+
+  /**
+   * El servidor negó el permiso a una escritura con la app abierta: el correo salió de la lista
+   * (las reglas no niegan por otra cosa al dueño). La sesión queda "sin acceso" con ese correo,
+   * como si se hubiera comprobado al arrancar; la identidad se conserva. Sin sesión activa, nada.
+   */
+  markAccessRevoked(): void {
+    const user = this.user();
+    if (user) {
+      this.setState({ kind: 'noAccess', email: user.email });
+    }
   }
 
   /**
@@ -210,6 +248,17 @@ export class SessionService {
     const googleSignIn = this.googleSignIn;
     this.googleSignIn = null;
 
+    // Con lo guardado en el dispositivo la app arranca al instante (con señal mala, esperar al
+    // servidor dejaba la pantalla en blanco hasta ~10 s); el servidor confirma detrás.
+    const saved = await this.savedProfile(identity);
+    if (generation !== this.generation) {
+      return;
+    }
+    const savedState: SessionState | null = saved ? { kind: 'active', user: saved } : null;
+    if (savedState) {
+      this.setState(savedState);
+    }
+
     try {
       const allowed = identity.email !== null && (await this.allowlist.isAllowed(identity.email));
       if (generation !== this.generation) {
@@ -228,15 +277,58 @@ export class SessionService {
       const profile =
         (await this.users.findById(identity.uid)) ?? (await this.createProfile(identity));
       if (generation === this.generation) {
-        this.setState({ kind: 'active', user: profile });
+        this.confirmProfile(savedState, profile);
       }
     } catch (error) {
+      if (generation !== this.generation) {
+        return;
+      }
+      if (savedState) {
+        // Ya se arrancó con lo guardado: sin respuesta del servidor se sigue con eso.
+        this.logger.warn(
+          'No se pudo confirmar la sesión con el servidor; sigue lo guardado',
+          error,
+        );
+        return;
+      }
       // Sin red y sin caché, o un perfil que no cumple su forma: la identidad se conserva y la
       // pantalla de acceso ofrece Reintentar o Cerrar sesión.
-      if (generation === this.generation) {
-        this.logger.error('No se pudo cargar el perfil del usuario', error);
-        this.setState({ kind: 'profileError', cause: error });
-      }
+      this.logger.error('No se pudo cargar el perfil del usuario', error);
+      this.setState({ kind: 'profileError', cause: error });
+    }
+  }
+
+  /**
+   * El perfil guardado en el dispositivo, solo si el dispositivo guarda también la entrada de su
+   * correo en la lista; si no, `null` y se espera al servidor. Lo guardado es un atajo: si no se
+   * puede leer, se avisa y manda el servidor.
+   */
+  private async savedProfile(identity: AuthIdentity): Promise<User | null> {
+    if (identity.email === null) {
+      return null;
+    }
+    try {
+      const allowed = await this.allowlist.isAllowed(identity.email, 'device');
+      return allowed ? await this.users.findById(identity.uid, 'device') : null;
+    } catch (error) {
+      this.logger.warn('No se pudo leer la sesión guardada en el dispositivo', error);
+      return null;
+    }
+  }
+
+  /**
+   * La sesión con el perfil del servidor. Si ya arrancó con lo guardado, solo lo cambia si es
+   * distinto y la sesión sigue siendo la de ese arranque: un ajuste guardado mientras tanto en este
+   * dispositivo es más nuevo que la lectura del servidor y no se pisa.
+   */
+  private confirmProfile(savedState: SessionState | null, profile: User): void {
+    if (savedState === null) {
+      this.setState({ kind: 'active', user: profile });
+      return;
+    }
+    const unchanged = this.stateSignal() === savedState;
+    if (unchanged && savedState.kind === 'active' && !sameProfile(savedState.user, profile)) {
+      this.setState({ kind: 'active', user: profile });
     }
   }
 

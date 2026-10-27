@@ -16,6 +16,7 @@ const choice = (n: number): QuizQuestion => ({
   type: 'multiple-choice',
   prompt: `front ${n}`,
   answer: `back ${n}`,
+  acceptedAnswers: [`back ${n}`],
   options: [`back ${n}`, 'x', 'y', 'z'],
 });
 const written = (n: number, answer = `back ${n}`): QuizQuestion => ({
@@ -24,6 +25,7 @@ const written = (n: number, answer = `back ${n}`): QuizQuestion => ({
   type: 'written',
   prompt: `front ${n}`,
   answer,
+  acceptedAnswers: [answer],
 });
 
 describe('practice-state', () => {
@@ -51,6 +53,19 @@ describe('practice-state', () => {
 
     expect(currentAnswer(answerCurrent(state, '  Darse por vencido '))?.correct).toBe(true);
     expect(currentAnswer(answerCurrent(state, 'avanzar'))?.correct).toBe(false);
+  });
+
+  it('escribir vale cualquiera de las acepciones del anverso', () => {
+    const bank: QuizQuestion = {
+      ...written(1, 'banco'),
+      prompt: 'bank',
+      acceptedAnswers: ['banco', 'orilla'],
+    };
+    const state = startPractice([bank]);
+
+    expect(currentAnswer(answerCurrent(state, 'orilla'))?.correct).toBe(true);
+    expect(currentAnswer(answerCurrent(state, 'banco'))?.correct).toBe(true);
+    expect(currentAnswer(answerCurrent(state, 'río'))?.correct).toBe(false);
   });
 
   it('una pregunta respondida no acepta otra respuesta ni cuenta doble', () => {

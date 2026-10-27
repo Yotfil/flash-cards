@@ -123,6 +123,16 @@ ts-fsrs, Zod, Signal Forms, Angular CDK, Vitest, Netlify.
 - Las reglas permiten comprobar un correo exacto sin sesión (para detener un registro no
   autorizado antes de crear la cuenta) y prohíben listar la colección. Al publicar un release que
   cambie `firestore.rules`, despliégalas con `firebase deploy --only firestore:rules`.
+- "Olvidé mi contraseña" envía el correo de restablecimiento de Firebase (su plantilla e idioma se
+  editan en la consola: Authentication → Plantillas). La pantalla responde lo mismo haya o no cuenta
+  con ese correo. En el emulador, el enlace aparece en la pestaña Authentication y en
+  `/emulator/v1/projects/<proyecto>/oobCodes`.
+- Si un correo sale de la lista con la app abierta, la siguiente nota del repaso o de la práctica
+  se rechaza por permisos: la sesión se cierra con "Ya no tienes acceso" y lleva a "sin acceso".
+- Al abrir la app, si el dispositivo ya guarda la entrada de la lista y el perfil, la sesión arranca
+  con eso al instante (`SessionService`, lecturas `'device'`) y el servidor confirma detrás: si el
+  correo ya no está, la raíz (`App`) lleva a `/sin-acceso`. Medido en Chrome con 3 s de retraso por
+  petición a Firestore: Hoy visible a los 92 ms (antes, 12,2 s en blanco).
 
 ## Caparazón y piezas compartidas
 
@@ -146,6 +156,27 @@ const ref = inject(DialogService).open<Book, { bookId: string }>(BookFormDialogC
 const saved = await ref.closed; // undefined si se canceló
 // Dentro del contenido: dialogRef.setPending(true) mientras guarda; dialogRef.close(resultado).
 ```
+
+Mientras está ocupado, ni Escape ni el "atrás" del sistema lo cierran. Un guardado que queda en el
+dispositivo aunque no confirme (crear o editar un libro, un capítulo, una tarjeta de un capítulo, un
+paquete) se apunta con `setPending(true, { releaseWhenSlow: true })`: si a los 6 s (`SLOW_SAVE_MS`)
+el almacén no confirmó (wifi sin internet), el diálogo deja de estar ocupado y `savingTooLong()`
+avisa al contenido, que muestra `SAVED_ON_DEVICE_MESSAGE` y cambia "Cancelar" por "Cerrar". Importar
+usa `IMPORT_WAITS_FOR_CONNECTION_MESSAGE`, que no promete nada. Los borrados y los ítems de un
+paquete (transacciones) no se apuntan. Con un diálogo abierto, el "atrás" del sistema solo cierra
+el de arriba: `DialogService` aborta la navegación y el router, con
+`canceledNavigationResolution: 'computed'`, devuelve el historial a su sitio.
+
+**Versión nueva.** En producción, el trabajador de servicio descarga la versión nueva en segundo
+plano. `AppUpdatePort` (adaptador sobre `SwUpdate`, `infrastructure/browser/`) la marca lista con
+`VERSION_READY` y el caparazón muestra "Hay una versión nueva · Recargar" (`features/shell/update-notice`):
+no obliga y no aparece en las pantallas completas, que no usan el caparazón. En desarrollo no hay
+trabajador de servicio y el aviso nunca sale.
+
+**Salir de una pantalla completa.** Repaso, práctica y práctica con IA salen con
+`ReturnNavigation.leaveTo(destino)` (`shared/navigation/`): si se abrieron desde el destino,
+regresan con "atrás"; si no, se reemplazan por él. Así ningún "atrás" posterior cae en la pantalla
+completa (que redirigiría) ni en una pantalla repetida.
 
 **Guardar ajustes.** Los controles de elección (casilla, selector, tema) guardan al tocar con
 `createImmediateSetting` (`features/ajustes/immediate-setting.ts`): el valor nuevo se ve al
@@ -235,9 +266,24 @@ final como aparición nueva; si no, sale. El guardado es **optimista**: `ReviewS
 avanza al instante y envía sin esperar un lote atómico (`GradePersistencePort`: tarjeta, historial
 e indicadores del día) que el SDK guarda en el dispositivo y sincroniza al volver la red; si el
 servidor lo rechaza, la tarjeta vuelve al final con su programación anterior y un aviso. Dos
-tiempos: la **latencia de recuerdo** (mostrar → revelar) solo sugiere un grado; la **duración del
-repaso** (mostrar → calificar) se guarda en cada registro. El cierre cuenta las tarjetas distintas
-y las calificaciones por grado, y deja el hueco `[practice]` para la práctica con IA.
+rechazos son permanentes y el adaptador los nombra: `CardGoneError` (la tarjeta se borró en otro
+dispositivo: sale de la sesión con su aviso) y `AccessRevokedError` (`permission-denied`, el correo
+salió de la lista: la sesión, y también la práctica con IA, se cierra con "Ya no tienes acceso" y
+"Continuar" lleva a `/sin-acceso` con `SessionService.markAccessRevoked`). Dos tiempos: la
+**latencia de recuerdo** (mostrar → revelar) solo sugiere un grado; la **duración del repaso**
+(mostrar → calificar) se guarda en cada registro. La sesión acredita todo al día de estudio en que
+empezó. El cierre cuenta las tarjetas distintas y las calificaciones por grado; su hueco
+`[practice]` solo lo llena la práctica con IA.
+
+**Práctica.** Un mini-quiz aparte del repaso (`/practicar`), sin tocar la programación ni el día.
+`services/practice/generate-quiz.ts` arma una pregunta por **anverso normalizado** (las acepciones
+de "bank" y las tarjetas repetidas no se preguntan dos veces), alterna opción múltiple y escribir y,
+en opción múltiple, nunca usa otra acepción del mismo anverso como distractor. Al escribir vale
+cualquier acepción, completa o por fragmentos separados por `,` `;` `/` (salvo entre dos dígitos:
+"3,14" no se parte). Toda comparación de textos de tarjeta (práctica, repetidas del listado y de la
+importación, orden) pasa por `normalizeCardText`: recorta, baja a minúsculas, colapsa espacios,
+iguala apóstrofos y comillas tipográficos con los rectos y une las tildes escritas aparte (NFC). El
+texto guardado no cambia.
 
 **Importar.** "Un archivo = un libro" (`/importar`) o pegar en un capítulo ("Importar tarjetas").
 La convención, línea a línea: `# Nombre` abre un capítulo; `anverso | reverso` (o separado por
@@ -245,16 +291,24 @@ tabulador) es una tarjeta básica; un texto con huecos `{{así}}` es una cloze; 
 espacio a cada lado añade un ejemplo al final (`to give up | rendirse :: I gave up smoking.`). El parser
 (`services/import/parse-import-text.ts`) valida con los mismos esquemas Zod que los formularios y
 nunca aborta: cada línea que no entra se omite con su motivo y su número, y la previsualización lo
-muestra antes de escribir nada. El libro se escribe en lotes con su documento en el último (nunca
-aparece a medias) y, si un lote falla, se borra lo escrito; reemplazar un capítulo es atómico si
-cabe en un lote (`writeInCountedBatches` con delta por operación).
+muestra antes de escribir nada (las 100 primeras y "y N más", con `limitList` de `@shared/text`).
+Al importar un libro, la previsualización nombra cada capítulo con sus tarjetas ("Unidad 1 · 24",
+plegada con más de 5), cuenta las repetidas dentro de cada capítulo (como las marcará el listado)
+y deja importar el esqueleto de un libro: capítulos sin tarjetas ("Importar 8 capítulos"). El
+libro se escribe en lotes con su documento en el último (nunca aparece a medias) y, si un lote
+falla, se borra lo escrito; reemplazar un capítulo es atómico si cabe en un lote
+(`writeInCountedBatches` con delta por operación).
 
 **Exportar.** El inverso de importar: el botón de compartir del detalle del libro arma, con
 `services/export/`, el mismo texto que la importación acepta (capítulos en orden, tarjetas en el
 orden del listado, suspendidas incluidas, sin progreso; importarlo da los mismos capítulos y
 tarjetas) y lo entrega con `FileDeliveryPort`: "Compartir" con la hoja del sistema donde el
 navegador comparte archivos, o "Descargar .txt" donde no, y siempre "Copiar texto". Lee el libro
-del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita.
+del servidor (`listByBookFromServer`, nunca la caché), así que sin red se deshabilita. La
+convención no tiene escapes, así que antes de entregar la exportación relee cada línea con el
+mismo parser (`cardsThatWontReturn`) y el diálogo nombra las tarjetas que no volverán igual (un
+`#` al inicio, un `|` en el anverso, un `::` en el reverso…); un capítulo sin nombre sale como
+"Capítulo sin nombre".
 
 **Práctica con IA.** Una rama aparte de los libros: **paquetes de práctica** (`/users/{uid}/practicePackages`,
 un documento por paquete con sus ítems dentro) que el usuario llena con lo que se cruza en el día,

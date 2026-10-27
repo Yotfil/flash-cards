@@ -11,9 +11,17 @@ const QUESTIONS: QuizQuestion[] = [
     type: 'multiple-choice',
     prompt: 'to give up',
     answer: 'rendirse',
+    acceptedAnswers: ['rendirse'],
     options: ['rendirse', 'a', 'b', 'c'],
   },
-  { id: 'q2', cardId: 'k2', type: 'written', prompt: 'to look up', answer: 'buscar' },
+  {
+    id: 'q2',
+    cardId: 'k2',
+    type: 'written',
+    prompt: 'to look up',
+    answer: 'buscar',
+    acceptedAnswers: ['buscar'],
+  },
 ];
 const PREPARED: PreparedPractice = {
   questions: QUESTIONS,
@@ -43,7 +51,12 @@ describe('PracticeSessionService', () => {
     session.start(PREPARED);
 
     session.answer('a');
-    expect(session.feedback()).toEqual({ correct: false, answer: 'rendirse', chosen: 'a' });
+    expect(session.feedback()).toEqual({
+      correct: false,
+      answer: 'rendirse',
+      chosen: 'a',
+      correctAnswers: ['rendirse'],
+    });
     expect(session.progress()).toBe(0.5);
     expect(session.isLast()).toBe(false);
 
@@ -57,6 +70,38 @@ describe('PracticeSessionService', () => {
     expect(session.finished()).toBe(true);
     expect(session.score()).toBe(1);
     expect(session.progress()).toBe(1);
+  });
+
+  it('al fallar, escribir nombra todas las acepciones y opción múltiple solo la mostrada', () => {
+    const session = service();
+    session.start({
+      ...PREPARED,
+      questions: [
+        {
+          id: 'q1',
+          cardId: 'k1',
+          type: 'multiple-choice',
+          prompt: 'bank',
+          answer: 'banco',
+          acceptedAnswers: ['banco', 'orilla'],
+          options: ['banco', 'a', 'b', 'c'],
+        },
+        {
+          id: 'q2',
+          cardId: 'k2',
+          type: 'written',
+          prompt: 'bank',
+          answer: 'banco',
+          acceptedAnswers: ['banco', 'orilla'],
+        },
+      ],
+    });
+
+    session.answer('a');
+    expect(session.feedback()?.correctAnswers).toEqual(['banco']);
+    session.advance();
+    session.answer('río');
+    expect(session.feedback()?.correctAnswers).toEqual(['banco', 'orilla']);
   });
 
   it('una práctica nueva empieza de cero; reset lo vacía todo', () => {

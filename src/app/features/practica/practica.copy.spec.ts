@@ -11,7 +11,14 @@ describe('textos de la práctica', () => {
     expect(positionLabel(4, 10)).toBe('4 / 10');
     expect(scoreLabel(7, 10)).toBe('Acertaste 7 de 10.');
     expect(scoreLabel(1, 2)).toBe('Acertaste 1 de 2.');
-    expect(wrongAnswerLabel('rendirse')).toBe('La respuesta era «rendirse».');
+    expect(wrongAnswerLabel(['rendirse'])).toBe('La respuesta era «rendirse».');
+  });
+
+  it('con varias acepciones, las nombra todas', () => {
+    expect(wrongAnswerLabel(['banco', 'orilla'])).toBe('La respuesta era «banco» o «orilla».');
+    expect(wrongAnswerLabel(['banco', 'orilla', 'ribera'])).toBe(
+      'La respuesta era «banco», «orilla» o «ribera».',
+    );
   });
 
   it('volver según el origen', () => {
@@ -27,6 +34,9 @@ describe('textos de la práctica', () => {
     expect(PRACTICA_COPY.seeResult).toBe('Ver resultado');
     expect(PRACTICA_COPY.completedTitle).toBe('¡Práctica completada!');
     expect(PRACTICA_COPY.nothingToPractice).toBe('Nada que practicar aún.');
+    expect(PRACTICA_COPY.nothingOnDeviceOffline).toBe(
+      'Sin conexión, este dispositivo aún no tiene tarjetas de este libro.',
+    );
     expect(PRACTICA_COPY.prepareError).toBe('No se pudo preparar la práctica. Inténtalo de nuevo.');
   });
 });

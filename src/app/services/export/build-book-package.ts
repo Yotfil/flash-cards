@@ -6,6 +6,12 @@ import { sortCardsForDisplay } from '@services/cards/sort-cards-for-display';
 
 /** El capítulo final que recoge las tarjetas cuyo capítulo ya no existe. */
 const ORPHAN_CHAPTER_NAME = 'Sin capítulo';
+/**
+ * Los capítulos de versiones anteriores pueden no tener nombre, y un `# ` vacío no abre capítulo al
+ * importar: sus tarjetas caerían en el anterior. Es el mismo nombre con que la Biblioteca los
+ * muestra (su copy vive en la feature, que esta capa no puede importar).
+ */
+const UNNAMED_CHAPTER_NAME = 'Capítulo sin nombre';
 
 /**
  * El paquete de un libro guardado: su contenido, sin progreso. Capítulos en el orden recibido y,
@@ -27,7 +33,7 @@ export function buildBookPackage(
     chapters: [
       ...chapters.map((chapter) =>
         toPackageChapter(
-          chapter.name,
+          chapter.name.trim() || UNNAMED_CHAPTER_NAME,
           cards.filter((card) => card.chapterId === chapter.id),
         ),
       ),

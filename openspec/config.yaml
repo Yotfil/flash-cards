@@ -23,7 +23,8 @@ context: |
   Las specs describen comportamiento observable: nunca nombres de clases, archivos ni librerías.
 
   Git: ramas feature/<kebab> sacadas de dev; Claude hace push y entrega el link de comparación;
-  el usuario crea y mergea el PR hacia dev. Commits atómicos sin trailer Co-Authored-By de Claude.
+  el usuario crea y mergea el PR hacia dev. Commits atómicos y sin ninguna firma de Claude ni de
+  Anthropic (ni Co-Authored-By, ni Claude-Session, ni "Generated with Claude Code"), tampoco en los PR.
 
   Reescritura (decisiones 2026-10-21, docs/adr/0002 y 0003): producto "Cadence"; el código nuevo
   va directo en dev; un change y una rama por spec (feature/<spec-id>), rama borrada tras el merge;

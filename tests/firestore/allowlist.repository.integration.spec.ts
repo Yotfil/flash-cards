@@ -40,4 +40,19 @@ describe('FirestoreAllowlistRepository', () => {
   it('la comparación es literal: otras mayúsculas no cuentan', async () => {
     expect(await repositoryAs('luis@ejemplo.com').isAllowed('luis@ejemplo.com')).toBe(false);
   });
+
+  it('lo guardado en el dispositivo: nada antes de leer; la entrada leída, después', async () => {
+    const repository = repositoryAs('ada@ejemplo.com');
+
+    expect(await repository.isAllowed('ada@ejemplo.com', 'device')).toBe(false);
+    expect(await repository.isAllowed('ada@ejemplo.com')).toBe(true);
+    expect(await repository.isAllowed('ada@ejemplo.com', 'device')).toBe(true);
+  });
+
+  it('un correo que el servidor dijo que no está tampoco cuenta como guardado', async () => {
+    const repository = repositoryAs('nuevo@ejemplo.com');
+
+    expect(await repository.isAllowed('nuevo@ejemplo.com')).toBe(false);
+    expect(await repository.isAllowed('nuevo@ejemplo.com', 'device')).toBe(false);
+  });
 });

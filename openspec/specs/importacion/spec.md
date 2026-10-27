@@ -117,7 +117,7 @@ El sistema SHALL procesar todas las líneas válidas aunque otras fallen, y SHAL
 - **THEN** el error se reporta en la línea 3
 
 ### Requirement: La previsualización es obligatoria, en vivo y sin escribir nada
-El sistema SHALL procesar el texto en memoria cada vez que el usuario escribe, pega o carga un archivo, y SHALL mostrar antes de confirmar, con plural real: el número de tarjetas válidas ("1 tarjeta", "4 tarjetas"), el número de capítulos detectados al importar un libro ("1 capítulo", "2 capítulos"), el número de repetidas si es mayor que cero ("1 repetida", "3 repetidas") y la lista de líneas que se omitirán, encabezada por "1 línea se omitirá:" o "N líneas se omitirán:" y con el formato "Línea N: motivo". Las líneas omitidas SHALL distinguirse por icono y texto, nunca solo por color, y SHALL NOT usar el color de la calificación "Otra vez". El botón de confirmar SHALL mostrar "Importar N" con el número de tarjetas válidas y SHALL permanecer deshabilitado mientras ese número sea 0. El sistema SHALL NOT escribir nada en el almacén hasta que el usuario confirme.
+El sistema SHALL procesar el texto en memoria cada vez que el usuario escribe, pega o carga un archivo, y SHALL mostrar antes de confirmar, con plural real: el número de tarjetas válidas ("1 tarjeta", "4 tarjetas"), el número de capítulos detectados al importar un libro ("1 capítulo", "2 capítulos"), el número de repetidas si es mayor que cero ("1 repetida", "3 repetidas") y la lista de líneas que se omitirán, encabezada por "1 línea se omitirá:" o "N líneas se omitirán:" y con el formato "Línea N: motivo". El conteo de líneas omitidas SHALL ser siempre el total exacto, pero la lista SHALL mostrar como mucho las primeras 100 y, si hay más, una última línea "y N más", para que un archivo equivocado de miles de líneas no congele la pantalla. Las líneas omitidas SHALL distinguirse por icono y texto, nunca solo por color, y SHALL NOT usar el color de la calificación "Otra vez". Al importar un libro, la previsualización SHALL nombrar además cada capítulo detectado con su número de tarjetas ("Unidad 1 · 24"), en orden de aparición y bajo el título "Tarjetas por capítulo"; con más de 5 capítulos esa lista SHALL mostrarse plegada, y el usuario la despliega al tocar el título. Al pegar en un capítulo no se nombran capítulos. El botón de confirmar SHALL mostrar "Importar N" con el número de tarjetas válidas y SHALL permanecer deshabilitado mientras ese número sea 0, salvo al importar un libro cuyo texto tiene capítulos y ninguna tarjeta: entonces SHALL decir "Importar 1 capítulo" o "Importar N capítulos" y SHALL estar habilitado (es el esqueleto de un libro, por ejemplo el que se exporta sin tarjetas). El sistema SHALL NOT escribir nada en el almacén hasta que el usuario confirme.
 
 #### Scenario: Previsualización con errores
 - **WHEN** el usuario pega un texto con 4 válidas y 1 línea sin separador
@@ -135,6 +135,30 @@ El sistema SHALL procesar el texto en memoria cada vez que el usuario escribe, p
 - **WHEN** el texto tiene 1 válida, 1 capítulo y 1 línea sin separador
 - **THEN** se muestra "1 capítulo", "1 tarjeta", "1 línea se omitirá:" y el botón dice "Importar 1"
 
+#### Scenario: Un archivo equivocado de miles de líneas
+- **WHEN** el usuario carga un archivo con 20000 líneas sin separador
+- **THEN** se muestra "20000 líneas se omitirán:", la lista tiene las 100 primeras ("Línea 1: …" a "Línea 100: …") y termina con "y 19900 más"
+
+#### Scenario: Capítulos nombrados con sus tarjetas
+- **WHEN** el usuario importa un libro con `# Unidad 1` y dos tarjetas, y `# Unidad 2` sin tarjetas
+- **THEN** la previsualización muestra "Tarjetas por capítulo" con "Unidad 1 · 2" y "Unidad 2 · 0"
+
+#### Scenario: Un "#" de más se ve en la lista
+- **WHEN** el texto de un libro tiene `# Preprocesador`, `#include | incluye un archivo` y `pragma | directiva`
+- **THEN** la previsualización nombra los capítulos "Preprocesador · 0" e "include | incluye un archivo · 1"
+
+#### Scenario: Muchos capítulos, lista plegada
+- **WHEN** el texto de un libro tiene 12 capítulos
+- **THEN** la lista "Tarjetas por capítulo" aparece plegada y, al desplegarla, nombra los 12
+
+#### Scenario: Libro solo con capítulos
+- **WHEN** el usuario importa un libro cuyo texto es `# Unidad 1`, `# Unidad 2` y nada más
+- **THEN** la previsualización dice "2 capítulos · 0 tarjetas" y el botón "Importar 2 capítulos" está habilitado
+
+#### Scenario: En un capítulo, los encabezados no cuentan
+- **WHEN** el usuario pega solo `# A` y `# B` en el diálogo "Importar tarjetas" de un capítulo
+- **THEN** el botón de confirmar está deshabilitado
+
 ### Requirement: Cargar un archivo rellena el texto y, al importar un libro, propone su nombre
 El sistema SHALL aceptar archivos `.txt`, `.md` o de tipo texto plano, y SHALL reemplazar el contenido del área de texto con el del archivo. El mismo archivo SHALL poder cargarse de nuevo. Al importar un libro, el sistema SHALL proponer como nombre del libro el nombre del archivo sin la extensión `.txt`/`.md`, salvo que el usuario ya haya editado el nombre a mano, en cuyo caso SHALL respetarse lo escrito.
 
@@ -147,7 +171,7 @@ El sistema SHALL aceptar archivos `.txt`, `.md` o de tipo texto plano, y SHALL r
 - **THEN** el nombre sigue siendo "Mis verbos"
 
 ### Requirement: Importar un archivo crea un libro nuevo con capítulos y tarjetas en estado "nueva"
-La página "Importar un libro" SHALL pedir el nombre y una materia opcional con la pista "Si la dejas vacía, será «general»", con las mismas reglas que el diálogo "Nuevo libro". Al confirmar, el sistema SHALL crear un libro con: nombre = el escrito recortado, o "Libro importado" si quedó vacío; `subject` = la materia recortada, o `general` si quedó vacía; `studyDirection = forward`; `newCardsPerDay` = el valor por defecto del usuario en Ajustes (20 si no lo ha cambiado); `maxReviewsPerDay = 200`; `order` = el siguiente al último libro de la biblioteca; `cardCount` = el número de tarjetas válidas. SHALL crear un capítulo por cada capítulo detectado, en orden de aparición (`order` 0, 1, 2…), y cada tarjeta como `forward`, no suspendida, con `noteId` propio, su ejemplo si lo trae, y programación inicial en estado "nueva". El capítulo por defecto SHALL llevar el nombre del libro.
+La página "Importar un libro" SHALL pedir el nombre y una materia opcional con la pista "Si la dejas vacía, será «general»", con las mismas reglas que el diálogo "Nuevo libro". Al confirmar, el sistema SHALL crear un libro con: nombre = el escrito recortado, o "Libro importado" si quedó vacío; `subject` = la materia recortada, o `general` si quedó vacía; `studyDirection = forward`; `newCardsPerDay` = el valor por defecto del usuario en Ajustes (20 si no lo ha cambiado); `maxReviewsPerDay = 200`; `order` = el siguiente al último libro de la biblioteca; `cardCount` = el número de tarjetas válidas. SHALL crear un capítulo por cada capítulo detectado, en orden de aparición (`order` 0, 1, 2…), también los que no tienen tarjetas, y cada tarjeta como `forward`, no suspendida, con `noteId` propio, su ejemplo si lo trae, y programación inicial en estado "nueva". El capítulo por defecto SHALL llevar el nombre del libro.
 
 #### Scenario: Libro armado con sus metadatos
 - **WHEN** el usuario importa "  Phrasal Verbs  " con 2 capítulos y 3 tarjetas válidas
@@ -165,8 +189,12 @@ La página "Importar un libro" SHALL pedir el nombre y una materia opcional con 
 - **WHEN** el usuario escribe "  Francés  " en la materia y confirma
 - **THEN** el libro se crea con `subject = Francés` y la Biblioteca lo muestra con esa etiqueta
 
+#### Scenario: El esqueleto de un libro
+- **WHEN** el usuario importa "Francés A1" con 8 encabezados de capítulo y ninguna tarjeta
+- **THEN** se crea el libro con `cardCount = 0` y sus 8 capítulos vacíos en orden, y el usuario ve la pantalla del libro nuevo
+
 ### Requirement: La escritura del libro es consistente y por lotes, y al terminar lleva al libro
-El sistema SHALL escribir los capítulos y las tarjetas en lotes de como máximo 450 escrituras y SHALL escribir el documento del libro en el último lote, de modo que el libro nunca aparezca en la Biblioteca a medias. Si un lote falla, el sistema SHALL intentar borrar todo lo que ya se había escrito, SHALL registrar el resultado de ese intento y SHALL mostrar "No se pudo importar el libro. Inténtalo de nuevo." conservando el nombre, la materia y el texto para reintentar. Al terminar bien, el nuevo libro SHALL aparecer en la Biblioteca sin recargar y el usuario SHALL ser llevado a la pantalla del libro creado.
+El sistema SHALL escribir los capítulos y las tarjetas en lotes de como máximo 450 escrituras y SHALL escribir el documento del libro en el último lote, de modo que el libro nunca aparezca en la Biblioteca a medias. Si un lote falla, el sistema SHALL intentar borrar todo lo que ya se había escrito, SHALL registrar el resultado de ese intento y SHALL mostrar "No se pudo importar el libro. Inténtalo de nuevo." conservando el nombre, la materia y el texto para reintentar. Si la escritura no confirma en unos 6 segundos (por ejemplo, con un wifi sin internet), la pantalla SHALL mostrar, sin quitar "Importando…", el aviso "No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app." con rol de estado. Al terminar bien, el nuevo libro SHALL aparecer en la Biblioteca sin recargar y el usuario SHALL ser llevado a la pantalla del libro creado.
 
 #### Scenario: Importación exitosa
 - **WHEN** la escritura termina bien
@@ -183,6 +211,10 @@ El sistema SHALL escribir los capítulos y las tarjetas en lotes de como máximo
 #### Scenario: Falla a mitad en un libro grande
 - **WHEN** se importan 1000 tarjetas y falla el segundo lote
 - **THEN** no existe ningún libro nuevo, las tarjetas del primer lote se borran, y se muestra el mensaje de error con el texto intacto
+
+#### Scenario: Importar un libro con un wifi sin internet
+- **WHEN** el usuario importa un libro y pasan 6 segundos sin que la escritura confirme
+- **THEN** la pantalla sigue en "Importando…" y muestra "No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app."
 
 ### Requirement: Pegar tarjetas en un capítulo aplana el texto en ese capítulo
 Desde la pantalla de un capítulo, el sistema SHALL ofrecer el diálogo "Importar tarjetas" con la misma convención de texto. Todas las tarjetas válidas, pertenezcan al capítulo que pertenezcan dentro del texto, SHALL caer en el capítulo destino: los encabezados `#` SHALL NOT crear capítulos nuevos. Las tarjetas creadas SHALL nacer `forward`, no suspendidas y en estado "nueva", y el contador del libro SHALL subir en el número creado.
@@ -230,7 +262,7 @@ En modo reemplazar, si el capítulo tiene tarjetas, el sistema SHALL mostrar una
 - **THEN** las 2 tarjetas siguen en el capítulo, el contador no cambió y la confirmación muestra el error con el texto conservado
 
 ### Requirement: La importación no filtra repetidas; el listado las señala después
-El sistema SHALL importar todas las tarjetas válidas aunque alguna coincida con una tarjeta ya existente en el capítulo o con otra línea del mismo texto. Antes de confirmar, la previsualización SHALL contar como repetidas las líneas válidas que tienen otra igual (mismo anverso y reverso normalizados) dentro del texto o entre las tarjetas del capítulo destino ya cargadas; al importar un libro, solo dentro del texto. El contador SHALL ir acompañado de "Se importarán igual. Las verás marcadas como repetidas." y SHALL NOT deshabilitar el botón. Tras importar, las coincidencias SHALL aparecer con el indicador "Repetida" en el listado del capítulo.
+El sistema SHALL importar todas las tarjetas válidas aunque alguna coincida con una tarjeta ya existente en el capítulo o con otra línea del mismo texto. Antes de confirmar, la previsualización SHALL contar como repetidas las líneas válidas que tienen otra igual (mismo anverso y reverso normalizados) dentro del texto o entre las tarjetas del capítulo destino ya cargadas; al importar un libro, solo dentro de cada capítulo del texto, que es donde el listado las marcará. El contador SHALL ir acompañado de "Se importarán igual. Las verás marcadas como repetidas." y SHALL NOT deshabilitar el botón. Tras importar, las coincidencias SHALL aparecer con el indicador "Repetida" en el listado del capítulo.
 
 #### Scenario: Repetida contra una existente
 - **WHEN** el capítulo ya tiene `to give up | rendirse` y el usuario importa esa misma línea en modo agregar
@@ -248,8 +280,12 @@ El sistema SHALL importar todas las tarjetas válidas aunque alguna coincida con
 - **WHEN** el usuario importa un libro cuyo texto trae `x | y` dos veces y `To Give Up | rendirse` una vez, y existe otro libro con `to give up | rendirse`
 - **THEN** la previsualización muestra "2 repetidas" (las de `x | y`; el otro libro no se consulta)
 
+#### Scenario: La misma línea en dos capítulos del libro
+- **WHEN** el usuario importa un libro con `# Unidad 1`, `to get | conseguir`, `# Unidad 5`, `to get | conseguir`
+- **THEN** la previsualización no muestra repetidas, porque cada capítulo tiene solo una y el listado no marcará ninguna
+
 ### Requirement: La importación en un capítulo comunica su progreso y sus fallos
-Mientras importa, el diálogo SHALL mostrar "Importando…" (o "Reemplazando…" en la confirmación de reemplazo), deshabilitar sus botones, ignorar reenvíos y bloquear el cierre con Escape. Si todo va bien, el diálogo SHALL cerrarse y las tarjetas nuevas SHALL aparecer en la lista sin recargar. Si falla, el diálogo SHALL permanecer abierto con el texto y mostrar dentro, encima de los botones, "No se pudieron importar las tarjetas. Inténtalo de nuevo."; el error de una confirmación de reemplazo SHALL mostrarse dentro de esa confirmación. Cancelar SHALL seguir disponible tras un fallo.
+Mientras importa, el diálogo SHALL mostrar "Importando…" (o "Reemplazando…" en la confirmación de reemplazo), deshabilitar sus botones, ignorar reenvíos y bloquear el cierre con Escape. Si la importación no confirma en unos 6 segundos, el diálogo (y la confirmación de reemplazo, si es ella la que espera) SHALL mostrar "No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app." y dejarse cerrar, como describe la spec de navegación. Si todo va bien, el diálogo SHALL cerrarse y las tarjetas nuevas SHALL aparecer en la lista sin recargar. Si falla, el diálogo SHALL permanecer abierto con el texto y mostrar dentro, encima de los botones, "No se pudieron importar las tarjetas. Inténtalo de nuevo."; el error de una confirmación de reemplazo SHALL mostrarse dentro de esa confirmación. Cancelar SHALL seguir disponible tras un fallo.
 
 #### Scenario: Importación exitosa
 - **WHEN** la creación de las tarjetas termina bien
@@ -258,6 +294,14 @@ Mientras importa, el diálogo SHALL mostrar "Importando…" (o "Reemplazando…"
 #### Scenario: Falla la importación
 - **WHEN** la escritura falla
 - **THEN** el mensaje de error aparece dentro del diálogo, el diálogo sigue abierto con el texto pegado y el botón vuelve a estar disponible
+
+#### Scenario: Importación que no confirma
+- **WHEN** el usuario importa tarjetas en un capítulo con un wifi sin internet y pasan 6 segundos
+- **THEN** el diálogo muestra "No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app." y "Cerrar" lo cierra
+
+#### Scenario: Reemplazo que no confirma
+- **WHEN** el usuario confirma un reemplazo con un wifi sin internet y pasan 6 segundos
+- **THEN** la confirmación muestra el mismo aviso y se deja cerrar
 
 ### Requirement: Un ` :: ` con espacios separa el ejemplo opcional de la tarjeta
 En una línea de tarjeta (no en encabezados), el sistema SHALL buscar el primer ` :: ` rodeado de al menos un espacio a cada lado y SHALL tomar lo posterior, recortado, como el ejemplo de la tarjeta; lo anterior sigue las reglas de cloze y de separador. Un `::` pegado a texto por cualquiera de sus lados SHALL tratarse como contenido. Un ejemplo que quede vacío SHALL omitirse (la tarjeta se guarda sin ejemplo). El ejemplo SHALL respetar el mismo límite que el formulario de tarjeta (2000 caracteres); si lo supera, la línea SHALL omitirse con "El ejemplo supera los 2000 caracteres.". Las tarjetas importadas con ejemplo SHALL conservarlo al guardarse, tanto al importar un libro como al pegar en un capítulo.

@@ -16,8 +16,11 @@ import {
 /** Lo que se ve tras responder: si acertó, la respuesta correcta y lo elegido o escrito. */
 export interface PracticeFeedback {
   readonly correct: boolean;
+  /** La opción buena (la que se resalta en opción múltiple). */
   readonly answer: string;
   readonly chosen: string;
+  /** Lo que nombra el fallo: al escribir, todas las acepciones; en opción múltiple, la mostrada. */
+  readonly correctAnswers: readonly string[];
 }
 
 // La práctica en curso, efímera: vive mientras la pantalla está abierta y no lee ni escribe nada
@@ -52,9 +55,15 @@ export class PracticeSessionService {
     const state = this.state();
     const question = this.current();
     const answer = state ? currentAnswer(state) : undefined;
-    return question && answer
-      ? { correct: answer.correct, answer: question.answer, chosen: answer.chosen }
-      : null;
+    if (!question || !answer) {
+      return null;
+    }
+    return {
+      correct: answer.correct,
+      answer: question.answer,
+      chosen: answer.chosen,
+      correctAnswers: question.type === 'written' ? question.acceptedAnswers : [question.answer],
+    };
   });
 
   start(prepared: PreparedPractice): void {

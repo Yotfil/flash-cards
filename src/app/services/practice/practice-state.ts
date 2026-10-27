@@ -31,7 +31,8 @@ export function currentAnswer(state: PracticeState): PracticeAnswer | undefined 
 
 /**
  * Responde la pregunta actual una sola vez: opción múltiple por igualdad exacta con la respuesta,
- * escribir con la comparación tolerante. Respondida o terminada la práctica, no cambia nada.
+ * escribir con la comparación tolerante contra cualquiera de las acepciones del anverso.
+ * Respondida o terminada la práctica, no cambia nada.
  */
 export function answerCurrent(state: PracticeState, chosen: string): PracticeState {
   const question = currentQuestion(state);
@@ -41,7 +42,7 @@ export function answerCurrent(state: PracticeState, chosen: string): PracticeSta
   const correct =
     question.type === 'multiple-choice'
       ? chosen === question.answer
-      : isWrittenAnswerCorrect(chosen, question.answer);
+      : question.acceptedAnswers.some((answer) => isWrittenAnswerCorrect(chosen, answer));
   const answers = new Map(state.answers).set(question.id, { chosen, correct });
   return { ...state, answers };
 }

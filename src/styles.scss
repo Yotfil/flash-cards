@@ -227,6 +227,17 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+// Zona segura superior: en la PWA del iPhone la barra de estado es translúcida y, sin esto, el
+// encabezado queda debajo de la hora y de la isla de la cámara. En el resto de pantallas vale 0.
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+// Lo mismo para las pantallas completas, que además dejan su respiro superior de siempre.
+@utility safe-top-gap {
+  padding-top: calc(env(safe-area-inset-top) + --spacing(4));
+}
+
 // Hundimiento al presionar (120 ms): funciona igual con mouse y con el dedo.
 @utility press {
   transition:

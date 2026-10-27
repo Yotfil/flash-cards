@@ -103,6 +103,65 @@ describe('generateQuiz', () => {
     expect(quiz[0]?.options?.some((option) => option.startsWith('back b'))).toBe(true);
   });
 
+  it('un anverso con dos acepciones da una sola pregunta con las dos como respuestas válidas', () => {
+    const source = [
+      aCard({ id: 'b1', front: 'bank', back: 'banco' }),
+      aCard({ id: 'b2', front: 'bank', back: 'orilla' }),
+      aCard({ id: 'h1', front: 'house', back: 'casa' }),
+    ];
+    const quiz = generateQuiz(source, { random: seededRandom(1) });
+
+    expect(quiz).toHaveLength(2);
+    expect(quiz.find((question) => question.prompt === 'bank')?.acceptedAnswers).toEqual([
+      'banco',
+      'orilla',
+    ]);
+    expect(quiz.find((question) => question.prompt === 'house')?.acceptedAnswers).toEqual(['casa']);
+  });
+
+  it('un capítulo importado dos veces no repite preguntas', () => {
+    const copies = cards(5).map((card) => ({ ...card, id: `${card.id}-copia` }));
+    const quiz = generateQuiz([...cards(5), ...copies], { random: seededRandom(2) });
+
+    expect(quiz).toHaveLength(5);
+    expect(new Set(quiz.map((question) => question.prompt)).size).toBe(5);
+  });
+
+  it('dos anversos que solo difieren al escribirse son la misma pregunta', () => {
+    const source = [
+      aCard({ id: 'd1', front: 'Don’t', back: 'no hacer' }),
+      aCard({ id: 'd2', front: "don't", back: 'no lo hagas' }),
+    ];
+    const quiz = generateQuiz(source, { random: seededRandom(3) });
+
+    expect(quiz).toHaveLength(1);
+    expect(quiz[0]?.prompt).toBe('Don’t');
+    expect(quiz[0]?.acceptedAnswers).toEqual(['no hacer', 'no lo hagas']);
+  });
+
+  it('en opción múltiple sale una sola acepción, es la correcta y varía entre prácticas', () => {
+    const source = [
+      aCard({ id: 'b1', front: 'bank', back: 'banco' }),
+      aCard({ id: 'b2', front: 'bank', back: 'orilla' }),
+      ...cards(4),
+    ];
+    const shownAsCorrect = new Set<string>();
+    for (let seed = 1; seed <= 50; seed++) {
+      const quiz = generateQuiz(source, { random: seededRandom(seed) });
+      for (const question of quiz.filter(
+        (candidate) => candidate.prompt === 'bank' && candidate.type === 'multiple-choice',
+      )) {
+        const senses = (question.options ?? []).filter((option) =>
+          ['banco', 'orilla'].includes(option),
+        );
+        expect(senses).toEqual([question.answer]);
+        shownAsCorrect.add(question.answer);
+      }
+    }
+
+    expect([...shownAsCorrect].sort()).toEqual(['banco', 'orilla']);
+  });
+
   it('dos prácticas con distinto azar salen en distinto orden; cada pregunta con su id', () => {
     const source = cards(10);
     const first = generateQuiz(source, { random: seededRandom(8) }).map((q) => q.cardId);

@@ -12,7 +12,11 @@ import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { BooksService } from '@services/books/books.service';
 import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  NEEDS_CONNECTION_MESSAGE,
+  SAVED_ON_DEVICE_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
 import { bookSettingsFormSchema, type BookSettingsFormValue } from '../book-settings-form.schema';
@@ -38,6 +42,10 @@ export class BookSettingsDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = BIBLIOTECA_COPY.bookSettings;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly savedOnDevice = SAVED_ON_DEVICE_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: lo escrito ya está en el dispositivo y se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly title = this.copy.title(this.data.book.name);
 
   private readonly model = signal<BookSettingsFormValue>({
@@ -79,7 +87,7 @@ export class BookSettingsDialogComponent {
   private async save(): Promise<void> {
     this.saving.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    this.dialogRef.setPending(true, { releaseWhenSlow: true });
     try {
       const { newCardsPerDay, maxReviewsPerDay } = this.model();
       const book = await this.books.update(this.data.book.id, { newCardsPerDay, maxReviewsPerDay });

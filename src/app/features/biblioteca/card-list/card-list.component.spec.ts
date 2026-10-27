@@ -198,11 +198,12 @@ describe('CardListComponent · estados', () => {
     expect(button('Seleccionar')).toBeDefined();
     expect(button('Importar tarjetas')).toBeDefined();
     expect(button('Nueva tarjeta')).toBeDefined();
+    // Las dos "banana" empatan en texto normalizado y fecha: decide el texto tal cual.
     expect(rows()).toEqual([
       'apple → fruta roja',
       'Apple → manzana',
-      'banana → fruta',
       'Banana → FRUTA',
+      'banana → fruta',
       'cherry → cereza',
     ]);
     expect(element.querySelectorAll('app-card-row')).toHaveLength(5);

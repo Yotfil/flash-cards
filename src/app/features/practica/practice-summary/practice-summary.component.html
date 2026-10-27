@@ -4,7 +4,13 @@
   <span class="grid size-14 place-items-center rounded-full bg-accent-tint text-accent-text">
     <app-icon name="check" />
   </span>
-  <h1 class="text-2xl font-extrabold tracking-tight text-text">{{ copy.completedTitle }}</h1>
+  <h1
+    #title
+    tabindex="-1"
+    class="text-2xl font-extrabold tracking-tight text-text focus-visible:outline-none"
+  >
+    {{ copy.completedTitle }}
+  </h1>
   <p class="text-sm text-text-dim">{{ scoreText() }}</p>
   <button
     type="button"

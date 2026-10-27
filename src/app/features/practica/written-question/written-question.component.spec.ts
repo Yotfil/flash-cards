@@ -35,6 +35,10 @@ describe('WrittenQuestionComponent', () => {
     expect(input().getAttribute('aria-label')).toBe('Tu respuesta');
   });
 
+  it('apaga la autocorrección (el iPhone podría cambiar la respuesta al pulsar Intro)', () => {
+    expect(render().input().getAttribute('autocorrect')).toBe('off');
+  });
+
   it('"Comprobar" deshabilitado con el campo vacío o solo espacios; Enter tampoco envía', () => {
     const { check, type, input, submitted } = render();
 

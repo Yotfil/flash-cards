@@ -196,6 +196,51 @@ describe('CardFormDialogComponent · crear', () => {
     expect(repository.calls.create).toBe(1);
   });
 
+  it('en un capítulo, si no confirma en 6 s, avisa que quedó guardado en el dispositivo y deja cerrar', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { ref, repository, update, submit } = await setup();
+    repository.create = () => new Promise<Card>(() => undefined);
+    typeInto('#card-front', 'hola');
+    typeInto('#card-back', 'hello');
+    await update();
+    submit();
+    await update();
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(openDialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Quedó guardado en este dispositivo; se enviará cuando vuelva la red.',
+    );
+    expect(dialogButton('Guardando…')?.disabled).toBe(true);
+    expect(dialogButton('Cerrar')?.disabled).toBe(false);
+    dialogButton('Cerrar')?.click();
+    await expect(ref.closed).resolves.toBeUndefined();
+    vi.useRealTimers();
+  });
+
+  it('con un guardado propio (un paquete), no promete nada: sigue ocupado pasados 6 s', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { update, submit } = await setup({
+      mode: 'create',
+      save: () => new Promise<void>(() => undefined),
+      existing: { cards: signal([]), message: 'Ya está en el paquete.' },
+    });
+    typeInto('#card-front', 'hola');
+    typeInto('#card-back', 'hello');
+    await update();
+    submit();
+    await update();
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(openDialog().textContent).not.toContain(
+      'Quedó guardado en este dispositivo; se enviará cuando vuelva la red.',
+    );
+    expect(dialogButton('Cancelar')?.disabled).toBe(true);
+    expect(dialogButton('Cerrar')).toBeUndefined();
+    vi.useRealTimers();
+  });
+
   it('si falla sigue abierto con el texto y el error; el reintento cierra con la tarjeta', async () => {
     const { ref, repository, update, submit, field } = await setup();
     repository.failWith.create = new Error('offline');

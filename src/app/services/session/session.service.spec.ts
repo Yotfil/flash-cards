@@ -95,6 +95,125 @@ describe('SessionService · resolución y estados', () => {
   });
 });
 
+describe('SessionService · arranque con lo guardado en el dispositivo', () => {
+  const ADA = anIdentity({ uid: 'u1', email: 'ada@ejemplo.com' });
+  const SAVED = aUser({ id: 'u1', email: 'ada@ejemplo.com' });
+
+  it('con la lista y el perfil guardados queda activa sin esperar al servidor', async () => {
+    const { session, authPort, users, allowlist } = setup();
+    users.seed(SAVED);
+    users.seedOnDevice(SAVED);
+    allowlist.seedOnDevice('ada@ejemplo.com');
+    const release = users.holdServerFind();
+
+    authPort.emit(ADA);
+    await settle();
+
+    expect(session.resolved()).toBe(true);
+    expect(session.state()).toEqual({ kind: 'active', user: SAVED });
+    release();
+    await settle();
+    expect(session.state()).toEqual({ kind: 'active', user: SAVED });
+  });
+
+  it('si el perfil cambió en otro dispositivo, la sesión toma el del servidor', async () => {
+    const { session, authPort, users, allowlist } = setup();
+    const fromServer = { ...SAVED, settings: { ...SAVED.settings, defaultNewCardsPerDay: 7 } };
+    users.seed(fromServer);
+    users.seedOnDevice(SAVED);
+    allowlist.seedOnDevice('ada@ejemplo.com');
+
+    authPort.emit(ADA);
+    await settle();
+
+    expect(session.user()?.settings.defaultNewCardsPerDay).toBe(7);
+  });
+
+  it('un ajuste cambiado mientras se confirma no se pisa con el perfil leído antes', async () => {
+    const { session, authPort, users, allowlist } = setup();
+    users.seed(SAVED);
+    users.seedOnDevice(SAVED);
+    allowlist.seedOnDevice('ada@ejemplo.com');
+    const release = users.holdServerFind();
+    authPort.emit(ADA);
+    await settle();
+
+    await session.updateSettings({ theme: 'dark' });
+    release();
+    await settle();
+
+    expect(session.user()?.settings.theme).toBe('dark');
+  });
+
+  it('si el servidor dice que el correo ya no está en la lista, pasa a sin acceso', async () => {
+    const { session, authPort, users, allowlist } = setup([]);
+    users.seed(SAVED);
+    users.seedOnDevice(SAVED);
+    allowlist.seedOnDevice('ada@ejemplo.com');
+
+    authPort.emit(ADA);
+    await settle();
+
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
+    expect(authPort.deletions).toBe(0);
+  });
+
+  it('si el servidor no responde, sigue con lo guardado y lo registra como aviso', async () => {
+    const { session, authPort, users, allowlist, logger } = setup();
+    users.seedOnDevice(SAVED);
+    allowlist.seedOnDevice('ada@ejemplo.com');
+    allowlist.failWith = new Error('sin red');
+
+    authPort.emit(ADA);
+    await settle();
+
+    expect(session.state()).toEqual({ kind: 'active', user: SAVED });
+    expect(logger.entries.map((entry) => entry.level)).toEqual(['warn']);
+  });
+
+  it('primer acceso en el dispositivo: sigue resolviendo hasta que responde el servidor', async () => {
+    const { session, authPort, users } = setup();
+    users.seed(SAVED);
+    const release = users.holdServerFind();
+
+    authPort.emit(ADA);
+    await settle();
+    expect(session.state()).toEqual({ kind: 'resolving' });
+
+    release();
+    await settle();
+    expect(session.state()).toEqual({ kind: 'active', user: SAVED });
+  });
+
+  it('con la lista guardada pero sin perfil guardado, también espera al servidor', async () => {
+    const { session, authPort, users, allowlist } = setup();
+    users.seed(SAVED);
+    allowlist.seedOnDevice('ada@ejemplo.com');
+    const release = users.holdServerFind();
+
+    authPort.emit(ADA);
+    await settle();
+    expect(session.resolved()).toBe(false);
+
+    release();
+    await settle();
+    expect(session.state()).toEqual({ kind: 'active', user: SAVED });
+  });
+
+  it('si lo guardado no se puede leer, lo avisa y sigue con el servidor', async () => {
+    const { session, authPort, users, allowlist, logger } = setup();
+    users.seed(SAVED);
+    users.failOnFindOnDevice = new Error('perfil guardado inválido');
+    allowlist.seedOnDevice('ada@ejemplo.com');
+
+    authPort.emit(ADA);
+    await settle();
+
+    expect(session.state()).toEqual({ kind: 'active', user: SAVED });
+    expect(logger.entries.map((entry) => entry.level)).toEqual(['warn']);
+  });
+});
+
 describe('SessionService · perfil del primer acceso', () => {
   const NOW = new Date('2026-06-15T10:30:00.000Z');
 
@@ -184,6 +303,23 @@ describe('SessionService · registro', () => {
     expect(authPort.registrations).toEqual([]);
   });
 
+  it('el correo tecleado con mayúsculas o espacios se compara como lo guarda el proveedor (en minúsculas)', async () => {
+    const { session, authPort } = setup(['ana.perez@example.com']);
+    authPort.emit(null);
+    await settle();
+
+    const result = await session.register({
+      email: '  Ana.Perez@Example.COM ',
+      password: 'secreta',
+      displayName: 'Ana',
+    });
+
+    expect(result).toBe('registered');
+    expect(authPort.registrations.map((registration) => registration.email)).toEqual([
+      'ana.perez@example.com',
+    ]);
+  });
+
   it('con un correo autorizado crea la identidad y el perfil toma el nombre elegido', async () => {
     const { session, authPort, users } = setup(['ada@ejemplo.com']);
     authPort.emit(null);
@@ -230,6 +366,31 @@ describe('SessionService · registro', () => {
     expect(failure).toBeInstanceOf(AuthError);
     expect((failure as AuthError).kind).toBe('offline');
     expect(authPort.registrations).toEqual([]);
+  });
+});
+
+describe('SessionService · restablecer la contraseña', () => {
+  it('pide el correo de restablecimiento con el correo recortado y en minúsculas', async () => {
+    const { session, authPort } = setup();
+
+    await session.sendPasswordReset('  Ada@Ejemplo.com ');
+
+    expect(authPort.passwordResets).toEqual(['ada@ejemplo.com']);
+  });
+
+  it('un correo sin cuenta no se delata: "datos incorrectos" se calla', async () => {
+    const { session, authPort } = setup();
+    authPort.failWith.sendPasswordReset = new AuthError('invalidCredentials');
+
+    await expect(session.sendPasswordReset('nadie@ejemplo.com')).resolves.toBeUndefined();
+  });
+
+  it('sin red, el fallo sube para que la pantalla lo explique', async () => {
+    const { session, authPort } = setup();
+    const offline = new AuthError('offline');
+    authPort.failWith.sendPasswordReset = offline;
+
+    await expect(session.sendPasswordReset('ada@ejemplo.com')).rejects.toBe(offline);
   });
 });
 
@@ -343,6 +504,29 @@ describe('SessionService · inicio de sesión, Google y acceso retirado', () => 
 
     expect(authPort.deletions).toBe(0);
     expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
+  });
+
+  it('con la app abierta, un permiso negado por el servidor deja la sesión sin acceso con su correo', async () => {
+    const { session, authPort, users } = setup();
+    users.seed(aUser({ id: 'u1', email: 'ada@ejemplo.com' }));
+    authPort.emit(anIdentity({ uid: 'u1', email: 'ada@ejemplo.com' }));
+    await settle();
+
+    session.markAccessRevoked();
+
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
+    expect(session.user()).toBeNull();
+    expect(authPort.deletions).toBe(0);
+  });
+
+  it('sin sesión activa, marcar el acceso retirado no cambia nada', async () => {
+    const { session, authPort } = setup();
+    authPort.emit(null);
+    await settle();
+
+    session.markAccessRevoked();
+
+    expect(session.state()).toEqual({ kind: 'signedOut' });
   });
 
   it('si borrar la identidad falla, se registra y la sesión queda igual sin acceso', async () => {

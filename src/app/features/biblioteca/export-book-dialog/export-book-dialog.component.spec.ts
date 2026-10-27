@@ -34,7 +34,9 @@ const CARDS = Array.from({ length: 40 }, (_, index) =>
   }),
 );
 
-async function open(options: { canShare?: boolean; holdRead?: boolean; failRead?: boolean } = {}) {
+async function open(
+  options: { canShare?: boolean; holdRead?: boolean; failRead?: boolean; cards?: Card[] } = {},
+) {
   const books = new FakeBookRepository();
   books.seed(aBook({ id: 'b1', name: 'Phrasal Verbs' }));
   const chapters = new FakeChapterRepository();
@@ -43,7 +45,7 @@ async function open(options: { canShare?: boolean; holdRead?: boolean; failRead?
     aChapter({ id: 'c2', name: 'Grammar', order: 1 }),
   );
   const cards = new FakeCardRepository();
-  cards.seed(...CARDS);
+  cards.seed(...(options.cards ?? CARDS));
   if (options.failRead) {
     cards.failWith.listByBookFromServer = new Error('sin red');
   }
@@ -114,9 +116,71 @@ async function open(options: { canShare?: boolean; holdRead?: boolean; failRead?
   };
 }
 
+const wontReturnItems = (dialog: HTMLElement) =>
+  Array.from(dialog.querySelectorAll('[data-wont-return] li'));
+
 describe('ExportBookDialogComponent', () => {
   beforeEach(() => allowDialogFocusInJsdom());
   afterEach(() => vi.restoreAllMocks());
+
+  it('si todo vuelve igual, no avisa de nada', async () => {
+    const { dialog } = await open();
+
+    expect(dialog().querySelector('[data-wont-return]')).toBeNull();
+  });
+
+  it('nombra con su anverso la tarjeta que no volverá igual, con un icono', async () => {
+    const haskell = aCard({ id: 'h1', front: 'map', back: 'map :: (a -> b) -> [a] -> [b]' });
+    const { dialog } = await open({ cards: [haskell] });
+
+    expect(dialog().textContent).toContain('1 tarjeta no volverá igual al importarla:');
+    const items = wontReturnItems(dialog());
+    expect(items.map((item) => item.textContent?.trim())).toEqual(['map']);
+    expect(items[0]?.querySelector('app-icon[data-icon="alert"]')).not.toBeNull();
+  });
+
+  it('nombra también las que caerían en otro capítulo, en el orden del texto', async () => {
+    const preprocessor = [
+      aCard({ id: 'p1', front: 'pragma', back: 'directiva del compilador' }),
+      aCard({ id: 'p2', front: '#include', back: 'incluye un archivo' }),
+      aCard({ id: 'p3', front: '#define', back: 'define una macro' }),
+    ];
+    const { dialog } = await open({ cards: preprocessor });
+
+    expect(dialog().textContent).toContain('3 tarjetas no volverán igual al importarlas:');
+    expect(wontReturnItems(dialog()).map((item) => item.textContent?.trim())).toEqual([
+      '#define',
+      '#include',
+      'pragma',
+    ]);
+  });
+
+  it('con muchas, nombra las 100 primeras y "y N más"', async () => {
+    const many = Array.from({ length: 150 }, (_, index) =>
+      aCard({ id: `h${index}`, front: `#${index}`, back: 'x' }),
+    );
+    const { dialog } = await open({ cards: many });
+
+    expect(dialog().textContent).toContain('150 tarjetas no volverán igual al importarlas:');
+    const items = wontReturnItems(dialog());
+    expect(items).toHaveLength(101);
+    expect(items[100]?.textContent?.trim()).toBe('y 50 más');
+  });
+
+  it('el aviso no impide entregar: descargar lleva el texto entero y cierra', async () => {
+    const haskell = aCard({ id: 'h1', front: 'map', back: 'map :: (a -> b) -> [a] -> [b]' });
+    const { ref, delivery, click } = await open({ cards: [haskell] });
+
+    await click('Descargar .txt');
+
+    expect(delivery.downloaded).toEqual([
+      {
+        name: 'Phrasal Verbs.txt',
+        content: '# Movement\nmap | map :: (a -> b) -> [a] -> [b]\n\n# Grammar\n',
+      },
+    ]);
+    await expect(ref.closed).resolves.toBe(true);
+  });
 
   it('mientras lee muestra un esqueleto ocupado y las acciones deshabilitadas; al resolver, el resumen', async () => {
     const { dialog, button, update, releaseRead } = await open({ holdRead: true });

@@ -2,6 +2,7 @@
 export const PRACTICA_COPY = {
   practice: 'Practicar',
   nothingToPractice: 'Nada que practicar aún.',
+  nothingOnDeviceOffline: 'Sin conexión, este dispositivo aún no tiene tarjetas de este libro.',
   prepareError: 'No se pudo preparar la práctica. Inténtalo de nuevo.',
   chooseAnswer: 'Elige la respuesta',
   writeAnswer: 'Escribe la respuesta',
@@ -22,8 +23,12 @@ export function scoreLabel(score: number, total: number): string {
   return `Acertaste ${score} de ${total}.`;
 }
 
-export function wrongAnswerLabel(answer: string): string {
-  return `La respuesta era «${answer}».`;
+/** "La respuesta era «banco»." · "«banco» o «orilla»" · "«banco», «orilla» o «ribera»". */
+export function wrongAnswerLabel(answers: readonly string[]): string {
+  const quoted = answers.map((answer) => `«${answer}»`);
+  const last = quoted.pop() ?? '';
+  const listed = quoted.length === 0 ? last : `${quoted.join(', ')} o ${last}`;
+  return `La respuesta era ${listed}.`;
 }
 
 /** El botón del resumen vuelve al origen de la práctica. */

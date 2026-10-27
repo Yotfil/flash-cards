@@ -11,7 +11,8 @@ import {
  * El texto de un libro en la convención de importación, su inverso exacto: `# capítulo` por cada
  * capítulo (también el único y los vacíos), una línea por tarjeta y una línea en blanco entre
  * capítulos, terminando en LF. Usa las mismas constantes que el parser, así lo exportado vuelve a
- * importarse igual. No inventa escapes: lo que la convención no puede decir se aplana.
+ * importarse igual. No inventa escapes: lo que la convención no puede decir se aplana, y
+ * `cardsThatWontReturn` nombra lo que, aun así, no volverá igual.
  */
 export function serializeBookPackage(pkg: BookPackage): string {
   if (pkg.chapters.length === 0) {
@@ -20,19 +21,35 @@ export function serializeBookPackage(pkg: BookPackage): string {
   return `${pkg.chapters.map(serializeChapter).join('\n\n')}\n`;
 }
 
-function serializeChapter(chapter: PackageChapter): string {
-  return [`${CHAPTER_PREFIX} ${flatten(chapter.name)}`, ...chapter.cards.map(serializeCard)].join(
-    '\n',
-  );
+/** La línea que abre un capítulo: `# nombre`. */
+export function serializeChapterHeader(name: string): string {
+  return `${CHAPTER_PREFIX} ${flatten(name)}`;
 }
 
-function serializeCard(card: CardContentDraft): string {
+/** La línea de una tarjeta: `anverso | reverso`, o la cloze tal cual, y ` :: ejemplo` si lo tiene. */
+export function serializeCardLine(card: CardContentDraft): string {
+  const written = writtenCard(card);
   const body =
-    card.cardType === 'cloze'
-      ? flatten(card.front)
-      : `${flatten(card.front)} ${PIPE} ${flatten(card.back)}`;
+    written.cardType === 'cloze' ? written.front : `${written.front} ${PIPE} ${written.back}`;
+  return written.example ? `${body}${EXAMPLE_SEPARATOR}${written.example}` : body;
+}
+
+/**
+ * La tarjeta tal como la escribe la exportación: cada campo en una sola línea y recortado, el
+ * reverso de una cloze vacío (no se escribe) y sin ejemplo si queda vacío.
+ */
+export function writtenCard(card: CardContentDraft): CardContentDraft {
   const example = flatten(card.example ?? '');
-  return example ? `${body}${EXAMPLE_SEPARATOR}${example}` : body;
+  return {
+    cardType: card.cardType,
+    front: flatten(card.front),
+    back: card.cardType === 'cloze' ? '' : flatten(card.back),
+    ...(example ? { example } : {}),
+  };
+}
+
+function serializeChapter(chapter: PackageChapter): string {
+  return [serializeChapterHeader(chapter.name), ...chapter.cards.map(serializeCardLine)].join('\n');
 }
 
 /** Un campo en una sola línea: cada salto de línea pasa a ser un espacio, y se recorta. */

@@ -145,6 +145,25 @@ describe('PackageDetailPageComponent', () => {
     ]);
   });
 
+  it('tras practicar, los del día ya calificados muestran su nota de hoy; "Para hoy" solo los que faltan', async () => {
+    const again = anItem({ id: 'a', front: 'to give up', back: 'rendirse', lastGrade: 1 });
+    const good = anItem({ id: 'b', front: 'to look up', back: 'buscar', lastGrade: 3 });
+    const pending = anItem({ id: 'c', front: 'to get by', back: 'arreglárselas' });
+    const practiced = aPackage({ id: 'p1', todaySet: { dayId: TODAY, itemIds: ['a', 'b', 'c'] } }, [
+      { ...again, lastPracticedDayId: TODAY },
+      { ...good, lastPracticedDayId: TODAY },
+      pending,
+    ]);
+
+    const { rows } = await open({ packages: [practiced] });
+
+    expect(rows()).toEqual([
+      'to give up → rendirse · Otra vez · hoy',
+      'to look up → buscar · Bien · hoy',
+      'to get by → arreglárselas · Para hoy',
+    ]);
+  });
+
   it('"Practicar hoy" prepara la práctica del día y la abre; sin nada para hoy, lo dice', async () => {
     const opened = await open();
 
@@ -178,6 +197,52 @@ describe('PackageDetailPageComponent', () => {
 
     expect(repository.calls.addItems).toBe(1);
     expect(rows()).toContain('to look up → buscar · Para hoy');
+  });
+
+  it('si otro dispositivo ya lo completó, agregar lo dice en el formulario y no agrega', async () => {
+    const { button, update, dialogs, repository } = await open();
+    repository.seed({
+      ...FILM,
+      status: 'completed',
+      completedAt: new Date('2026-10-26T12:00:00Z'),
+    });
+
+    button('Agregar')?.click();
+    await update();
+    typeInto('#card-front', 'to look up');
+    typeInto('#card-back', 'buscar');
+    await update();
+    dialogs().at(-1)?.querySelector('form')?.dispatchEvent(new Event('submit'));
+    await update();
+
+    expect(dialogs().at(-1)?.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'Este paquete ya está completado; no admite más ítems.',
+    );
+  });
+
+  it('si otro dispositivo ya lo completó, importar lo dice en el diálogo', async () => {
+    const { button, update, dialogs, repository } = await open();
+    repository.seed({
+      ...FILM,
+      status: 'completed',
+      completedAt: new Date('2026-10-26T12:00:00Z'),
+    });
+
+    button('Importar')?.click();
+    await update();
+    const dialog = dialogs().at(-1);
+    const area = dialog?.querySelector('textarea') as HTMLTextAreaElement;
+    area.value = 'a | b';
+    area.dispatchEvent(new Event('input'));
+    await update();
+    Array.from(dialog?.querySelectorAll('button') ?? [])
+      .find((candidate) => candidate.textContent?.trim().startsWith('Importar 1'))
+      ?.click();
+    await update();
+
+    expect(dialog?.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'Este paquete ya está completado; no admite más ítems.',
+    );
   });
 
   it('"Importar" abre el diálogo de pegar texto del paquete, con lo que cabe', async () => {

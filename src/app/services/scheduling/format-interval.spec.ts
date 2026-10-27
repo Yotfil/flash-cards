@@ -45,4 +45,21 @@ describe('formatInterval', () => {
   it('años: 365 días → "1 año"', () => {
     expect(formatInterval(after(365 * DAY_MS), T0)).toBe('1 año');
   });
+
+  it.each([
+    [59.6 * MINUTE_MS, '1 h'],
+    [23.7 * HOUR_MS, '1 día'],
+    [345 * DAY_MS, '1 año'],
+    [364 * DAY_MS, '1 año'],
+  ])('si el redondeo llega al tramo siguiente, se muestra ese tramo: %d ms → "%s"', (ms, text) => {
+    expect(formatInterval(after(ms), T0)).toBe(text);
+  });
+
+  it.each([
+    [59.4 * MINUTE_MS, '59 min'],
+    [23.4 * HOUR_MS, '23 h'],
+    [344 * DAY_MS, '11 meses'],
+  ])('justo antes del borde sigue en su tramo: %d ms → "%s"', (ms, text) => {
+    expect(formatInterval(after(ms), T0)).toBe(text);
+  });
 });
