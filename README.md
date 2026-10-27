@@ -123,6 +123,12 @@ ts-fsrs, Zod, Signal Forms, Angular CDK, Vitest, Netlify.
 - Las reglas permiten comprobar un correo exacto sin sesión (para detener un registro no
   autorizado antes de crear la cuenta) y prohíben listar la colección. Al publicar un release que
   cambie `firestore.rules`, despliégalas con `firebase deploy --only firestore:rules`.
+- "Olvidé mi contraseña" envía el correo de restablecimiento de Firebase (su plantilla e idioma se
+  editan en la consola: Authentication → Plantillas). La pantalla responde lo mismo haya o no cuenta
+  con ese correo. En el emulador, el enlace aparece en la pestaña Authentication y en
+  `/emulator/v1/projects/<proyecto>/oobCodes`.
+- Si un correo sale de la lista con la app abierta, la siguiente nota del repaso o de la práctica
+  se rechaza por permisos: la sesión se cierra con "Ya no tienes acceso" y lleva a "sin acceso".
 
 ## Caparazón y piezas compartidas
 

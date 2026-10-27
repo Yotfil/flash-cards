@@ -15,5 +15,5 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 3. Cierre
 
-- [ ] 3.1 `openspec archive restablecer-contrasena -y`. Verificar: `openspec validate --specs --strict` en verde.
-- [ ] 3.2 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 10 hecho.
+- [x] 3.1 `openspec archive restablecer-contrasena -y`. Verificar: `openspec validate --specs --strict` en verde.
+- [x] 3.2 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 10 hecho.
