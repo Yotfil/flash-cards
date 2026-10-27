@@ -14,8 +14,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 3. La raíz lleva a "sin acceso" (D3)
 
-- [ ] 3.1 Prueba en rojo en `app.spec`: en `/hoy`, la sesión pasa a `noAccess` → `/sin-acceso`. Verificar: falla.
-- [ ] 3.2 Implementar D3. Verificar: 3.1 en verde y `repaso-page.component.spec` en verde ("atrás" no vuelve al repaso).
+- [x] 3.1 Prueba en rojo en `app.spec`: en `/hoy`, la sesión pasa a `noAccess` → `/sin-acceso`. Verificar: falla.
+- [x] 3.2 Implementar D3. Verificar: 3.1 en verde y `repaso-page.component.spec` en verde ("atrás" no vuelve al repaso).
 
 ## 4. Cierre
 
