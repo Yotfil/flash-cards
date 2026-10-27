@@ -147,6 +147,21 @@ const saved = await ref.closed; // undefined si se canceló
 // Dentro del contenido: dialogRef.setPending(true) mientras guarda; dialogRef.close(resultado).
 ```
 
+Mientras está ocupado, ni Escape ni el "atrás" del sistema lo cierran. Un guardado que queda en el
+dispositivo aunque no confirme (crear o editar un libro, un capítulo, una tarjeta de un capítulo, un
+paquete) se apunta con `setPending(true, { releaseWhenSlow: true })`: si a los 6 s (`SLOW_SAVE_MS`)
+el almacén no confirmó (wifi sin internet), el diálogo deja de estar ocupado y `savingTooLong()`
+avisa al contenido, que muestra `SAVED_ON_DEVICE_MESSAGE` y cambia "Cancelar" por "Cerrar". Importar
+usa `IMPORT_WAITS_FOR_CONNECTION_MESSAGE`, que no promete nada. Los borrados y los ítems de un
+paquete (transacciones) no se apuntan. Con un diálogo abierto, el "atrás" del sistema solo cierra
+el de arriba: `DialogService` aborta la navegación y el router, con
+`canceledNavigationResolution: 'computed'`, devuelve el historial a su sitio.
+
+**Salir de una pantalla completa.** Repaso, práctica y práctica con IA salen con
+`ReturnNavigation.leaveTo(destino)` (`shared/navigation/`): si se abrieron desde el destino,
+regresan con "atrás"; si no, se reemplazan por él. Así ningún "atrás" posterior cae en la pantalla
+completa (que redirigiría) ni en una pantalla repetida.
+
 **Guardar ajustes.** Los controles de elección (casilla, selector, tema) guardan al tocar con
 `createImmediateSetting` (`features/ajustes/immediate-setting.ts`): el valor nuevo se ve al
 instante, el control queda deshabilitado mientras guarda y, si falla, vuelve al valor guardado con

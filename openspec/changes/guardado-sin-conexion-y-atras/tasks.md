@@ -26,9 +26,9 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 
 - [x] 5.1 Pruebas en rojo: `return-navigation.service.spec` (regresa o reemplaza); `practica-page.component.spec` (Salir y Volver regresan; atrás y adelante como la spec); `practice-ai-page.component.spec` (desde el paquete y desde Hoy); `repaso-page.component.spec` (desde el capítulo y desde Hoy). Verificar: fallan.
 - [x] 5.2 Implementar `ReturnNavigation` y usarlo en las tres pantallas. Verificar: 5.1 en verde.
-- [ ] 5.3 README: el plazo de los diálogos, el "atrás" y las salidas de pantalla completa (párrafo de navegación). Verificar: `npx prettier --check README.md`.
+- [x] 5.3 README: el plazo de los diálogos, el "atrás" y las salidas de pantalla completa (párrafo de navegación). Verificar: `npx prettier --check README.md`.
 
 ## 6. Cierre
 
-- [ ] 6.1 Puerta completa en verde. Verificar: "PUERTA: VERDE".
+- [x] 6.1 Puerta completa en verde. Verificar: "PUERTA: VERDE".
 - [ ] 6.2 Archivar el change en la rama (specs base de los ocho capability con el delta). Verificar: `openspec validate --specs --strict` y `openspec list` sin el change.
