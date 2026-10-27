@@ -16,10 +16,10 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 - [x] 3.1 Pruebas en rojo en `generate-quiz.spec`: `bank→banco`, `bank→orilla`, `house→casa` → 2 preguntas y "bank" con `acceptedAnswers` `['banco','orilla']`; 5 tarjetas ×2 → 5 preguntas con anversos distintos; `Don’t` y `don't` → 1 pregunta con los dos reversos; con 6 tarjetas y 50 semillas, cada opción múltiple de "bank" tiene exactamente una de banco/orilla y es su `answer`. Verificar: fallan (hoy una pregunta por tarjeta y sin `acceptedAnswers`).
 - [x] 3.2 Implementar D2 en `generateQuiz` (agrupar, barajar grupos, `acceptedAnswers`, correcta al azar en opción múltiple, distractores sin el grupo) y actualizar su comentario. Verificar: 3.1 en verde y el resto de `generate-quiz.spec` en verde (incluida la de dos azares → órdenes distintos).
-- [ ] 3.3 Pruebas en rojo: `practice-state.spec` (escrita con `acceptedAnswers ['banco','orilla']`: "orilla" → correcta); `practice-session.service.spec` (`feedback().correctAnswers`: en escribir, las aceptadas; en opción múltiple, `[answer]`); `practica.copy.spec` (`wrongAnswerLabel` con 1, 2 y 3 respuestas: «a» · «a» o «b» · «a», «b» o «c»). Verificar: fallan.
-- [ ] 3.4 Implementar en `practice-state.answerCurrent`, `PracticeSessionService.feedback` y `wrongAnswerLabel(answers)`. Verificar: 3.3 en verde.
-- [ ] 3.5 Prueba en rojo en `practice-feedback.component.spec`: con `correctAnswers ['banco','orilla']` pinta "La respuesta era «banco» o «orilla»."; la de una respuesta sigue igual. Verificar: falla.
-- [ ] 3.6 Pasar `correctAnswers` al feedback (entrada del componente y plantilla). Verificar: 3.5 en verde y `practica-page.component.spec` en verde.
+- [x] 3.3 Pruebas en rojo: `practice-state.spec` (escrita con `acceptedAnswers ['banco','orilla']`: "orilla" → correcta); `practice-session.service.spec` (`feedback().correctAnswers`: en escribir, las aceptadas; en opción múltiple, `[answer]`); `practica.copy.spec` (`wrongAnswerLabel` con 1, 2 y 3 respuestas: «a» · «a» o «b» · «a», «b» o «c»). Verificar: fallan.
+- [x] 3.4 Implementar en `practice-state.answerCurrent`, `PracticeSessionService.feedback` y `wrongAnswerLabel(answers)`. Verificar: 3.3 en verde.
+- [x] 3.5 Prueba en rojo en `practice-feedback.component.spec`: con `correctAnswers ['banco','orilla']` pinta "La respuesta era «banco» o «orilla»."; la de una respuesta sigue igual. Verificar: falla.
+- [x] 3.6 Pasar `correctAnswers` al feedback (entrada del componente y plantilla). Verificar: 3.5 en verde y `practica-page.component.spec` en verde.
 - [ ] 3.7 README: un párrafo "Práctica" (una pregunta por anverso, la normalización única de `normalizeCardText` y los separadores con dígitos). Verificar: `npx prettier --check README.md`.
 
 ## 4. Libro sin red y sin nada guardado (PQ-06)

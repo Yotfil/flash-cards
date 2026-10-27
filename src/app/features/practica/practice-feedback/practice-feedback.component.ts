@@ -13,7 +13,10 @@ import { PRACTICA_COPY, wrongAnswerLabel } from '../practica.copy';
   styleUrl: './practice-feedback.component.scss',
 })
 export class PracticeFeedbackComponent {
-  readonly result = input.required<{ correct: boolean; answer: string } | null>();
+  readonly result = input.required<{
+    correct: boolean;
+    correctAnswers: readonly string[];
+  } | null>();
 
   protected readonly copy = PRACTICA_COPY;
   protected readonly wrongAnswer = wrongAnswerLabel;

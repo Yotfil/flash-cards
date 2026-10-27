@@ -55,6 +55,19 @@ describe('practice-state', () => {
     expect(currentAnswer(answerCurrent(state, 'avanzar'))?.correct).toBe(false);
   });
 
+  it('escribir vale cualquiera de las acepciones del anverso', () => {
+    const bank: QuizQuestion = {
+      ...written(1, 'banco'),
+      prompt: 'bank',
+      acceptedAnswers: ['banco', 'orilla'],
+    };
+    const state = startPractice([bank]);
+
+    expect(currentAnswer(answerCurrent(state, 'orilla'))?.correct).toBe(true);
+    expect(currentAnswer(answerCurrent(state, 'banco'))?.correct).toBe(true);
+    expect(currentAnswer(answerCurrent(state, 'río'))?.correct).toBe(false);
+  });
+
   it('una pregunta respondida no acepta otra respuesta ni cuenta doble', () => {
     const once = answerCurrent(startPractice([choice(1), choice(2)]), 'back 1');
     const twice = answerCurrent(once, 'x');
