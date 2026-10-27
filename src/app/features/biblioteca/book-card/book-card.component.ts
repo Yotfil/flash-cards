@@ -16,6 +16,8 @@ import { BIBLIOTECA_COPY } from '../biblioteca.copy';
 })
 export class BookCardComponent {
   readonly book = input.required<Book>();
+  /** Se está preparando su borrado (contando lo que se pierde): el botón queda ocupado. */
+  readonly preparingDelete = input(false);
   readonly opened = output<void>();
   readonly settingsRequested = output<void>();
   readonly deleteRequested = output<void>();
