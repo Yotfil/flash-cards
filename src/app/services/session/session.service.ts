@@ -113,16 +113,18 @@ export class SessionService {
 
   /**
    * Crea una cuenta con correo y contraseña, solo si el correo está en la lista: fuera de ella no se
-   * crea ninguna identidad. La sesión llega después por el observador.
+   * crea ninguna identidad. La sesión llega después por el observador. El correo se recorta y pasa
+   * a minúsculas, como lo guarda el proveedor: la lista se escribe así y la comparación es literal.
    */
   async register(registration: Registration): Promise<'registered' | 'notAllowlisted'> {
-    if (!(await this.isAllowedForRegistration(registration.email))) {
+    const email = registration.email.trim().toLowerCase();
+    if (!(await this.isAllowedForRegistration(email))) {
       return 'notAllowlisted';
     }
-    const displayName = registration.displayName.trim() || displayNameFromEmail(registration.email);
+    const displayName = registration.displayName.trim() || displayNameFromEmail(email);
     this.pendingDisplayName = displayName;
     try {
-      await this.authPort.registerWithEmail({ ...registration, displayName });
+      await this.authPort.registerWithEmail({ ...registration, email, displayName });
     } catch (error) {
       this.pendingDisplayName = null;
       throw error;

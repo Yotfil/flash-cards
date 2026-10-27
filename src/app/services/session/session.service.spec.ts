@@ -184,6 +184,23 @@ describe('SessionService · registro', () => {
     expect(authPort.registrations).toEqual([]);
   });
 
+  it('el correo tecleado con mayúsculas o espacios se compara como lo guarda el proveedor (en minúsculas)', async () => {
+    const { session, authPort } = setup(['ana.perez@example.com']);
+    authPort.emit(null);
+    await settle();
+
+    const result = await session.register({
+      email: '  Ana.Perez@Example.COM ',
+      password: 'secreta',
+      displayName: 'Ana',
+    });
+
+    expect(result).toBe('registered');
+    expect(authPort.registrations.map((registration) => registration.email)).toEqual([
+      'ana.perez@example.com',
+    ]);
+  });
+
   it('con un correo autorizado crea la identidad y el perfil toma el nombre elegido', async () => {
     const { session, authPort, users } = setup(['ada@ejemplo.com']);
     authPort.emit(null);
