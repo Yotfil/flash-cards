@@ -6,6 +6,7 @@ import type { SessionState } from '@domain/models/session-state';
 import { BookRepository } from '@domain/ports/book.repository';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
+import { AppUpdatePort } from '@domain/ports/app-update.port';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { DailyStatsRepository } from '@domain/ports/daily-stats.repository';
 import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
@@ -23,6 +24,7 @@ import { FakeBookRepository } from '@testing/fake-book-repository';
 import { aCard } from '@testing/fake-card-repository';
 import { FakeCardRepository } from '@testing/fake-card-repository';
 import { FakeChapterRepository } from '@testing/fake-chapter-repository';
+import { FakeAppUpdate } from '@testing/fake-app-update';
 import { FakeConnectivity } from '@testing/fake-connectivity';
 import { FakeDailyStatsRepository } from '@testing/fake-daily-stats-repository';
 import { FakeGradePersistence } from '@testing/fake-grade-persistence';
@@ -50,6 +52,7 @@ async function navigate(
     providers: [
       provideRouter(routes),
       { provide: ConnectivityPort, useValue: new FakeConnectivity() },
+      { provide: AppUpdatePort, useValue: new FakeAppUpdate() },
       { provide: SessionService, useValue: new FakeSessionService(session) },
       { provide: Logger, useValue: new FakeLogger() },
       { provide: ThemePort, useValue: new FakeThemePort() },

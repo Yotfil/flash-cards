@@ -8,6 +8,8 @@ export const SHELL_COPY = {
   offline: 'Sin conexión. Tus repasos se guardan aquí y se sincronizan al volver.',
   unexpectedError: 'Algo salió mal. Si se repite, recarga la app.',
   dismissUnexpectedError: 'Cerrar aviso',
+  newVersion: 'Hay una versión nueva',
+  reload: 'Recargar',
 } as const;
 
 export interface NavDestination {

@@ -9,8 +9,8 @@ Orden TDD, puerta antes de cada commit (`bash ../flash-cards/docs/herramientas/p
 
 ## 2. Aviso en el caparazón
 
-- [ ] 2.1 Pruebas en rojo: `update-notice.component.spec` (sin versión no pinta; con versión, texto, botón, `role="status"`, sólido; "Recargar" llama `reload`) y `shell.component.spec` (el caparazón lo incluye). Verificar: fallan.
-- [ ] 2.2 Crear `UpdateNoticeComponent` (cuatro archivos), sus textos y ponerlo en el caparazón. Verificar: 2.1 en verde.
+- [x] 2.1 Pruebas en rojo: `update-notice.component.spec` (sin versión no pinta; con versión, texto, botón, `role="status"`, sólido; "Recargar" llama `reload`) y `shell.component.spec` (el caparazón lo incluye). Verificar: fallan.
+- [x] 2.2 Crear `UpdateNoticeComponent` (cuatro archivos), sus textos y ponerlo en el caparazón. Verificar: 2.1 en verde.
 
 ## 3. Cierre
 
