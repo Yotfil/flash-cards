@@ -19,5 +19,5 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 4. Cierre
 
-- [ ] 4.1 `openspec archive dia-de-estudio-y-specs -y`: las specs base de `cola-diaria`, `sesion-de-repaso` (con el requisito renombrado), `ajustes-de-usuario` y `programacion-espaciada` llevan el delta. Verificar: `openspec validate --specs --strict` en verde.
-- [ ] 4.2 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 7 hecho.
+- [x] 4.1 `openspec archive dia-de-estudio-y-specs -y`: las specs base de `cola-diaria`, `sesion-de-repaso` (con el requisito renombrado), `ajustes-de-usuario` y `programacion-espaciada` llevan el delta. Verificar: `openspec validate --specs --strict` en verde.
+- [x] 4.2 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 7 hecho.
