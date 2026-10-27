@@ -31,4 +31,4 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 ## 6. Cierre
 
 - [x] 6.1 Puerta completa en verde. Verificar: "PUERTA: VERDE".
-- [ ] 6.2 Archivar el change en la rama (specs base de los ocho capability con el delta). Verificar: `openspec validate --specs --strict` y `openspec list` sin el change.
+- [x] 6.2 Archivar el change en la rama (specs base de los ocho capability con el delta). Verificar: `openspec validate --specs --strict` y `openspec list` sin el change.

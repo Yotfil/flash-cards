@@ -7,7 +7,7 @@ Guiar al usuario tarjeta por tarjeta a través de una lista ya armada (la cola d
 ## Requirements
 
 ### Requirement: La sesión ocupa toda la pantalla, sin la navegación principal
-El sistema SHALL presentar la sesión de repaso en una pantalla propia, sin las pestañas de navegación (Hoy, Biblioteca, Progreso, Ajustes), accesible solo con sesión iniciada. La pantalla SHALL mostrar únicamente una barra superior discreta de acrílico tenue (barra de progreso, contador "Quedan N" y "Salir") y la tarjeta, que SHALL ser una superficie sólida de alto contraste, sin acrílico. Si se llega a la pantalla sin una lista entregada para estudiar (recarga del navegador, URL directa o botón "atrás"), el sistema SHALL redirigir a Hoy.
+El sistema SHALL presentar la sesión de repaso en una pantalla propia, sin las pestañas de navegación (Hoy, Biblioteca, Progreso, Ajustes), accesible solo con sesión iniciada. La pantalla SHALL mostrar únicamente una barra superior discreta de acrílico tenue (barra de progreso, contador "Quedan N" y "Salir") y la tarjeta, que SHALL ser una superficie sólida de alto contraste, sin acrílico. Si se llega a la pantalla sin una lista entregada para estudiar (recarga del navegador, URL directa, "atrás" o "adelante"), el sistema SHALL redirigir a Hoy.
 
 #### Scenario: Entrar desde Hoy con tarjetas
 - **WHEN** el usuario pulsa empezar en Hoy y la cola tiene al menos una tarjeta
@@ -18,8 +18,8 @@ El sistema SHALL presentar la sesión de repaso en una pantalla propia, sin las 
 - **THEN** la app lo redirige a Hoy en vez de mostrar una sesión vacía
 
 #### Scenario: Volver atrás tras terminar
-- **WHEN** el usuario terminó una sesión, está en Hoy y pulsa "atrás" en el navegador
-- **THEN** la app lo devuelve a Hoy sin mostrar la sesión anterior ni su cierre
+- **WHEN** el usuario terminó una sesión abierta desde un capítulo, está en Hoy y pulsa "atrás" en el navegador
+- **THEN** la app lo lleva al capítulo sin mostrar la sesión anterior ni su cierre
 
 ### Requirement: Una sesión arranca con una lista ya curada y la recorre en orden
 El sistema SHALL iniciar la sesión con la lista de tarjetas entregada por la cola diaria o por "Estudiar este libro" / "Estudiar este capítulo", en ese mismo orden y sin volver a filtrarla. Cada entrada a la pantalla SHALL arrancar una sesión nueva: progreso en cero, sin difíciles, sin avisos; nunca se retoma una sesión anterior. La lista SHALL consumirse al arrancar, de modo que una segunda entrada sin nueva entrega no encuentre nada. Si la lista está vacía, la sesión NO se inicia y la app vuelve a Hoy.
@@ -353,3 +353,14 @@ Al mostrarse la pantalla de cierre de la sesión, el sistema SHALL mover el foco
 #### Scenario: Cierre con teclado
 - **WHEN** el usuario califica con el teclado la última tarjeta y aparece el cierre
 - **THEN** el foco está en el título "Sesión terminada" y Tab lleva a los controles del cierre hasta "Volver a Hoy"
+
+### Requirement: Salir y volver a Hoy no dejan la sesión en el historial
+"Salir" y "Volver a Hoy" SHALL llevar a Hoy sin dejar la sesión detrás en el historial: si la sesión se abrió desde Hoy, regresan a Hoy como la entrada anterior del historial; si se abrió desde un capítulo o un libro, la sesión SHALL reemplazarse por Hoy, de modo que el siguiente "atrás" lleve a ese capítulo o libro.
+
+#### Scenario: Desde un capítulo
+- **WHEN** el usuario toca "Estudiar este capítulo" en "Unidad 1", toca "Salir" y pulsa "atrás"
+- **THEN** llega a "Unidad 1", no a la sesión ni a otra Hoy
+
+#### Scenario: Desde Hoy
+- **WHEN** el usuario empieza en Hoy, termina la sesión, toca "Volver a Hoy" y pulsa "atrás"
+- **THEN** llega a la pantalla anterior a Hoy, sin pasar por la sesión
