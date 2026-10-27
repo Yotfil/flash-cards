@@ -10,6 +10,7 @@ import {
   type PracticePackage,
 } from '@domain/models/practice-package';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { PackageCompletedError } from '@domain/ports/practice-package.repository';
 import { clozeQuestion } from '@services/cards/cloze/parse-cloze';
 import { todayItemIds } from '@services/practice-ai/pending-items';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
@@ -167,6 +168,10 @@ export class PackageDetailPageComponent implements OnInit {
     this.packages.reload();
   }
 
+  /** Otro dispositivo pudo completar el paquete mientras este lo veía abierto: se dice así. */
+  private readonly explainAddFailure = (error: unknown): string | undefined =>
+    error instanceof PackageCompletedError ? this.copy.packageCompleted : undefined;
+
   protected addItem(pkg: PracticePackage): void {
     this.dialogs.open<undefined, CardFormDialogData>(CardFormDialogComponent, {
       label: this.copy.itemFormCreate,
@@ -176,6 +181,7 @@ export class PackageDetailPageComponent implements OnInit {
         save: async (draft) => {
           await this.packages.addItems(pkg.id, [draft]);
         },
+        failureMessage: this.explainAddFailure,
         existing: { cards: this.faces, message: this.copy.duplicate },
       },
     });
@@ -194,6 +200,7 @@ export class PackageDetailPageComponent implements OnInit {
           save: async (drafts: readonly CardContentDraft[]) => {
             await this.packages.addItems(pkg.id, drafts);
           },
+          failureMessage: this.explainAddFailure,
           texts: {
             title: this.copy.importTitle,
             remaining: remainingLabel(this.remaining()),

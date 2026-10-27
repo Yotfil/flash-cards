@@ -180,6 +180,52 @@ describe('PackageDetailPageComponent', () => {
     expect(rows()).toContain('to look up → buscar · Para hoy');
   });
 
+  it('si otro dispositivo ya lo completó, agregar lo dice en el formulario y no agrega', async () => {
+    const { button, update, dialogs, repository } = await open();
+    repository.seed({
+      ...FILM,
+      status: 'completed',
+      completedAt: new Date('2026-10-26T12:00:00Z'),
+    });
+
+    button('Agregar')?.click();
+    await update();
+    typeInto('#card-front', 'to look up');
+    typeInto('#card-back', 'buscar');
+    await update();
+    dialogs().at(-1)?.querySelector('form')?.dispatchEvent(new Event('submit'));
+    await update();
+
+    expect(dialogs().at(-1)?.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'Este paquete ya está completado; no admite más ítems.',
+    );
+  });
+
+  it('si otro dispositivo ya lo completó, importar lo dice en el diálogo', async () => {
+    const { button, update, dialogs, repository } = await open();
+    repository.seed({
+      ...FILM,
+      status: 'completed',
+      completedAt: new Date('2026-10-26T12:00:00Z'),
+    });
+
+    button('Importar')?.click();
+    await update();
+    const dialog = dialogs().at(-1);
+    const area = dialog?.querySelector('textarea') as HTMLTextAreaElement;
+    area.value = 'a | b';
+    area.dispatchEvent(new Event('input'));
+    await update();
+    Array.from(dialog?.querySelectorAll('button') ?? [])
+      .find((candidate) => candidate.textContent?.trim().startsWith('Importar 1'))
+      ?.click();
+    await update();
+
+    expect(dialog?.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'Este paquete ya está completado; no admite más ítems.',
+    );
+  });
+
   it('"Importar" abre el diálogo de pegar texto del paquete, con lo que cabe', async () => {
     const { button, update, dialogs } = await open({
       packages: [aPackage({ id: 'p1', capacity: 3 }, [NEW, RESTED])],

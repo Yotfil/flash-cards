@@ -110,7 +110,7 @@
     <p role="status" class="text-sm text-text-dim">{{ savedOnDevice }}</p>
   }
   @if (failed()) {
-    <p role="alert" class="text-sm text-danger">{{ copy.saveError }}</p>
+    <p role="alert" class="text-sm text-danger">{{ errorText() }}</p>
   }
 
   <div class="mt-2 flex justify-end gap-2">

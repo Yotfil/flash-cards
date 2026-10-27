@@ -19,6 +19,8 @@ import { cardFormSchema, type CardFormValue } from '@services/cards/card-form.sc
 /** Guardar fuera de un capítulo (p. ej. un paquete de práctica): quien abre decide cómo. */
 export interface CustomCardSave {
   readonly save: (draft: CardContentDraft) => Promise<void>;
+  /** El texto de un fallo que el destino sabe explicar (p. ej. un paquete ya completado). */
+  readonly failureMessage?: (error: unknown) => string | undefined;
 }
 
 export type CardFormDialogData =
@@ -64,6 +66,7 @@ export class CardFormDialogComponent {
   protected readonly showMore = signal(this.data.mode === 'edit' && !!this.data.card.example);
   protected readonly saving = signal(false);
   protected readonly failed = signal(false);
+  protected readonly errorText = signal<string>(this.copy.saveError);
   protected readonly canSubmit = computed(
     () => this.cardForm().valid() && !this.saving() && this.online(),
   );
@@ -126,6 +129,8 @@ export class CardFormDialogComponent {
       await this.persist(this.model());
     } catch (error) {
       this.logger.error(this.copy.saveError, error);
+      const data = this.data;
+      this.errorText.set(('save' in data && data.failureMessage?.(error)) || this.copy.saveError);
       this.failed.set(true);
       this.saving.set(false);
       this.dialogRef.setPending(false);

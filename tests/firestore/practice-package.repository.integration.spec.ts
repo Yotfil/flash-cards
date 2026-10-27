@@ -2,6 +2,7 @@ import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { Timestamp, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 
 import {
+  PackageCompletedError,
   PackageFullError,
   PracticeItemGoneError,
   PracticePackageGoneError,
@@ -161,6 +162,20 @@ describe('FirestorePracticePackageRepository · ítems', () => {
     expect(failure).toBeInstanceOf(PackageFullError);
     const [stored] = await repository.listByUser(OWNER_UID);
     expect(stored?.itemOrder).toHaveLength(1);
+  });
+
+  it('si otro dispositivo ya lo completó, rechaza sin escribir nada', async () => {
+    const pkg = await repository.create(OWNER_UID, { name: 'Película', capacity: 10 });
+    const { device } = anotherDevice();
+    await device.complete(OWNER_UID, pkg.id, new Date('2026-10-26T12:00:00Z'));
+
+    const failure = await repository
+      .addItems(OWNER_UID, pkg.id, [basic('a', 'b')])
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PackageCompletedError);
+    const [stored] = await repository.listByUser(OWNER_UID);
+    expect(stored?.itemOrder).toHaveLength(0);
   });
 
   it('edita el contenido de un ítem y borra otro', async () => {

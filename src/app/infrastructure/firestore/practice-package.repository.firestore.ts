@@ -18,6 +18,7 @@ import type { Rating } from '@domain/models/rating';
 import { Logger } from '@domain/ports/logger.port';
 import type { ReadSource } from '@domain/ports/read-source';
 import {
+  PackageCompletedError,
   PackageFullError,
   PracticeItemGoneError,
   PracticePackageGoneError,
@@ -87,11 +88,15 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
     const ref = this.packageRef(uid, packageId);
     return runTransaction(this.firestore, async (transaction) => {
       const snapshot = await transaction.get(ref);
-      const { capacity, itemOrder } = parseDocument(
+      const { capacity, itemOrder, status } = parseDocument(
         packageItemOrderSchema,
         ref.path,
         snapshot.data(),
       );
+      // Otro dispositivo pudo completarlo mientras este aún lo veía abierto.
+      if (status !== 'open') {
+        throw new PackageCompletedError(packageId);
+      }
       if (itemOrder.length + drafts.length > capacity) {
         throw new PackageFullError(capacity);
       }

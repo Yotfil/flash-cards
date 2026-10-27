@@ -12,6 +12,15 @@ export class PackageFullError extends Error {
   }
 }
 
+/** El paquete ya está completado (quizá desde otro dispositivo): no admite ítems; no se escribió nada. */
+export class PackageCompletedError extends Error {
+  override readonly name = 'PackageCompletedError';
+
+  constructor(readonly packageId: string) {
+    super(`El paquete ${packageId} ya está completado.`);
+  }
+}
+
 /** El paquete ya no existe (se borró, por ejemplo, desde otro dispositivo): no se escribió nada. */
 export class PracticePackageGoneError extends Error {
   override readonly name = 'PracticePackageGoneError';
@@ -38,7 +47,10 @@ export abstract class PracticePackageRepository {
   abstract create(uid: string, input: { name: string; capacity: number }): Promise<PracticePackage>;
   abstract rename(uid: string, packageId: string, name: string): Promise<void>;
   abstract delete(uid: string, packageId: string): Promise<void>;
-  /** Agrega al final; si no caben todos, lanza `PackageFullError` sin escribir nada. */
+  /**
+   * Agrega al final; si no caben todos lanza `PackageFullError` y, si ya está completado,
+   * `PackageCompletedError`, sin escribir nada.
+   */
   abstract addItems(
     uid: string,
     packageId: string,

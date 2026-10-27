@@ -32,6 +32,7 @@ const practicePackageFieldsSchema = z.object({
 export const packageItemOrderSchema = practicePackageFieldsSchema.pick({
   capacity: true,
   itemOrder: true,
+  status: true,
 });
 
 type StoredItem = z.output<typeof practiceItemSchema> & { readonly id: string };

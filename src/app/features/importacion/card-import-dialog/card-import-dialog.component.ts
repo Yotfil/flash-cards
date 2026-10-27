@@ -46,6 +46,8 @@ export interface PackageImportTarget {
   /** Cuántos caben todavía: se importan las primeras válidas hasta ese número. */
   readonly remaining: number;
   readonly save: (drafts: readonly CardContentDraft[]) => Promise<void>;
+  /** El texto de un fallo que el destino sabe explicar (p. ej. un paquete ya completado). */
+  readonly failureMessage?: (error: unknown) => string | undefined;
   /** Los textos que nombran el destino (la importación no conoce los paquetes). */
   readonly texts: {
     readonly title: string;
@@ -92,6 +94,7 @@ export class CardImportDialogComponent {
     this.target.kind === 'package' ? this.target.texts.wording : CARD_WORDING;
   protected readonly errorMessage =
     this.target.kind === 'package' ? this.target.texts.error : this.copy.cardsError;
+  protected readonly errorText = signal<string>(this.errorMessage);
   protected readonly preview = computed(() =>
     this.importService.previewForChapter(this.text(), this.destinationName(), this.existing()),
   );
@@ -157,6 +160,9 @@ export class CardImportDialogComponent {
       this.dialogRef.close(true);
     } catch (error) {
       this.logger.error(this.errorMessage, error);
+      this.errorText.set(
+        (target.kind === 'package' && target.failureMessage?.(error)) || this.errorMessage,
+      );
       this.failed.set(true);
       this.importing.set(false);
       this.dialogRef.setPending(false);
