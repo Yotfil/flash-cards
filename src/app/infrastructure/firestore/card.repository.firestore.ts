@@ -15,11 +15,12 @@ import {
 } from 'firebase/firestore';
 
 import type { Card, CardContentChanges, NewCard } from '@domain/models/card.model';
+import { PartialCreationError } from '@domain/models/partial-creation-error';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
 import type { ReadSource } from '@domain/ports/read-source';
 
-import { chunksOf, type BatchWriter } from './batch-writer';
+import { BatchCommitError, chunksOf, type BatchWriter } from './batch-writer';
 import { COUNTED_GROUP_SIZE, writeInCountedBatches } from './counted-batch';
 import { parseDocuments } from './document-boundary';
 import { readFrom } from './read-from';
@@ -135,6 +136,36 @@ export class FirestoreCardRepository extends CardRepository {
       // en el orden recibido (el del archivo al importar).
       createdAt: new Date(now.getTime() + position),
     }));
+    const asCard = ({ ref, card, createdAt }: (typeof created)[number]): Card => ({
+      id: ref.id,
+      ...card,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    try {
+      await this.writeReplacement(uid, bookId, chapterId, cardIdsToDelete, created, now);
+    } catch (error) {
+      // Un alta (sin bajas) cortada a mitad: los lotes confirmados ya crearon y sumaron lo suyo.
+      if (error instanceof BatchCommitError && cardIdsToDelete.length === 0) {
+        const committed = new Set(error.committed.map((ref) => ref.path));
+        throw new PartialCreationError(
+          created.filter(({ ref }) => committed.has(ref.path)).map(asCard),
+          error,
+        );
+      }
+      throw error;
+    }
+    return created.map(asCard);
+  }
+
+  private async writeReplacement(
+    uid: string,
+    bookId: string,
+    chapterId: string | undefined,
+    cardIdsToDelete: readonly string[],
+    created: readonly { ref: DocumentReference; card: NewCard; createdAt: Date }[],
+    now: Date,
+  ): Promise<void> {
     await writeInCountedBatches({
       firestore: this.firestore,
       bookRef: this.bookRef(uid, bookId),
@@ -159,12 +190,6 @@ export class FirestoreCardRepository extends CardRepository {
         })),
       ],
     });
-    return created.map(({ ref, card, createdAt }) => ({
-      id: ref.id,
-      ...card,
-      createdAt,
-      updatedAt: createdAt,
-    }));
   }
 
   /** `example: null` elimina el campo; un ejemplo se guarda recortado; ausente no se toca. */

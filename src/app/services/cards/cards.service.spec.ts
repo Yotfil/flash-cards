@@ -7,6 +7,7 @@ import { CardRepository } from '@domain/ports/card.repository';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { initialCardScheduling } from '@domain/models/card-scheduling';
+import { PartialCreationError } from '@domain/models/partial-creation-error';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { BooksService } from '@services/books/books.service';
 import { CardCollectionChanges } from '@services/progress/card-collection-changes';
@@ -210,6 +211,24 @@ describe('CardsService · crear y editar', () => {
 
     await service.createMany('b1', 'c1', []);
     expect(repository.calls.createMany).toBe(1);
+  });
+
+  it('si crear varias se corta a mitad, la lista y el contador suman las ya creadas, y relanza', async () => {
+    const { service, repository, changeCardCount } = await opened();
+    const ids = () => service.cards.value()?.map((card) => card.id);
+    const alreadyCreated = [
+      aCard({ id: 'n1', chapterId: 'c1', front: 'a', back: 'b' }),
+      aCard({ id: 'n2', chapterId: 'c1', front: 'c', back: 'd' }),
+    ];
+    const failure = new PartialCreationError(alreadyCreated, new Error('offline'));
+    repository.failWith.createMany = failure;
+    const draft = { cardType: 'basic' as const, front: 'a', back: 'b' };
+
+    await expect(service.createMany('b1', 'c1', [draft, draft, draft])).rejects.toBe(failure);
+
+    // Al reintentar, la previsualización las cuenta como repetidas: ya están en la lista.
+    expect(ids()).toEqual(['k1', 'n1', 'n2']);
+    expect(changeCardCount).toHaveBeenCalledWith('b1', 2);
   });
 
   it('editar envía solo el contenido y conserva programación y suspensión', async () => {
