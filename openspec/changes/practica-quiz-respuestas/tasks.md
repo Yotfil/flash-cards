@@ -32,8 +32,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 5. Campo y foco (UI, PQ-03 y PQ-07)
 
-- [ ] 5.1 Prueba en rojo en `written-question.component.spec`: el campo tiene `autocorrect="off"`. Verificar: falla.
-- [ ] 5.2 Añadir el atributo (D6). Verificar: 5.1 en verde.
+- [x] 5.1 Prueba en rojo en `written-question.component.spec`: el campo tiene `autocorrect="off"`. Verificar: falla.
+- [x] 5.2 Añadir el atributo (D6). Verificar: 5.1 en verde.
 - [ ] 5.3 Pruebas en rojo: `multiple-choice-question.component.spec` (al crearse y al cambiar `questionId`, el foco está en el `h2` del enunciado, que tiene `tabindex="-1"`); `practica-page.component.spec` (al abrir con una de opción múltiple, foco en su enunciado; tras responder, en "Siguiente"; al avanzar a una escrita, en el campo; al avanzar a otra de opción múltiple, en su enunciado; en la última, en "Ver resultado"). Verificar: fallan las de opción múltiple.
 - [ ] 5.4 Implementar D5 en `multiple-choice-question` (entrada `questionId`, `effect` de foco, `tabindex="-1"` y `focus-visible:outline-none`) y pasarle `question.id` desde la página. Verificar: 5.3 en verde.
 - [ ] 5.5 Pruebas en rojo: `practice-summary.component.spec` (al crearse, foco en su `h1`); `practica-page.component.spec` ("Ver resultado" → foco en "¡Práctica completada!"). Verificar: fallan.
