@@ -21,6 +21,15 @@ describe('isWrittenAnswerCorrect', () => {
     expect(isWrittenAnswerCorrect('rendi', 'rendí')).toBe(false);
   });
 
+  it('el apóstrofo tipográfico y el recto son lo mismo, en los dos sentidos', () => {
+    expect(isWrittenAnswerCorrect("don't", 'don’t')).toBe(true);
+    expect(isWrittenAnswerCorrect('don’t', "don't")).toBe(true);
+  });
+
+  it('una tilde escrita aparte cuenta igual que la letra con tilde', () => {
+    expect(isWrittenAnswerCorrect('rendí', 'rendi\u0301')).toBe(true);
+  });
+
   it('una respuesta distinta no vale', () => {
     expect(isWrittenAnswerCorrect('avanzar', 'rendirse')).toBe(false);
   });

@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 1. Una sola normalización (cerebro, PQ-03)
 
-- [ ] 1.1 Pruebas en rojo: `normalize-card-text.spec` (’ ‘ ʼ → ', “ ” → ", `'rendí'` → `'rendí'`, sigue recortando, bajando a minúsculas y colapsando); `written-answer.spec` («don’t»/"don't" en los dos sentidos y la tilde aparte); `card-duplicates.spec` (`findDuplicateCardIds` con `don’t | no hacer` y `don't | no hacer`, y con la tilde aparte; `isDuplicateDraft` con `don't` frente a `don’t`); `count-repeated-lines.spec` (`don’t | no hacer` en el texto contra `don't | no hacer` del capítulo → 1); `sort-cards-for-display.spec` (`“b”` ordena junto a `"b"`). Verificar: fallan porque `normalizeCardText` no unifica.
-- [ ] 1.2 Implementar D1 en `normalizeCardText` (NFC, apóstrofos y comillas, y lo de siempre) con su comentario del porqué. Verificar: 1.1 en verde y las pruebas existentes de tarjetas, importación, exportación y práctica en verde.
+- [x] 1.1 Pruebas en rojo: `normalize-card-text.spec` (’ ‘ ʼ → ', “ ” → ", `'rendí'` → `'rendí'`, sigue recortando, bajando a minúsculas y colapsando); `written-answer.spec` («don’t»/"don't" en los dos sentidos y la tilde aparte); `card-duplicates.spec` (`findDuplicateCardIds` con `don’t | no hacer` y `don't | no hacer`, y con la tilde aparte; `isDuplicateDraft` con `don't` frente a `don’t`); `count-repeated-lines.spec` (`don’t | no hacer` en el texto contra `don't | no hacer` del capítulo → 1); `sort-cards-for-display.spec` (`“b”` ordena junto a `"b"`). Verificar: fallan porque `normalizeCardText` no unifica.
+- [x] 1.2 Implementar D1 en `normalizeCardText` (NFC, apóstrofos y comillas, y lo de siempre) con su comentario del porqué. Verificar: 1.1 en verde y las pruebas existentes de tarjetas, importación, exportación y práctica en verde.
 
 ## 2. Separadores con dígitos (cerebro, PQ-04)
 

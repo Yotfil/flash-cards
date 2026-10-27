@@ -13,6 +13,20 @@ describe('sortCardsForDisplay', () => {
     expect(sortCardsForDisplay(cards).map((card) => card.id)).toEqual(['apple', 'Apple', 'banana']);
   });
 
+  it('las comillas tipográficas ordenan junto a las rectas', () => {
+    const cards = [
+      aCard({ id: 'rectas-z', front: '"b"', back: 'z' }),
+      aCard({ id: 'tipograficas-m', front: '“b”', back: 'm' }),
+      aCard({ id: 'rectas-a', front: '"b"', back: 'a' }),
+    ];
+
+    expect(sortCardsForDisplay(cards).map((card) => card.id)).toEqual([
+      'rectas-a',
+      'tipograficas-m',
+      'rectas-z',
+    ]);
+  });
+
   it('a igual anverso y reverso, la creada antes va primero', () => {
     const newer = aCard({ id: 'nueva', createdAt: new Date('2026-06-15T12:00:00Z') });
     const older = aCard({ id: 'vieja', createdAt: new Date('2026-06-14T12:00:00Z') });
