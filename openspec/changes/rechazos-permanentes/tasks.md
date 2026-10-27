@@ -31,8 +31,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 6. La nota de hoy en el detalle (D6, IA-05)
 
-- [ ] 6.1 Prueba en rojo en `package-detail-page.component.spec`: conjunto de 3 con dos calificados hoy → "Otra vez · hoy", "Bien · hoy", "Para hoy". Verificar: falla (hoy, tres "Para hoy").
-- [ ] 6.2 Implementar D6. Verificar: 6.1 en verde y el resto del detalle en verde.
+- [x] 6.1 Prueba en rojo en `package-detail-page.component.spec`: conjunto de 3 con dos calificados hoy → "Otra vez · hoy", "Bien · hoy", "Para hoy". Verificar: falla (hoy, tres "Para hoy").
+- [x] 6.2 Implementar D6. Verificar: 6.1 en verde y el resto del detalle en verde.
 
 ## 7. Cierre
 

@@ -145,6 +145,25 @@ describe('PackageDetailPageComponent', () => {
     ]);
   });
 
+  it('tras practicar, los del día ya calificados muestran su nota de hoy; "Para hoy" solo los que faltan', async () => {
+    const again = anItem({ id: 'a', front: 'to give up', back: 'rendirse', lastGrade: 1 });
+    const good = anItem({ id: 'b', front: 'to look up', back: 'buscar', lastGrade: 3 });
+    const pending = anItem({ id: 'c', front: 'to get by', back: 'arreglárselas' });
+    const practiced = aPackage({ id: 'p1', todaySet: { dayId: TODAY, itemIds: ['a', 'b', 'c'] } }, [
+      { ...again, lastPracticedDayId: TODAY },
+      { ...good, lastPracticedDayId: TODAY },
+      pending,
+    ]);
+
+    const { rows } = await open({ packages: [practiced] });
+
+    expect(rows()).toEqual([
+      'to give up → rendirse · Otra vez · hoy',
+      'to look up → buscar · Bien · hoy',
+      'to get by → arreglárselas · Para hoy',
+    ]);
+  });
+
   it('"Practicar hoy" prepara la práctica del día y la abre; sin nada para hoy, lo dice', async () => {
     const opened = await open();
 

@@ -138,11 +138,7 @@ export class PackageDetailPageComponent implements OnInit {
     return orderedItems(pkg).map((item) => ({
       item,
       text: itemText(item),
-      status: today.has(item.id)
-        ? this.copy.forToday
-        : item.lastGrade && item.lastPracticedDayId
-          ? lastGradeLabel(item.lastGrade, item.lastPracticedDayId, todayId)
-          : '',
+      status: this.itemStatus(item, today.has(item.id), todayId),
     }));
   });
   /** Hoy ya practicado (abierto) o completado: entonces hay prompt que copiar. */
@@ -286,6 +282,20 @@ export class PackageDetailPageComponent implements OnInit {
 
   private todayIds(pkg: PracticePackage): string[] {
     return todayItemIds(pkg, this.packages.currentDayId());
+  }
+
+  /**
+   * Lo que se dice de un ítem: su nota si ya se calificó hoy ("Otra vez · hoy"), aunque sea del
+   * día; "Para hoy" si es del día y falta; y si no, su última nota ("Bien · ayer").
+   */
+  private itemStatus(item: PracticeItem, isForToday: boolean, todayId: string): string {
+    const gradedToday = item.lastPracticedDayId === todayId;
+    if (isForToday && !gradedToday) {
+      return this.copy.forToday;
+    }
+    return item.lastGrade && item.lastPracticedDayId
+      ? lastGradeLabel(item.lastGrade, item.lastPracticedDayId, todayId)
+      : '';
   }
 }
 
