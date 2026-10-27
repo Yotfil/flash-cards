@@ -79,6 +79,9 @@ y la app muestra "sin acceso".
 - **"Could not start Firestore Emulator, port taken"**: otro proceso usa el 8080 (por ejemplo, un
   contenedor de Docker publicado en ese puerto). Detenlo o publícalo en otro puerto: la app y las
   pruebas esperan el emulador de Firestore en el 8080 y el de Auth en el 9099 (`firebase.json`).
+- **`npm run test:integration` con `npm run emulators` encendido** falla con "port taken": arranca su
+  propio emulador en el 8080. Las pruebas usan otro proyecto (`demo-cadence-test`) y cada una vacía
+  solo ese: aunque llegaran a tu emulador de desarrollo, tus datos de `demo-cadence` no se tocan.
 - **El login falla con "connection refused"**: los emuladores no están corriendo (`npm run emulators`).
 - **"Auth Emulator Internal Error: No matching frame"** al entrar con Google: la ventanita del
   emulador no encuentra su iframe en la pestaña de la app. Pasa si la pestaña se recargó con la
@@ -212,9 +215,15 @@ Hoy, "Estudiar este libro", "Estudiar este capítulo" y el "N listas" de cada ca
 `buildDailyQueue` (puro) aplica los topes de cada libro: la **cola base** (la que ve Progreso) y la
 **cola de la sesión**, que suma el ajuste de nuevas de hoy **por libro** (nunca toma nuevas de otro
 libro). `DailyQueueService` lee una vez por entrada a Hoy (`refresh`: libros, listas e indicadores
-del día) y deriva ambas colas en memoria; el ajuste vive en memoria ligado al día de estudio. La
-racha se calcula al vuelo desde los indicadores de los últimos 60 días (`computeStreak`), en un
-recurso aparte: si falla se omite sin tumbar la cola. Quien prepara una sesión la deja en
+del día) y deriva ambas colas en memoria; el ajuste vive en memoria ligado al día de estudio.
+Pinta primero la cola armada con lo guardado en el dispositivo (si hay libros y tarjetas
+guardados) y la cambia por la del servidor al llegar; "Estudiar ahora" arma la sesión siempre con
+la lectura del servidor (`prepareSession` espera la que está en curso). La racha se calcula al
+vuelo desde los indicadores de los últimos 60 días (`computeStreak`), en un recurso aparte que
+solo lee Hoy: si falla se omite sin tumbar la cola. Progreso arma la cola sin la racha
+(`refreshQueue`) y guarda en memoria el conteo de la colección: lo repite solo si la colección
+cambió desde este dispositivo (`CardCollectionChanges`, que avisan quienes escriben tarjetas con
+`afterWrite`), con "Reintentar" o si no hay conteo y vuelve la red con Progreso abierta. Quien prepara una sesión la deja en
 `StudyHandoffService` (`hand`/`take`, una sola entrega) y navega a `/repaso`; el botón compartido
 es `StudyLaunchButtonComponent` (`features/estudio/`).
 
@@ -265,22 +274,27 @@ crearse y sin repasos. `programacion-espaciada` comprueba que equivale a la de t
 recursos de libros y de capítulos: error de libros, cargando, libro inexistente, error de
 capítulos, capítulo inexistente o listo, en ese orden.
 
-**Pintar una pantalla que lee datos.** El servicio expone un `resource()` de Angular y la
-plantilla distingue cuatro estados; un fallo nunca se pinta como vacío. Las mutaciones locales
-(`books.update(...)`) dejan el recurso en estado `local`, que se pinta como `resolved`
-(ejemplo real: `BibliotecaPageComponent`):
+**Pintar una pantalla que lee datos.** El servicio expone un `resource()` de Angular con un
+cargador en flujo, `readDeviceThenServer` (`services/data-loading/`): entrega al instante lo que el
+dispositivo ya tiene guardado (los puertos de lista aceptan el origen `'device'`, que el adaptador
+lee de la caché de Firestore) y lo cambia por la lectura del servidor al llegar; sin nada guardado
+(o una lista vacía), espera al servidor. Si el servidor falla con lo guardado a la vista, lo
+guardado se queda y el fallo se registra. La plantilla distingue cuatro estados y un fallo nunca
+se pinta como vacío; mientras carga o se relee, lo que ya hay se queda (sin volver al esqueleto) y
+el vacío solo lo decide una lectura terminada. Las mutaciones locales (`books.update(...)`) dejan
+el recurso en estado `local`, que se pinta como `resolved` (ejemplo real: `BibliotecaPageComponent`):
 
-<!-- prettier-ignore -->
-```html
-@switch (books.status()) {
-  @case ('loading') { <app-skeleton [lines]="4" /> }
-  @case ('reloading') { <app-skeleton [lines]="4" /> }
-  @case ('error') { <app-error-state (retry)="books.reload()" /> }
-  @default {
-    @if (books.value()?.length) { <!-- contenido --> }
-    @else { <app-empty-state title="Tu biblioteca está vacía" /> }
+```ts
+protected readonly view = computed<LibraryView>(() => {
+  const status = this.booksService.books.status();
+  if (status === 'error') {
+    return 'error';
   }
-}
+  if (status !== 'resolved' && status !== 'local') {
+    return this.books().length > 0 ? 'list' : 'loading';
+  }
+  return this.books().length === 0 ? 'empty' : 'list';
+});
 ```
 
 ## Especificaciones y diseño

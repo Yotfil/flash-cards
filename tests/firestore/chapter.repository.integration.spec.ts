@@ -212,3 +212,17 @@ describe('FirestoreChapterRepository · conteo y cascada', () => {
     expect(await bookCardCount()).toBe(0);
   });
 });
+
+describe('FirestoreChapterRepository · lo guardado en el dispositivo', () => {
+  it('lee lo guardado sin ir al servidor: nada antes de leer, lo leído después', async () => {
+    const otherDevice = new FirestoreChapterRepository(
+      modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    );
+    await otherDevice.create(OWNER_UID, { bookId: 'b1', name: 'Unidad 1', order: 0 });
+
+    expect(await repository.listByBook(OWNER_UID, 'b1', 'device')).toEqual([]);
+    const fromServer = await repository.listByBook(OWNER_UID, 'b1');
+    expect(fromServer.map((chapter) => chapter.name)).toEqual(['Unidad 1']);
+    expect(await repository.listByBook(OWNER_UID, 'b1', 'device')).toEqual(fromServer);
+  });
+});

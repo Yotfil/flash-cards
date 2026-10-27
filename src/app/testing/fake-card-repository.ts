@@ -5,6 +5,7 @@ import {
   type NewCard,
 } from '@domain/models/card.model';
 import { CardRepository, type ChapterReplacement } from '@domain/ports/card.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 type FailableMethod =
   | 'listByChapter'
@@ -50,7 +51,26 @@ export class FakeCardRepository extends CardRepository {
     }
   }
 
-  async listByChapter(uid: string, chapterId: string): Promise<Card[]> {
+  /** Lo que el dispositivo tiene guardado: aparte de lo del servidor (`seed`). */
+  readonly onDevice = new Map<string, Card>();
+  /** Lecturas del dispositivo (las del servidor las cuenta `calls`). */
+  readonly deviceCalls = { listByChapter: 0, listReady: 0 };
+
+  seedOnDevice(...cards: Card[]): void {
+    for (const card of cards) {
+      this.onDevice.set(card.id, card);
+    }
+  }
+
+  async listByChapter(
+    uid: string,
+    chapterId: string,
+    source: ReadSource = 'server',
+  ): Promise<Card[]> {
+    if (source === 'device') {
+      this.deviceCalls.listByChapter++;
+      return [...this.onDevice.values()].filter((card) => card.chapterId === chapterId);
+    }
     this.record('listByChapter');
     this.listedUids.push(uid);
     return [...this.cards.values()].filter((card) => card.chapterId === chapterId);
@@ -59,7 +79,11 @@ export class FakeCardRepository extends CardRepository {
   /** Con qué instante se pidieron las listas (la cola lo calcula del fin del día). */
   readonly readyBefore: Date[] = [];
 
-  async listReady(_uid: string, before: Date): Promise<Card[]> {
+  async listReady(_uid: string, before: Date, source: ReadSource = 'server'): Promise<Card[]> {
+    if (source === 'device') {
+      this.deviceCalls.listReady++;
+      return [...this.onDevice.values()].filter((card) => card.scheduling.due <= before);
+    }
     this.record('listReady');
     this.readyBefore.push(before);
     return [...this.cards.values()].filter((card) => card.scheduling.due <= before);

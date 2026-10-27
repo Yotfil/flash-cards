@@ -284,3 +284,18 @@ describe('FirestoreBookRepository · colección', () => {
     });
   });
 });
+
+describe('FirestoreBookRepository · lo guardado en el dispositivo', () => {
+  it('lee lo guardado sin ir al servidor: nada antes de leer, lo leído después', async () => {
+    // Otro dispositivo de la misma cuenta crea el libro; este todavía no lo ha leído.
+    const otherDevice = new FirestoreBookRepository(
+      modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    );
+    await otherDevice.create(OWNER_UID, draft({ name: 'Inglés' }));
+
+    expect(await repository.listByUser(OWNER_UID, 'device')).toEqual([]);
+    const fromServer = await repository.listByUser(OWNER_UID);
+    expect(fromServer.map((book) => book.name)).toEqual(['Inglés']);
+    expect(await repository.listByUser(OWNER_UID, 'device')).toEqual(fromServer);
+  });
+});

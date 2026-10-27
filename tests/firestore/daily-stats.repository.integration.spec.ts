@@ -101,3 +101,14 @@ describe('FirestoreDailyStatsRepository', () => {
     expect((failure as InvalidDocumentError).message).toContain('users/u1/dailyStats/2026-10-24');
   });
 });
+
+describe('FirestoreDailyStatsRepository · lo guardado en el dispositivo', () => {
+  it('los indicadores de un día: nada antes de leer, lo leído después', async () => {
+    await seedDay('2026-10-24', { reviewsCompleted: 3 });
+
+    expect(await repository.getByDay(OWNER_UID, '2026-10-24', 'device')).toBeNull();
+    const fromServer = await repository.getByDay(OWNER_UID, '2026-10-24');
+    expect(fromServer?.reviewsCompleted).toBe(3);
+    expect(await repository.getByDay(OWNER_UID, '2026-10-24', 'device')).toEqual(fromServer);
+  });
+});

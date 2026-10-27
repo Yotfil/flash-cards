@@ -75,9 +75,12 @@ async function open(
   if (options.holdList) {
     const gate = new Promise<void>((resolve) => (releaseList = resolve));
     const list = cards.listReady.bind(cards);
-    cards.listReady = async (uid, before) => {
-      await gate;
-      return list(uid, before);
+    // Solo el servidor espera: lo guardado en el dispositivo responde al instante.
+    cards.listReady = async (uid, before, source) => {
+      if (source !== 'device') {
+        await gate;
+      }
+      return list(uid, before, source);
     };
   }
   const stats = new FakeDailyStatsRepository();
@@ -125,7 +128,18 @@ async function open(
     Array.from(element.querySelectorAll('button')).find(
       (candidate) => candidate.textContent?.trim() === text,
     );
-  return { element, books, cards, connectivity, update, summary, collection, button, releaseList };
+  return {
+    element,
+    fixture,
+    books,
+    cards,
+    connectivity,
+    update,
+    summary,
+    collection,
+    button,
+    releaseList,
+  };
 }
 
 describe('ProgresoPageComponent', () => {
@@ -221,5 +235,17 @@ describe('ProgresoPageComponent', () => {
 
     expect(books.calls.countCollectionByState).toBe(1);
     expect(collection()?.textContent).toContain('1 tarjeta en total');
+  });
+
+  it('al salir de Progreso, la red que vuelve ya no cuenta la colección', async () => {
+    const { books, connectivity, fixture } = await open({ online: false });
+
+    fixture.destroy();
+    connectivity.setOnline(true);
+    await new Promise((resolve) => setTimeout(resolve));
+    TestBed.tick();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(books.calls.countCollectionByState).toBe(0);
   });
 });

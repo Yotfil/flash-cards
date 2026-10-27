@@ -9,6 +9,7 @@ import { Logger } from '@domain/ports/logger.port';
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { BooksService } from '@services/books/books.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { SessionService } from '@services/session/session.service';
 import { FakeBookRepository } from '@testing/fake-book-repository';
 import { FakeCardRepository, aCard } from '@testing/fake-card-repository';
@@ -86,6 +87,59 @@ describe('CardsService · recurso', () => {
 
     expect(service.sorted().map((card) => card.front)).toEqual(['apple', 'Apple', 'banana']);
     expect([...service.duplicateIds()].sort()).toEqual(['a1', 'a2']);
+  });
+});
+
+/** Deja en espera las lecturas del servidor (las del dispositivo responden al instante). */
+function holdServerReads(repository: FakeCardRepository): () => void {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const list = repository.listByChapter.bind(repository);
+  repository.listByChapter = async (uid, chapterId, source) => {
+    if (source !== 'device') {
+      await gate;
+    }
+    return list(uid, chapterId, source);
+  };
+  return release;
+}
+
+describe('CardsService · lo guardado en el dispositivo primero', () => {
+  it('pinta al instante las tarjetas guardadas y después las del servidor', async () => {
+    const { service, repository, settle } = setup();
+    repository.seedOnDevice(aCard({ id: 'k1', chapterId: 'c1' }));
+    repository.seed(aCard({ id: 'k1', chapterId: 'c1' }), aCard({ id: 'k2', chapterId: 'c1' }));
+    const release = holdServerReads(repository);
+    const ids = () => service.cards.value()?.map((card) => card.id);
+
+    service.openChapter('c1');
+    await settle();
+    expect(ids()).toEqual(['k1']);
+
+    release();
+    await settle();
+    expect(ids()).toEqual(['k1', 'k2']);
+    expect(repository.calls.listByChapter).toBe(1);
+  });
+
+  it('si el servidor falla con lo guardado a la vista, la lista se queda y el fallo se registra', async () => {
+    const { service, repository, logger, settle } = setup();
+    repository.seedOnDevice(aCard({ id: 'k1', chapterId: 'c1' }));
+    const failure = new Error('unavailable');
+    repository.failWith.listByChapter = failure;
+
+    service.openChapter('c1');
+    await settle();
+
+    expect(service.cards.status()).not.toBe('error');
+    expect(service.cards.value()?.map((card) => card.id)).toEqual(['k1']);
+    expect(logger.entries).toEqual([
+      {
+        level: 'error',
+        message: 'No se pudieron leer las tarjetas del capítulo c1',
+        cause: failure,
+      },
+    ]);
   });
 });
 
@@ -315,5 +369,71 @@ describe('CardsService · registro de fallos', () => {
         cause: failure,
       },
     ]);
+  });
+});
+
+describe('CardsService · avisa que la colección cambió', () => {
+  const draft = { cardType: 'basic' as const, front: 'a', back: 'b' };
+
+  async function opened() {
+    const context = setup();
+    context.repository.seed(
+      aCard({ id: 'k1', chapterId: 'c1' }),
+      aCard({ id: 'k2', chapterId: 'c1' }),
+    );
+    context.service.openChapter('c1');
+    await context.settle();
+    return { ...context, changes: TestBed.inject(CardCollectionChanges) };
+  }
+
+  it('crear una tarjeta avisa', async () => {
+    const { service, changes } = await opened();
+
+    await service.create('b1', 'c1', draft);
+
+    expect(changes.version()).toBe(1);
+  });
+
+  it('crear varias avisa una vez', async () => {
+    const { service, changes } = await opened();
+
+    await service.createMany('b1', 'c1', [draft, draft]);
+
+    expect(changes.version()).toBe(1);
+  });
+
+  it('reemplazar las tarjetas del capítulo avisa', async () => {
+    const { service, changes } = await opened();
+
+    await service.replaceAll('b1', 'c1', [draft]);
+
+    expect(changes.version()).toBe(1);
+  });
+
+  it('borrar una tarjeta avisa', async () => {
+    const { service, changes } = await opened();
+
+    await service.remove('b1', 'k1');
+
+    expect(changes.version()).toBe(1);
+  });
+
+  it('borrar varias avisa, también si se corta a mitad (una parte pudo borrarse)', async () => {
+    const { service, repository, changes } = await opened();
+    await service.removeMany('b1', ['k1']);
+
+    repository.failWith.deleteManyWithCount = new Error('offline');
+    await expect(service.removeMany('b1', ['k2'])).rejects.toThrow('offline');
+
+    expect(changes.version()).toBe(2);
+  });
+
+  it('editar el contenido o suspender no avisa: no cambian el estado ni la cantidad', async () => {
+    const { service, changes } = await opened();
+
+    await service.update('k1', draft);
+    await service.setSuspended('k1', true);
+
+    expect(changes.version()).toBe(0);
   });
 });

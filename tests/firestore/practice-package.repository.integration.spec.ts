@@ -310,3 +310,15 @@ describe('FirestorePracticePackageRepository · un ítem borrado en otro disposi
     expect(await repository.listByUser(OWNER_UID)).toEqual([]);
   });
 });
+
+describe('FirestorePracticePackageRepository · lo guardado en el dispositivo', () => {
+  it('lee lo guardado sin ir al servidor: nada antes de leer, lo leído después', async () => {
+    const { device } = anotherDevice();
+    await device.create(OWNER_UID, { name: 'Película del viernes', capacity: 20 });
+
+    expect(await repository.listByUser(OWNER_UID, 'device')).toEqual([]);
+    const fromServer = await repository.listByUser(OWNER_UID);
+    expect(fromServer.map((pkg) => pkg.name)).toEqual(['Película del viernes']);
+    expect(await repository.listByUser(OWNER_UID, 'device')).toEqual(fromServer);
+  });
+});

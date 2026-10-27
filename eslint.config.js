@@ -163,6 +163,50 @@ module.exports = defineConfig([
     },
   },
   {
+    // testing/ son fakes de los puertos de domain/ (matriz del change 0): si un fake necesitara el
+    // adaptador real, Firebase o la UI, ya no sería un fake. Va aparte de layerBoundaries porque
+    // sus archivos sí se importan entre sí.
+    files: ['src/app/testing/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                ...layer('infrastructure'),
+                ...layer('features'),
+                ...layer('core'),
+                NOT_ANGULAR_PACKAGES,
+                'firebase',
+                'firebase/*',
+                '@firebase/*',
+              ],
+              message:
+                'testing/ son fakes de los puertos de domain/: nunca el adaptador real, Firebase ni la UI.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // `no-restricted-imports` no mira los import() dinámicos: uno de ellos cruzaría cualquier
+    // frontera sin que nadie lo viera. Las cargas diferidas solo viven en las rutas de la raíz
+    // (app.routes.ts) y en core/, que pueden enchufar cualquier capa; en las capas, prohibidas.
+    files: ['src/app/{domain,services,infrastructure,features,shared,testing}/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression',
+          message:
+            'import() dinámico solo en las rutas de la raíz o en core/: en una capa esquivaría sus fronteras.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {},

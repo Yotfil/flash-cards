@@ -1,6 +1,7 @@
 import type { CardContentDraft } from '@domain/models/card.model';
 import type { PracticeItem, PracticePackage, TodaySet } from '@domain/models/practice-package';
 import type { Rating } from '@domain/models/rating';
+import type { ReadSource } from '@domain/ports/read-source';
 import {
   PackageFullError,
   PracticePackageRepository,
@@ -56,12 +57,25 @@ export class FakePracticePackageRepository extends PracticePackageRepository {
     return this.pendingGrades.length;
   }
 
-  async listByUser(uid: string): Promise<PracticePackage[]> {
+  /** Lo que el dispositivo tiene guardado: aparte de lo del servidor (`seed`). */
+  readonly onDevice = new Map<string, PracticePackage>();
+  /** Lecturas del dispositivo (las del servidor las cuenta `calls`). */
+  readonly deviceCalls = { listByUser: 0 };
+
+  seedOnDevice(...packages: PracticePackage[]): void {
+    for (const pkg of packages) {
+      this.onDevice.set(pkg.id, pkg);
+    }
+  }
+
+  async listByUser(uid: string, source: ReadSource = 'server'): Promise<PracticePackage[]> {
+    if (source === 'device') {
+      this.deviceCalls.listByUser++;
+      return byCreation(this.onDevice);
+    }
     this.record('listByUser');
     this.listedUids.push(uid);
-    return [...this.packages.values()].sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-    );
+    return byCreation(this.packages);
   }
 
   async create(_uid: string, input: { name: string; capacity: number }): Promise<PracticePackage> {
@@ -224,6 +238,10 @@ export function anItem(overrides: Partial<PracticeItem> = {}): PracticeItem {
     addedAt: new Date('2026-10-20T15:00:00.000Z'),
     ...overrides,
   };
+}
+
+function byCreation(packages: ReadonlyMap<string, PracticePackage>): PracticePackage[] {
+  return [...packages.values()].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 }
 
 /** Paquete de prueba (abierto, capacidad 20) con los ítems dados, en ese orden. */

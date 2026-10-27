@@ -5,6 +5,7 @@ import type { Rating } from '@domain/models/rating';
 import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import type { PreparedStudy } from '@services/queue/study-handoff.service';
 import { requireSessionUid, requireSessionUser } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
@@ -39,6 +40,7 @@ export class ReviewSessionService {
   private readonly persistence = inject(GradePersistencePort);
   private readonly session = inject(SessionService);
   private readonly logger = inject(Logger);
+  private readonly collectionChanges = inject(CardCollectionChanges);
 
   private readonly state = signal<SessionState | null>(null);
   /** Identidad de la sesión en pantalla: un guardado tardío de otra sesión no la toca. */
@@ -116,8 +118,11 @@ export class ReviewSessionService {
     }
     const uid = requireSessionUid(this.session.user());
     const session = this.sessionNumber;
+    // La nota ya cambió la tarjeta en el dispositivo: Progreso debe volver a contar la colección. Se
+    // avisa otra vez cuando responde el servidor, para que un conteo hecho antes no quede por bueno.
+    this.collectionChanges.notify();
     // Sin `await`: la sesión ya avanzó; el lote quedó guardado en el dispositivo.
-    this.persistence.persistGrade(uid, record).then(
+    this.collectionChanges.afterWrite(this.persistence.persistGrade(uid, record)).then(
       () => this.applyToSession(session, (current) => confirmSaved(current, appearance.id)),
       (error: unknown) => {
         this.logger.error('No se guardó una calificación', error);

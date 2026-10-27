@@ -1,5 +1,6 @@
 import type { Chapter } from '@domain/models/chapter.model';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
+import type { ReadSource } from '@domain/ports/read-source';
 
 type FailableMethod = 'listByBook' | 'create' | 'rename' | 'countCards' | 'deleteWithCards';
 
@@ -29,12 +30,25 @@ export class FakeChapterRepository extends ChapterRepository {
     this.cardCounts.set(chapterId, count);
   }
 
-  async listByBook(uid: string, bookId: string): Promise<Chapter[]> {
+  /** Lo que el dispositivo tiene guardado: aparte de lo del servidor (`seed`). */
+  readonly onDevice = new Map<string, Chapter>();
+  /** Lecturas del dispositivo (las del servidor las cuenta `calls`). */
+  readonly deviceCalls = { listByBook: 0 };
+
+  seedOnDevice(...chapters: Chapter[]): void {
+    for (const chapter of chapters) {
+      this.onDevice.set(chapter.id, chapter);
+    }
+  }
+
+  async listByBook(uid: string, bookId: string, source: ReadSource = 'server'): Promise<Chapter[]> {
+    if (source === 'device') {
+      this.deviceCalls.listByBook++;
+      return chaptersOf(this.onDevice, bookId);
+    }
     this.record('listByBook');
     this.listedUids.push(uid);
-    return [...this.chapters.values()]
-      .filter((chapter) => chapter.bookId === bookId)
-      .sort((a, b) => a.order - b.order);
+    return chaptersOf(this.chapters, bookId);
   }
 
   async create(
@@ -83,6 +97,13 @@ export class FakeChapterRepository extends ChapterRepository {
 }
 
 /** Capítulo de prueba con valores razonables; se sobrescribe lo que haga falta. */
+
+function chaptersOf(chapters: ReadonlyMap<string, Chapter>, bookId: string): Chapter[] {
+  return [...chapters.values()]
+    .filter((chapter) => chapter.bookId === bookId)
+    .sort((a, b) => a.order - b.order);
+}
+
 export function aChapter(overrides: Partial<Chapter> = {}): Chapter {
   return {
     id: 'c1',

@@ -8,6 +8,7 @@ import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SessionService } from '@services/session/session.service';
 import { BooksService } from '@services/books/books.service';
+import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { FakeBookRepository, aBook } from '@testing/fake-book-repository';
 import { FakeChapterRepository, aChapter } from '@testing/fake-chapter-repository';
 import { FakeConnectivity } from '@testing/fake-connectivity';
@@ -103,6 +104,58 @@ describe('ChaptersService · recurso', () => {
   });
 });
 
+/** Deja en espera las lecturas del servidor (las del dispositivo responden al instante). */
+function holdServerReads(repository: FakeChapterRepository): () => void {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const list = repository.listByBook.bind(repository);
+  repository.listByBook = async (uid, bookId, source) => {
+    if (source !== 'device') {
+      await gate;
+    }
+    return list(uid, bookId, source);
+  };
+  return release;
+}
+
+describe('ChaptersService · lo guardado en el dispositivo primero', () => {
+  it('pinta al instante los capítulos guardados y después los del servidor', async () => {
+    const { service, repository, settle } = setup();
+    repository.seedOnDevice(aChapter({ id: 'c0', bookId: 'b1', order: 0 }));
+    repository.seed(
+      aChapter({ id: 'c0', bookId: 'b1', order: 0 }),
+      aChapter({ id: 'c1', bookId: 'b1', order: 1 }),
+    );
+    const release = holdServerReads(repository);
+    const ids = () => service.chapters.value()?.map((chapter) => chapter.id);
+
+    service.openBook('b1');
+    await settle();
+    expect(ids()).toEqual(['c0']);
+
+    release();
+    await settle();
+    expect(ids()).toEqual(['c0', 'c1']);
+    expect(repository.calls.listByBook).toBe(1);
+  });
+
+  it('si el servidor falla con lo guardado a la vista, la lista se queda y el fallo se registra', async () => {
+    const { service, repository, logger, settle } = setup();
+    repository.seedOnDevice(aChapter({ id: 'c0', bookId: 'b1' }));
+    const failure = new Error('unavailable');
+    repository.failWith.listByBook = failure;
+
+    service.openBook('b1');
+    await settle();
+
+    expect(service.chapters.status()).not.toBe('error');
+    expect(service.chapters.value()?.map((chapter) => chapter.id)).toEqual(['c0']);
+    expect(logger.entries).toEqual([
+      { level: 'error', message: 'No se pudieron leer los capítulos del libro b1', cause: failure },
+    ]);
+  });
+});
+
 describe('ChaptersService · mutaciones', () => {
   async function opened(
     chapters = [aChapter({ id: 'c0', order: 0 }), aChapter({ id: 'c3', order: 3 })],
@@ -177,6 +230,17 @@ describe('ChaptersService · mutaciones', () => {
 
     await expect(service.remove('c3')).rejects.toThrow('offline');
     expect(service.chapters.value()?.map((chapter) => chapter.id)).toEqual(['c0', 'c3']);
+  });
+
+  it('borrar un capítulo avisa que la colección cambió, también si falla', async () => {
+    const { service, repository } = await opened();
+    const changes = TestBed.inject(CardCollectionChanges);
+
+    await service.remove('c3');
+    repository.failWith.deleteWithCards = new Error('offline');
+    await expect(service.remove('c0')).rejects.toThrow('offline');
+
+    expect(changes.version()).toBe(2);
   });
 
   it('tras borrar uno del medio, el siguiente va después del mayor', async () => {

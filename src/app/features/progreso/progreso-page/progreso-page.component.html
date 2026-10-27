@@ -10,7 +10,7 @@
       <app-error-state
         [title]="copy.errorTitle"
         [message]="copy.errorMessage"
-        (retry)="progress.refresh()"
+        (retry)="progress.retry()"
       />
     }
     @case ('empty') {

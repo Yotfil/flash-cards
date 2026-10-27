@@ -4,7 +4,6 @@ import {
   deleteDoc,
   deleteField,
   doc,
-  getDocs,
   runTransaction,
   setDoc,
   updateDoc,
@@ -17,6 +16,7 @@ import type { CardContentDraft } from '@domain/models/card.model';
 import type { PracticeItem, PracticePackage, TodaySet } from '@domain/models/practice-package';
 import type { Rating } from '@domain/models/rating';
 import { Logger } from '@domain/ports/logger.port';
+import type { ReadSource } from '@domain/ports/read-source';
 import {
   PackageFullError,
   PracticeItemGoneError,
@@ -25,6 +25,7 @@ import {
 } from '@domain/ports/practice-package.repository';
 
 import { parseDocument, parseDocuments } from './document-boundary';
+import { readFrom } from './read-from';
 import {
   packageItemOrderSchema,
   practicePackageDocumentSchema,
@@ -45,10 +46,14 @@ export class FirestorePracticePackageRepository extends PracticePackageRepositor
 
   // Se ordena en memoria (son pocos): `orderBy` dejaría fuera, sin avisar, un documento sin fecha,
   // y un documento malformado debe verse como fallo de carga.
-  async listByUser(uid: string): Promise<PracticePackage[]> {
-    const snapshot = await getDocs(this.packagesOf(uid));
+  async listByUser(uid: string, source: ReadSource = 'server'): Promise<PracticePackage[]> {
+    const snapshot = await readFrom(this.packagesOf(uid), source);
     const documents = parseDocuments(practicePackageDocumentSchema, snapshot.docs);
-    documents.forEach((document) => this.reportStrayItems(uid, document));
+    // Lo guardado en el dispositivo se vuelve a leer del servidor enseguida: los restos sueltos
+    // se registran una sola vez, con la lectura del servidor.
+    if (source === 'server') {
+      documents.forEach((document) => this.reportStrayItems(uid, document));
+    }
     return documents.map(toPackage).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
