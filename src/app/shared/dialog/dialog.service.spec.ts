@@ -107,6 +107,59 @@ describe('DialogService', () => {
     expect(overlayElement('[role="dialog"]')).toBeNull();
   });
 
+  describe('un guardado que no confirma', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('apuntado al plazo, a los 6 s deja de estar ocupado: Escape lo cierra y avisa al contenido', async () => {
+      const ref = open();
+      ref.setPending(true, { releaseWhenSlow: true });
+
+      vi.advanceTimersByTime(5999);
+      pressEscape();
+      expect(overlayElement('[role="dialog"]')).not.toBeNull();
+      expect(ref.savingTooLong()).toBe(false);
+
+      vi.advanceTimersByTime(1);
+      expect(ref.savingTooLong()).toBe(true);
+      expect(overlayElement('[role="dialog"]')?.hasAttribute('aria-busy')).toBe(false);
+      pressEscape();
+      await expect(ref.closed).resolves.toBeUndefined();
+    });
+
+    it('sin apuntarse (un borrado), sigue ocupado pasado el plazo', () => {
+      const ref = open();
+      ref.setPending(true);
+
+      vi.advanceTimersByTime(10_000);
+      pressEscape();
+
+      expect(overlayElement('[role="dialog"]')).not.toBeNull();
+      expect(ref.savingTooLong()).toBe(false);
+    });
+
+    it('si termina antes del plazo, el aviso no llega', () => {
+      const ref = open();
+      ref.setPending(true, { releaseWhenSlow: true });
+
+      vi.advanceTimersByTime(2000);
+      ref.setPending(false);
+      vi.advanceTimersByTime(10_000);
+
+      expect(ref.savingTooLong()).toBe(false);
+    });
+
+    it('al cerrarse, el plazo se cancela', () => {
+      const ref = open();
+      ref.setPending(true, { releaseWhenSlow: true });
+
+      ref.close();
+      vi.advanceTimersByTime(10_000);
+
+      expect(ref.savingTooLong()).toBe(false);
+    });
+  });
+
   it('tocar el fondo oscurecido no lo cierra', () => {
     open();
 

@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo. Puert
 
 ## 1. Plazo del guardado (UI compartida)
 
-- [ ] 1.1 Pruebas en rojo: `connection.copy.spec` (los tres textos); `dialog.service.spec` con temporizadores falsos (plazo con `releaseWhenSlow`, sin la opción sigue ocupado, `setPending(false)` cancela, cerrar cancela). Verificar: fallan.
-- [ ] 1.2 Implementar `slow-save.ts` (`SLOW_SAVE_MS`, `watchSlow`), la opción en `setPending` y `savingTooLong()`, y los textos. Verificar: 1.1 en verde.
+- [x] 1.1 Pruebas en rojo: `connection.copy.spec` (los tres textos); `dialog.service.spec` con temporizadores falsos (plazo con `releaseWhenSlow`, sin la opción sigue ocupado, `setPending(false)` cancela, cerrar cancela). Verificar: fallan.
+- [x] 1.2 Implementar `slow-save.ts` (`SLOW_SAVE_MS`, `watchSlow`), la opción en `setPending` y `savingTooLong()`, y los textos. Verificar: 1.1 en verde.
 
 ## 2. "Atrás" cierra el diálogo
 
