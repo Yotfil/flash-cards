@@ -30,6 +30,18 @@ describe('isWrittenAnswerCorrect', () => {
     expect(isWrittenAnswerCorrect('rendí', 'rendi\u0301')).toBe(true);
   });
 
+  it('un separador con un dígito a cada lado no parte la respuesta', () => {
+    expect(isWrittenAnswerCorrect('3', '3,14')).toBe(false);
+    expect(isWrittenAnswerCorrect('3,14', '3,14')).toBe(true);
+    expect(isWrittenAnswerCorrect('25', '25/12')).toBe(false);
+    expect(isWrittenAnswerCorrect('1', '1/2')).toBe(false);
+  });
+
+  it('entre letras la barra sigue separando', () => {
+    expect(isWrittenAnswerCorrect('m', 'm/s')).toBe(true);
+    expect(isWrittenAnswerCorrect('m/s', 'm/s')).toBe(true);
+  });
+
   it('una respuesta distinta no vale', () => {
     expect(isWrittenAnswerCorrect('avanzar', 'rendirse')).toBe(false);
   });

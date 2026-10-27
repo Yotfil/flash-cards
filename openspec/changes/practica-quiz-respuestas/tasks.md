@@ -9,8 +9,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 2. Separadores con dígitos (cerebro, PQ-04)
 
-- [ ] 2.1 Pruebas en rojo en `written-answer.spec`: "3" no vale por "3,14" y "3,14" sí; "25" no vale por "25/12"; "1" no vale por "1/2"; "m" sigue valiendo por "m/s". Verificar: las tres primeras fallan.
-- [ ] 2.2 Cambiar `SYNONYM_SEPARATORS` según D3 y actualizar el comentario. Verificar: 2.1 en verde y el resto de `written-answer.spec` en verde.
+- [x] 2.1 Pruebas en rojo en `written-answer.spec`: "3" no vale por "3,14" y "3,14" sí; "25" no vale por "25/12"; "1" no vale por "1/2"; "m" sigue valiendo por "m/s". Verificar: las tres primeras fallan.
+- [x] 2.2 Cambiar `SYNONYM_SEPARATORS` según D3 y actualizar el comentario. Verificar: 2.1 en verde y el resto de `written-answer.spec` en verde.
 
 ## 3. Una pregunta por anverso (cerebro, PQ-02 y PQ-08)
 
