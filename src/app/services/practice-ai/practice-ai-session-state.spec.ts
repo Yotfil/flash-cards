@@ -2,6 +2,7 @@ import { anItem } from '@testing/fake-practice-package-repository';
 import { seededRandom } from '@testing/seeded-random';
 
 import {
+  closeBecauseAccessIsLost,
   closeBecausePackageIsGone,
   gradeCurrent,
   progress,
@@ -88,5 +89,25 @@ describe('practice-ai-session-state', () => {
     expect(late.status).toBe('finished');
     expect(late.rejectedAfterFinish).toBe(1);
     expect(closeBecausePackageIsGone(gone)).toBe(gone);
+  });
+
+  it('sin acceso, la práctica se cierra (también terminada) y nada la reabre', () => {
+    const active = gradeCurrent(reveal(start()), 1);
+
+    const closed = closeBecauseAccessIsLost(active);
+    expect(closed.status).toBe('accessLost');
+    expect(closed.revealed).toBe(false);
+    expect(gradeCurrent(reveal(closed), 3)).toEqual(closed);
+    expect(requeueRejected(closed, active.queue[0]?.id ?? '')).toBe(closed);
+    expect(closeBecausePackageIsGone(closed)).toBe(closed);
+
+    let finished = active;
+    for (let index = 1; index < 5; index++) {
+      finished = gradeCurrent(reveal(finished), 3);
+    }
+    expect(closeBecauseAccessIsLost(finished).status).toBe('accessLost');
+
+    const gone = closeBecausePackageIsGone(active);
+    expect(closeBecauseAccessIsLost(gone)).toBe(gone);
   });
 });

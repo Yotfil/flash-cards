@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import { Logger } from '@domain/ports/logger.port';
 import {
   PracticePackageGoneError,
@@ -25,20 +26,18 @@ function setup() {
   const packages = new FakePracticePackageRepository();
   packages.seed(aPackage({}, ITEMS));
   const logger = new FakeLogger();
+  const appSession = new FakeSessionService({ kind: 'active', user: aUser({ id: 'u9' }) });
   TestBed.configureTestingModule({
     providers: [
       { provide: PracticePackageRepository, useValue: packages },
       { provide: Logger, useValue: logger },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({ kind: 'active', user: aUser({ id: 'u9' }) }),
-      },
+      { provide: SessionService, useValue: appSession },
     ],
   });
   const session = TestBed.inject(PracticeAiSessionService);
   session.start({ packageId: 'p1', dayId: '2026-10-25', items: ITEMS });
   const flush = () => new Promise((resolve) => setTimeout(resolve));
-  return { session, packages, logger, flush };
+  return { session, packages, logger, flush, appSession };
 }
 
 describe('PracticeAiSessionService', () => {
@@ -119,6 +118,25 @@ describe('PracticeAiSessionService', () => {
     expect(session.alerts()).toEqual([]);
     expect(session.current()).toBeUndefined();
     expect(logger.entries.filter((entry) => entry.level === 'error')).toHaveLength(2);
+  });
+
+  it('sin acceso, la práctica se cierra sin reencolar; al reconocerlo, la sesión de la app queda sin acceso', async () => {
+    const { session, packages, logger, flush, appSession } = setup();
+    session.reveal();
+    session.grade(3);
+    const revoked = new AccessRevokedError();
+
+    packages.rejectNext(revoked);
+    await flush();
+
+    expect(session.status()).toBe('accessLost');
+    expect(session.total()).toBe(3);
+    expect(session.alerts()).toEqual([]);
+    expect(logger.entries.at(-1)?.cause).toBe(revoked);
+
+    session.acknowledgeLostAccess();
+    expect(session.status()).toBe('idle');
+    expect(appSession.state()).toEqual({ kind: 'noAccess', email: aUser().email });
   });
 
   it('una nota rechazada de una práctica anterior no toca la nueva', async () => {

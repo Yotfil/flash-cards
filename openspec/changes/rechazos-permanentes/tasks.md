@@ -21,8 +21,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 4. Núcleo de la práctica (D3)
 
-- [ ] 4.1 Pruebas en rojo: `practice-ai-session-state.spec` (`closeBecauseAccessIsLost` desde activa, terminada y `gone`; `requeueRejected` posterior no lo cambia) y `practice-ai-session.service.spec` (`AccessRevokedError` → `accessLost`; `acknowledgeLostAccess`). Verificar: fallan.
-- [ ] 4.2 Implementar D3. Verificar: 4.1 en verde.
+- [x] 4.1 Pruebas en rojo: `practice-ai-session-state.spec` (`closeBecauseAccessIsLost` desde activa, terminada y `gone`; `requeueRejected` posterior no lo cambia) y `practice-ai-session.service.spec` (`AccessRevokedError` → `accessLost`; `acknowledgeLostAccess`). Verificar: fallan.
+- [x] 4.2 Implementar D3. Verificar: 4.1 en verde.
 
 ## 5. Pantallas (D5)
 
