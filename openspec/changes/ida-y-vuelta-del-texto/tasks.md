@@ -41,8 +41,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 7. El aviso en el diálogo de exportar (UI, EX-01)
 
-- [ ] 7.1 Pruebas en rojo en `export-book-dialog.component.spec` (y `biblioteca.copy.spec` para `wontReturnHeading`): con una que no vuelve, "1 tarjeta no volverá igual al importarla:" y su anverso con icono; con tres, "3 tarjetas no volverán igual al importarlas:"; sin ninguna, sin `[data-wont-return]`; con 150, 100 anversos y "y 50 más"; con aviso, "Descargar .txt" entrega el texto y cierra. Verificar: fallan.
-- [ ] 7.2 Implementar D3 en el diálogo y en el copy. Verificar: 7.1 en verde y el resto de pruebas del diálogo en verde.
+- [x] 7.1 Pruebas en rojo en `export-book-dialog.component.spec` (y `biblioteca.copy.spec` para `wontReturnHeading`): con una que no vuelve, "1 tarjeta no volverá igual al importarla:" y su anverso con icono; con tres, "3 tarjetas no volverán igual al importarlas:"; sin ninguna, sin `[data-wont-return]`; con 150, 100 anversos y "y 50 más"; con aviso, "Descargar .txt" entrega el texto y cierra. Verificar: fallan.
+- [x] 7.2 Implementar D3 en el diálogo y en el copy. Verificar: 7.1 en verde y el resto de pruebas del diálogo en verde.
 
 ## 8. Cierre
 
