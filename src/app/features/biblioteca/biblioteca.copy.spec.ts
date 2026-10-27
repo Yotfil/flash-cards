@@ -16,6 +16,7 @@ import {
   exportButtonLabel,
   exportDialogTitle,
   exportSummary,
+  wontReturnHeading,
 } from './biblioteca.copy';
 import { aCard } from '@testing/fake-card-repository';
 import { aChapter } from '@testing/fake-chapter-repository';
@@ -92,6 +93,11 @@ describe('textos de la Biblioteca', () => {
     expect(exportSummary(1, 1)).toBe('1 capítulo · 1 tarjeta');
     expect(exportButtonLabel('Phrasal Verbs')).toBe('Exportar «Phrasal Verbs»');
     expect(exportDialogTitle('Phrasal Verbs')).toBe('Exportar «Phrasal Verbs»');
+  });
+
+  it('el aviso de las tarjetas que no volverán igual concuerda en número', () => {
+    expect(wontReturnHeading(1)).toBe('1 tarjeta no volverá igual al importarla:');
+    expect(wontReturnHeading(3)).toBe('3 tarjetas no volverán igual al importarlas:');
   });
 
   it('los textos de la exportación son los de la spec', () => {

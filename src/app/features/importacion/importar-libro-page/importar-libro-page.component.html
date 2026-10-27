@@ -58,6 +58,9 @@
   @if (!online()) {
     <p role="status" class="text-sm text-text-dim">{{ needsConnection }}</p>
   }
+  @if (slow()) {
+    <p role="status" class="text-sm text-text-dim">{{ waitsForConnection }}</p>
+  }
   @if (failed()) {
     <p role="alert" class="text-sm text-danger">{{ copy.bookError }}</p>
   }

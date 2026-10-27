@@ -145,6 +145,15 @@ describe('CardImportDialogComponent', () => {
     expect(importDialog().textContent).not.toContain('capítulo ·');
   });
 
+  it('en un capítulo, solo encabezados no dan nada que importar', async () => {
+    const { type, importButton } = await open();
+
+    await type('# A\n# B');
+
+    expect(importButton()?.textContent?.trim()).toBe('Importar 0');
+    expect(importButton()?.disabled).toBe(true);
+  });
+
   it('agregar importa directo, con el ejemplo, y cierra con true', async () => {
     const { ref, service, type, importButton, confirmDialog } = await open();
     const importInto = vi.spyOn(service, 'importIntoChapter');
@@ -243,6 +252,51 @@ describe('CardImportDialogComponent', () => {
     expect(calls).toHaveBeenCalledTimes(1);
   });
 
+  describe('una importación que no confirma en 6 s', () => {
+    beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+    afterEach(() => vi.useRealTimers());
+
+    it('al agregar, avisa sin prometer y deja cerrar', async () => {
+      const { ref, service, type, importButton, importDialog, buttonIn, update } = await open();
+      vi.spyOn(service, 'importIntoChapter').mockReturnValue(new Promise(() => undefined));
+      await type('a | b');
+      importButton()?.click();
+      await update();
+
+      vi.advanceTimersByTime(6000);
+      await update();
+
+      expect(importDialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+        'No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app.',
+      );
+      expect(importButton()?.textContent?.trim()).toBe('Importando…');
+      buttonIn(importDialog(), (text) => text === 'Cerrar')?.click();
+      await expect(ref.closed).resolves.toBeUndefined();
+    });
+
+    it('al reemplazar, la confirmación avisa y se deja cerrar', async () => {
+      const { service, type, chooseReplace, importButton, confirmDialog, buttonIn, update } =
+        await open();
+      vi.spyOn(service, 'importIntoChapter').mockReturnValue(new Promise(() => undefined));
+      await type('a | b');
+      await chooseReplace();
+      importButton()?.click();
+      await update();
+      buttonIn(confirmDialog(), (text) => text === 'Reemplazar todo')?.click();
+      await update();
+
+      vi.advanceTimersByTime(6000);
+      await update();
+
+      expect(confirmDialog()?.textContent).toContain(
+        'No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app.',
+      );
+      buttonIn(confirmDialog(), (text) => text === 'Cerrar')?.click();
+      await update();
+      expect(confirmDialog()).toBeUndefined();
+    });
+  });
+
   it('si agregar falla, avisa dentro, conserva el texto y deja cancelar', async () => {
     const { repository, type, importButton, importDialog, buttonIn, update } = await open();
     repository.failWith.createMany = new Error('offline');
@@ -318,6 +372,25 @@ describe('CardImportDialogComponent · en un paquete', () => {
       },
     };
   }
+
+  it('si guardar no confirma en 6 s, no promete nada (es una transacción): sigue ocupado', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { ref, importDialog, importButton, type, update } = await open({
+      packageTarget: packageTarget(() => new Promise<void>(() => undefined)),
+    });
+    await type('a | b');
+    importButton()?.click();
+    await update();
+
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(importDialog().textContent).not.toContain(
+      'No hay conexión a internet. La importación seguirá cuando vuelva; no cierres la app.',
+    );
+    expect(ref.isPending).toBe(true);
+    vi.useRealTimers();
+  });
 
   it('solo agrega: sin modos; cuenta repetidas contra el paquete y limita a lo que cabe', async () => {
     const save = vi.fn(async () => undefined);

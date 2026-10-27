@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 
 import type { BookPackage } from '@domain/models/book-package';
+import type { CardContentDraft } from '@domain/models/card.model';
 import { CardRepository } from '@domain/ports/card.repository';
 import { ChapterRepository } from '@domain/ports/chapter.repository';
 import { FileDeliveryPort, type TextFile } from '@domain/ports/file-delivery.port';
@@ -10,16 +11,19 @@ import { requireSessionUid } from '@services/session/require-session';
 import { SessionService } from '@services/session/session.service';
 
 import { buildBookPackage } from './build-book-package';
+import { cardsThatWontReturn } from './cards-that-wont-return';
 import { exportFileName } from './sanitize-file-name';
 import { serializeBookPackage } from './serialize-book-package';
 
-/** Lo que el diálogo muestra antes de entregar: el texto ya armado y sus conteos. */
+/** Lo que el diálogo muestra antes de entregar: el texto ya armado, sus conteos y sus avisos. */
 export interface ExportPreview {
   readonly package: BookPackage;
   readonly text: string;
   readonly fileName: string;
   readonly chapterCount: number;
   readonly cardCount: number;
+  /** Las tarjetas que no volverán igual al importar el texto, tal como se escriben. */
+  readonly cardsThatWontReturn: readonly CardContentDraft[];
 }
 
 export type ExportDeliveryMode = 'share' | 'download' | 'copy';
@@ -54,6 +58,7 @@ export class ExportService {
         fileName: exportFileName(book.name),
         chapterCount: bookPackage.chapters.length,
         cardCount: bookPackage.chapters.reduce((sum, chapter) => sum + chapter.cards.length, 0),
+        cardsThatWontReturn: cardsThatWontReturn(bookPackage),
       };
     } catch (error) {
       this.logger.error(`No se pudo leer el libro ${bookId} para exportarlo`, error);

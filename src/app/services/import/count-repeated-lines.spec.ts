@@ -31,6 +31,12 @@ describe('countRepeatedLines', () => {
     ).toBe(1);
   });
 
+  it('el apóstrofo tipográfico del texto repite el recto del capítulo', () => {
+    expect(
+      countRepeatedLines([basic('don’t', 'no hacer')], [{ front: "don't", back: 'no hacer' }]),
+    ).toBe(1);
+  });
+
   it('el mismo anverso con otro reverso no es repetida', () => {
     expect(countRepeatedLines([basic('get', 'llegar')], [{ front: 'get', back: 'obtener' }])).toBe(
       0,

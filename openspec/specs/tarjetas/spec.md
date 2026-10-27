@@ -172,7 +172,7 @@ El sistema SHALL mantener en el libro un `cardCount` denormalizado que sube en 1
 - **THEN** el libro ha bajado exactamente 448 y las 452 restantes siguen existiendo; reintentar borra lo que quede
 
 ### Requirement: El listado del capítulo agrupa por anverso y muestra cada tipo a su manera
-El sistema SHALL listar las tarjetas del capítulo, cada una en una fila de acrílico, ordenadas por anverso normalizado, luego por reverso normalizado y, en empate, por antigüedad (la más vieja primero), sin alterar el orden interno de los datos. Una tarjeta básica SHALL mostrarse como `anverso → reverso`; una cloze SHALL mostrarse con la etiqueta "cloze" y su pregunta compacta (huecos como `[…]`). Cada fila SHALL llevar un menú de acciones con nombre accesible "Acciones de «anverso»" (o de la pregunta compacta) y las opciones Editar, Suspender o Reactivar, y Borrar. Una suspendida SHALL verse atenuada y con la etiqueta "Suspendida"; una con ejemplo SHALL mostrar el icono "Tiene ejemplo".
+El sistema SHALL listar las tarjetas del capítulo, cada una en una fila de acrílico, ordenadas por anverso normalizado, luego por reverso normalizado, en empate por antigüedad (la más vieja primero) y, si aún empatan, por el anverso y el reverso tal cual están escritos, de modo que el orden no dependa de cómo el almacén devuelve las tarjetas. El orden SHALL NOT alterar el orden interno de los datos. Una tarjeta básica SHALL mostrarse como `anverso → reverso`; una cloze SHALL mostrarse con la etiqueta "cloze" y su pregunta compacta (huecos como `[…]`). Cada fila SHALL llevar un menú de acciones con nombre accesible "Acciones de «anverso»" (o de la pregunta compacta) y las opciones Editar, Suspender o Reactivar, y Borrar. Una suspendida SHALL verse atenuada y con la etiqueta "Suspendida"; una con ejemplo SHALL mostrar el icono "Tiene ejemplo".
 
 #### Scenario: Orden alfabético agrupando la misma palabra
 - **WHEN** el capítulo tiene `banana | fruta`, `Apple | manzana` y `apple | fruta roja`
@@ -181,6 +181,10 @@ El sistema SHALL listar las tarjetas del capítulo, cada una en una fila de acr�
 #### Scenario: Desempate por antigüedad
 - **WHEN** dos tarjetas tienen el mismo anverso y reverso
 - **THEN** la creada antes se muestra primero
+
+#### Scenario: Desempate final por el texto
+- **WHEN** `Apple | manzana` y `apple | manzana` se crearon en el mismo instante
+- **THEN** salen siempre en el mismo orden, venga como venga del almacén
 
 #### Scenario: Vista de una cloze
 - **WHEN** una tarjeta cloze tiene `front = El {{gato}} es {{negro}}`
@@ -191,15 +195,27 @@ El sistema SHALL listar las tarjetas del capítulo, cada una en una fila de acr�
 - **THEN** anuncia "Acciones de «to give up»" y, al abrirlo, ofrece Editar, Suspender y Borrar
 
 ### Requirement: Las tarjetas repetidas se detectan por anverso y reverso normalizados y se señalan sin bloquear
-El sistema SHALL considerar repetidas a las tarjetas que comparten anverso Y reverso tras normalizar (recortar, pasar a minúsculas y colapsar espacios múltiples en uno). El sistema SHALL marcar a TODAS las tarjetas del grupo repetido, no solo a las copias. Dos tarjetas con el mismo anverso y distinto reverso NO son repetidas. El sistema SHALL NOT impedir crear ni importar una repetida: la señala en el listado con un indicador accesible ("Tarjeta repetida") cuyo texto "Repetida" se muestra al pasar el cursor o al tocarlo.
+El sistema SHALL considerar repetidas a las tarjetas que comparten anverso Y reverso tras normalizar. Normalizar SHALL ser: recortar, pasar a minúsculas, colapsar espacios múltiples en uno, tratar los apóstrofos tipográficos (’ ‘ ʼ) como el apóstrofo recto (') y las comillas tipográficas (“ ”) como las rectas ("), y tratar igual una letra con tilde escrita de una pieza o como letra seguida de la tilde aparte. La normalización solo sirve para comparar y ordenar: el texto guardado y el que se muestra NO SHALL cambiar. El sistema SHALL marcar a TODAS las tarjetas del grupo repetido, no solo a las copias. Dos tarjetas con el mismo anverso y distinto reverso NO son repetidas. El sistema SHALL NOT impedir crear ni importar una repetida: la señala en el listado con un indicador accesible ("Tarjeta repetida") cuyo texto "Repetida" se muestra al pasar el cursor o al tocarlo.
 
 #### Scenario: Normalización
 - **WHEN** el texto es `  To   Give  Up `
 - **THEN** su forma normalizada es `to give up`
 
+#### Scenario: Normalización de apóstrofos y comillas
+- **WHEN** el texto es `Don’t say “yes”`
+- **THEN** su forma normalizada es `don't say "yes"`, y la tarjeta se sigue mostrando como `Don’t say “yes”`
+
 #### Scenario: Repetidas con distinta capitalización y espacios
 - **WHEN** existen `to give up | rendirse` y `To Give Up |   rendirse ` y `to wake up | despertarse`
 - **THEN** las dos primeras se marcan como repetidas y la tercera no
+
+#### Scenario: Repetidas con apóstrofo tipográfico
+- **WHEN** existen `don’t | no hacer` (copiada de un documento) y `don't | no hacer` (escrita en el teclado)
+- **THEN** las dos se marcan como repetidas
+
+#### Scenario: Repetidas con la tilde escrita aparte
+- **WHEN** existen `I gave up | me rendí` con la tilde como carácter aparte (copiada de un PDF) y `I gave up | me rendí` tecleada
+- **THEN** las dos se marcan como repetidas
 
 #### Scenario: Doble traducción intencional
 - **WHEN** existen `get | obtener` y `get | llegar`
@@ -252,11 +268,19 @@ El sistema SHALL pedir confirmación ("¿Borrar las tarjetas seleccionadas?") co
 - **THEN** el sistema las borra en tandas de hasta 450 hasta completar las 1000 y el contador del libro baja exactamente 1000
 
 ### Requirement: Toda acción en vuelo bloquea reenvíos y comunica su progreso
-Mientras se guarda o borra, el sistema SHALL deshabilitar los botones del diálogo, cambiar la etiqueta del botón principal ("Guardando…", "Borrando…"), ignorar nuevos envíos y bloquear el cierre con Escape. Si la acción falla, el diálogo SHALL permanecer abierto con lo escrito o lo seleccionado y mostrar dentro, con rol de alerta, el mensaje correspondiente ("No se pudo guardar la tarjeta. Inténtalo de nuevo.", "No se pudo borrar la tarjeta. Inténtalo de nuevo.", "No se pudieron borrar las tarjetas seleccionadas. Inténtalo de nuevo."); el diálogo solo se cierra cuando la acción termina con éxito o el usuario cancela.
+Mientras se guarda o borra, el sistema SHALL deshabilitar los botones del diálogo, cambiar la etiqueta del botón principal ("Guardando…", "Borrando…"), ignorar nuevos envíos y bloquear el cierre con Escape. Si guardar una tarjeta de un capítulo no confirma en unos 6 segundos, el diálogo SHALL mostrar "Quedó guardado en este dispositivo; se enviará cuando vuelva la red." y dejarse cerrar, como describe la spec de navegación; borrar no muestra ese aviso. Si la acción falla, el diálogo SHALL permanecer abierto con lo escrito o lo seleccionado y mostrar dentro, con rol de alerta, el mensaje correspondiente ("No se pudo guardar la tarjeta. Inténtalo de nuevo.", "No se pudo borrar la tarjeta. Inténtalo de nuevo.", "No se pudieron borrar las tarjetas seleccionadas. Inténtalo de nuevo."); el diálogo solo se cierra cuando la acción termina con éxito, el usuario cancela o, tras el aviso, el usuario lo cierra.
 
 #### Scenario: Doble clic al guardar
 - **WHEN** el usuario pulsa "Crear tarjeta" dos veces seguidas
 - **THEN** se crea una sola tarjeta
+
+#### Scenario: Guardado que no confirma
+- **WHEN** el usuario crea una tarjeta con un wifi sin internet y pasan 6 segundos
+- **THEN** el diálogo muestra "Quedó guardado en este dispositivo; se enviará cuando vuelva la red." y "Cerrar" lo cierra
+
+#### Scenario: Borrado que no confirma
+- **WHEN** el usuario borra una tarjeta con un wifi sin internet y pasan 6 segundos
+- **THEN** la confirmación sigue diciendo "Borrando…", sin aviso y sin dejarse cerrar
 
 #### Scenario: Falla el guardado
 - **WHEN** la escritura de la tarjeta falla
@@ -327,11 +351,15 @@ El sistema SHALL ofrecer en cada tarjeta del listado la acción "Suspender" si e
 - **THEN** el capítulo sigue mostrando "42 tarjetas" y el `cardCount` del libro no cambia
 
 ### Requirement: Al crear, el formulario avisa de una tarjeta repetida sin impedir guardarla
-Mientras el usuario escribe en el formulario "Nueva tarjeta", el sistema SHALL comparar anverso y reverso normalizados (recortar, minúsculas, espacios colapsados) con las tarjetas ya cargadas del capítulo abierto y, si existe una igual, SHALL mostrar bajo los campos el aviso "Ya tienes una tarjeta igual en este capítulo." El aviso NO SHALL deshabilitar el botón de guardar ni consultar el almacén. En modo "Editar tarjeta" NO SHALL mostrarse aviso. Las repeticiones en otros capítulos o libros NO se comprueban.
+Mientras el usuario escribe en el formulario "Nueva tarjeta", el sistema SHALL comparar anverso y reverso normalizados (la misma normalización que detecta las repetidas del listado) con las tarjetas ya cargadas del capítulo abierto y, si existe una igual, SHALL mostrar bajo los campos el aviso "Ya tienes una tarjeta igual en este capítulo." El aviso NO SHALL deshabilitar el botón de guardar ni consultar el almacén. En modo "Editar tarjeta" NO SHALL mostrarse aviso. Las repeticiones en otros capítulos o libros NO se comprueban.
 
 #### Scenario: Repetida al escribir
 - **WHEN** el capítulo tiene `to give up | rendirse` y el usuario escribe `To Give Up` y ` rendirse ` en el formulario de crear
 - **THEN** aparece "Ya tienes una tarjeta igual en este capítulo." y "Crear tarjeta" sigue habilitado
+
+#### Scenario: Repetida con otro apóstrofo
+- **WHEN** el capítulo tiene `don’t | no hacer` y el usuario escribe `don't` y `no hacer`
+- **THEN** aparece "Ya tienes una tarjeta igual en este capítulo."
 
 #### Scenario: Mismo anverso con otro reverso
 - **WHEN** el capítulo tiene `get | obtener` y el usuario escribe `get` y `llegar`

@@ -4,7 +4,9 @@ import { FileDeliveryPort } from '@domain/ports/file-delivery.port';
 import { ExportService, type ExportPreview } from '@services/export/export.service';
 import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
 import { ErrorStateComponent } from '@shared/error-state/error-state.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { SkeletonComponent } from '@shared/skeleton/skeleton.component';
+import { andMore, limitList } from '@shared/text/limited-list';
 
 import {
   COPIED,
@@ -14,6 +16,7 @@ import {
   EXPORT_READ_ERROR,
   exportDialogTitle,
   exportSummary,
+  wontReturnHeading,
 } from '../biblioteca.copy';
 
 export interface ExportBookDialogData {
@@ -24,14 +27,15 @@ export interface ExportBookDialogData {
 /** Cuánto se ve "Copiado" junto al botón. */
 const COPIED_VISIBLE_MS = 2000;
 
-// "Exportar «libro»": lee el libro entero del servidor, resume qué se va a exportar y lo entrega.
+// "Exportar «libro»": lee el libro entero del servidor, resume qué se va a exportar (y qué tarjetas
+// no volverán igual al importarlo) y lo entrega.
 // La acción principal es compartir si el navegador puede, y descargar si no; donde se puede
 // compartir, descargar sigue como secundaria (en el escritorio, la hoja de compartir no guarda el
 // archivo en el disco), junto a copiar el texto. Se cierra con `true` solo tras compartir o
 // descargar; cerrar la hoja de compartir no es un error y deja el diálogo abierto.
 @Component({
   selector: 'app-export-book-dialog',
-  imports: [ErrorStateComponent, SkeletonComponent],
+  imports: [ErrorStateComponent, IconComponent, SkeletonComponent],
   templateUrl: './export-book-dialog.component.html',
   styleUrl: './export-book-dialog.component.scss',
 })
@@ -56,6 +60,22 @@ export class ExportBookDialogComponent {
   protected readonly summary = computed(() => {
     const preview = this.loaded();
     return preview ? exportSummary(preview.chapterCount, preview.cardCount) : '';
+  });
+  /**
+   * Las tarjetas que no volverán igual al importar el archivo, por su anverso (las 100 primeras).
+   * Avisa, no impide entregar: el texto lleva todas las tarjetas igualmente.
+   */
+  protected readonly wontReturn = computed(() => {
+    const cards = this.loaded()?.cardsThatWontReturn ?? [];
+    if (cards.length === 0) {
+      return null;
+    }
+    const { shown, hiddenCount } = limitList(cards);
+    return {
+      heading: wontReturnHeading(cards.length),
+      fronts: shown.map((card) => card.front),
+      more: hiddenCount > 0 ? andMore(hiddenCount) : null,
+    };
   });
   protected readonly readFailed = computed(() => this.preview.status() === 'error');
   protected readonly busy = signal(false);

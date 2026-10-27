@@ -238,6 +238,13 @@ export function exportSummary(chapters: number, cards: number): string {
   return `${pluralize(chapters, 'capítulo', 'capítulos')} · ${pluralize(cards, 'tarjeta', 'tarjetas')}`;
 }
 
+/** El aviso de la exportación sobre las tarjetas que la convención de texto no puede devolver. */
+export function wontReturnHeading(count: number): string {
+  return count === 1
+    ? '1 tarjeta no volverá igual al importarla:'
+    : `${count} tarjetas no volverán igual al importarlas:`;
+}
+
 export const EXPORT_ACTIONS = {
   share: 'Compartir',
   download: 'Descargar .txt',

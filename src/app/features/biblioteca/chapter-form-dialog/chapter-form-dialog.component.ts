@@ -6,7 +6,11 @@ import { ConnectivityPort } from '@domain/ports/connectivity.port';
 import { Logger } from '@domain/ports/logger.port';
 import { ChaptersService } from '@services/chapters/chapters.service';
 import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  NEEDS_CONNECTION_MESSAGE,
+  SAVED_ON_DEVICE_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
 import { chapterFormSchema, type ChapterFormValue } from '@services/chapters/chapter-form.schema';
@@ -30,6 +34,10 @@ export class ChapterFormDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = BIBLIOTECA_COPY.chapterForm;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly savedOnDevice = SAVED_ON_DEVICE_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: lo escrito ya está en el dispositivo y se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly isRename = this.data.mode === 'rename';
 
   private readonly model = signal<ChapterFormValue>({
@@ -66,7 +74,7 @@ export class ChapterFormDialogComponent {
   private async save(): Promise<void> {
     this.saving.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    this.dialogRef.setPending(true, { releaseWhenSlow: true });
     try {
       const { name } = this.model();
       const chapter =

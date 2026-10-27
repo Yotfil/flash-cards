@@ -7,6 +7,7 @@ import type {
   CardContentDraft,
   NewCard,
 } from '@domain/models/card.model';
+import { PartialCreationError } from '@domain/models/partial-creation-error';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { CardRepository } from '@domain/ports/card.repository';
 import { Logger } from '@domain/ports/logger.port';
@@ -73,7 +74,11 @@ export class CardsService {
     return card;
   }
 
-  /** Crea varias de golpe (importación). Una lista vacía no escribe nada. */
+  /**
+   * Crea varias de golpe (importación). Una lista vacía no escribe nada. Si se corta a mitad, las
+   * ya creadas se suman a la lista y al contador antes de relanzar: así el reintento las cuenta
+   * como repetidas en vez de duplicarlas sin avisar.
+   */
   async createMany(
     bookId: string,
     chapterId: string,
@@ -84,17 +89,32 @@ export class CardsService {
     }
     const uid = requireSessionUid(this.session.user());
     const now = new Date();
-    const created = await this.collectionChanges.afterWrite(
-      this.repository.createMany(
-        uid,
-        drafts.map((draft) => toNewCard(bookId, chapterId, draft, now)),
-      ),
-    );
+    let created: Card[];
+    try {
+      created = await this.collectionChanges.afterWrite(
+        this.repository.createMany(
+          uid,
+          drafts.map((draft) => toNewCard(bookId, chapterId, draft, now)),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof PartialCreationError) {
+        this.addCreated(bookId, chapterId, error.createdCards);
+      }
+      throw error;
+    }
+    this.addCreated(bookId, chapterId, created);
+    return created;
+  }
+
+  private addCreated(bookId: string, chapterId: string, created: readonly Card[]): void {
+    if (created.length === 0) {
+      return;
+    }
     if (this.chapterId() === chapterId) {
       this.cards.update((cards) => [...(cards ?? []), ...created]);
     }
     this.books.changeCardCount(bookId, created.length);
-    return created;
   }
 
   /**

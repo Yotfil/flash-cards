@@ -10,6 +10,7 @@ import {
   type PracticePackage,
 } from '@domain/models/practice-package';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
+import { PackageCompletedError } from '@domain/ports/practice-package.repository';
 import { clozeQuestion } from '@services/cards/cloze/parse-cloze';
 import { todayItemIds } from '@services/practice-ai/pending-items';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
@@ -137,11 +138,7 @@ export class PackageDetailPageComponent implements OnInit {
     return orderedItems(pkg).map((item) => ({
       item,
       text: itemText(item),
-      status: today.has(item.id)
-        ? this.copy.forToday
-        : item.lastGrade && item.lastPracticedDayId
-          ? lastGradeLabel(item.lastGrade, item.lastPracticedDayId, todayId)
-          : '',
+      status: this.itemStatus(item, today.has(item.id), todayId),
     }));
   });
   /** Hoy ya practicado (abierto) o completado: entonces hay prompt que copiar. */
@@ -167,6 +164,10 @@ export class PackageDetailPageComponent implements OnInit {
     this.packages.reload();
   }
 
+  /** Otro dispositivo pudo completar el paquete mientras este lo veía abierto: se dice así. */
+  private readonly explainAddFailure = (error: unknown): string | undefined =>
+    error instanceof PackageCompletedError ? this.copy.packageCompleted : undefined;
+
   protected addItem(pkg: PracticePackage): void {
     this.dialogs.open<undefined, CardFormDialogData>(CardFormDialogComponent, {
       label: this.copy.itemFormCreate,
@@ -176,6 +177,7 @@ export class PackageDetailPageComponent implements OnInit {
         save: async (draft) => {
           await this.packages.addItems(pkg.id, [draft]);
         },
+        failureMessage: this.explainAddFailure,
         existing: { cards: this.faces, message: this.copy.duplicate },
       },
     });
@@ -194,6 +196,7 @@ export class PackageDetailPageComponent implements OnInit {
           save: async (drafts: readonly CardContentDraft[]) => {
             await this.packages.addItems(pkg.id, drafts);
           },
+          failureMessage: this.explainAddFailure,
           texts: {
             title: this.copy.importTitle,
             remaining: remainingLabel(this.remaining()),
@@ -279,6 +282,20 @@ export class PackageDetailPageComponent implements OnInit {
 
   private todayIds(pkg: PracticePackage): string[] {
     return todayItemIds(pkg, this.packages.currentDayId());
+  }
+
+  /**
+   * Lo que se dice de un ítem: su nota si ya se calificó hoy ("Otra vez · hoy"), aunque sea del
+   * día; "Para hoy" si es del día y falta; y si no, su última nota ("Bien · ayer").
+   */
+  private itemStatus(item: PracticeItem, isForToday: boolean, todayId: string): string {
+    const gradedToday = item.lastPracticedDayId === todayId;
+    if (isForToday && !gradedToday) {
+      return this.copy.forToday;
+    }
+    return item.lastGrade && item.lastPracticedDayId
+      ? lastGradeLabel(item.lastGrade, item.lastPracticedDayId, todayId)
+      : '';
   }
 }
 

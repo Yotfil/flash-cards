@@ -7,7 +7,7 @@ Guiar al usuario tarjeta por tarjeta a través de una lista ya armada (la cola d
 ## Requirements
 
 ### Requirement: La sesión ocupa toda la pantalla, sin la navegación principal
-El sistema SHALL presentar la sesión de repaso en una pantalla propia, sin las pestañas de navegación (Hoy, Biblioteca, Progreso, Ajustes), accesible solo con sesión iniciada. La pantalla SHALL mostrar únicamente una barra superior discreta de acrílico tenue (barra de progreso, contador "Quedan N" y "Salir") y la tarjeta, que SHALL ser una superficie sólida de alto contraste, sin acrílico. Si se llega a la pantalla sin una lista entregada para estudiar (recarga del navegador, URL directa o botón "atrás"), el sistema SHALL redirigir a Hoy.
+El sistema SHALL presentar la sesión de repaso en una pantalla propia, sin las pestañas de navegación (Hoy, Biblioteca, Progreso, Ajustes), accesible solo con sesión iniciada. La pantalla SHALL mostrar únicamente una barra superior discreta de acrílico tenue (barra de progreso, contador "Quedan N" y "Salir") y la tarjeta, que SHALL ser una superficie sólida de alto contraste, sin acrílico. Si se llega a la pantalla sin una lista entregada para estudiar (recarga del navegador, URL directa, "atrás" o "adelante"), el sistema SHALL redirigir a Hoy.
 
 #### Scenario: Entrar desde Hoy con tarjetas
 - **WHEN** el usuario pulsa empezar en Hoy y la cola tiene al menos una tarjeta
@@ -18,8 +18,8 @@ El sistema SHALL presentar la sesión de repaso en una pantalla propia, sin las 
 - **THEN** la app lo redirige a Hoy en vez de mostrar una sesión vacía
 
 #### Scenario: Volver atrás tras terminar
-- **WHEN** el usuario terminó una sesión, está en Hoy y pulsa "atrás" en el navegador
-- **THEN** la app lo devuelve a Hoy sin mostrar la sesión anterior ni su cierre
+- **WHEN** el usuario terminó una sesión abierta desde un capítulo, está en Hoy y pulsa "atrás" en el navegador
+- **THEN** la app lo lleva al capítulo sin mostrar la sesión anterior ni su cierre
 
 ### Requirement: Una sesión arranca con una lista ya curada y la recorre en orden
 El sistema SHALL iniciar la sesión con la lista de tarjetas entregada por la cola diaria o por "Estudiar este libro" / "Estudiar este capítulo", en ese mismo orden y sin volver a filtrarla. Cada entrada a la pantalla SHALL arrancar una sesión nueva: progreso en cero, sin difíciles, sin avisos; nunca se retoma una sesión anterior. La lista SHALL consumirse al arrancar, de modo que una segunda entrada sin nueva entrega no encuentre nada. Si la lista está vacía, la sesión NO se inicia y la app vuelve a Hoy.
@@ -201,7 +201,7 @@ Cada registro del historial SHALL incluir: identificador de la tarjeta, libro, g
 - **THEN** el registro guarda grado 3, estado "nueva", el instante de la calificación y la duración
 
 ### Requirement: Las estadísticas del día se acreditan al día de estudio del usuario
-El sistema SHALL acreditar cada calificación al día de estudio calculado con la zona horaria y la hora de inicio del día del usuario (ver spec de cola diaria), e incrementar: repasos completados (+1 siempre), el conteo del grado elegido (+1 en "otra vez", "difícil", "bien" o "fácil") y, según el estado previo de la tarjeta: si era "nueva", las nuevas introducidas de su libro (+1); si no, los repasos completados de su libro (+1). Los contadores no tocados se consideran cero.
+El sistema SHALL acreditar cada calificación al día de estudio en que empezó la sesión, calculado al arrancarla con la zona horaria y la hora de inicio del día del usuario (ver spec de cola diaria): una sesión no cruza al día siguiente aunque termine pasada la hora de inicio. Con cada calificación SHALL incrementar: repasos completados (+1 siempre), el conteo del grado elegido (+1 en "otra vez", "difícil", "bien" o "fácil") y, según el estado previo de la tarjeta: si era "nueva", las nuevas introducidas de su libro (+1); si no, los repasos completados de su libro (+1). Los contadores no tocados se consideran cero.
 
 #### Scenario: Primera vista de una nueva
 - **WHEN** se califica una tarjeta en estado "nueva" del libro L
@@ -214,6 +214,10 @@ El sistema SHALL acreditar cada calificación al día de estudio calculado con l
 #### Scenario: Madrugada
 - **WHEN** el usuario califica a la 01:30 local con hora de inicio del día 4
 - **THEN** la estadística se acredita al día anterior
+
+#### Scenario: Una sesión que cruza la hora de inicio
+- **WHEN** el usuario, con hora de inicio del día 4, empieza una sesión a las 03:55 local y califica una tarjeta a las 04:20
+- **THEN** esa calificación se acredita al día anterior, el mismo de la sesión
 
 ### Requirement: El progreso de la sesión se muestra de forma discreta
 El sistema SHALL mostrar en la barra superior el contador "Quedan N", donde N es cuántas apariciones faltan en la cola de la sesión (contando las tarjetas reencoladas), y una barra de progreso tenue cuyo ancho es el porcentaje de tarjetas que ya salieron de la sesión sobre las tarjetas distintas con que arrancó. Una tarjeta devuelta por un rechazo SHALL hacer retroceder la barra.
@@ -235,7 +239,7 @@ El sistema SHALL mostrar en la barra superior el contador "Quedan N", donde N es
 - **THEN** el contador muestra "Queda 1"
 
 ### Requirement: La sesión termina con un cierre breve y satisfactorio
-Al salir de la sesión la última tarjeta, el sistema SHALL mostrar una pantalla de cierre con un anillo que se completa en el color de acento seguido de una marca de verificación, el título "Sesión terminada", "Repasaste N tarjetas." con plural real y N igual a las tarjetas distintas de la sesión, el conteo por calificación (otra vez, difícil, bien, fácil; cuenta calificaciones, con sus marcas de color y el número visible), la nota "Las que más te costaron volverán antes.", un espacio reservado para el bloque de práctica con IA (ver spec de práctica con IA) y el botón "Volver a Hoy", que lleva a Hoy. El número SHALL subir de 0 al total mientras el anillo se completa; con reducir movimiento SHALL mostrarse directo. Al terminar SHALL dejar de mostrar previsualizaciones y sugerencias.
+Al salir de la sesión la última tarjeta, el sistema SHALL mostrar una pantalla de cierre con un anillo que se completa en el color de acento seguido de una marca de verificación, el título "Sesión terminada", "Repasaste N tarjetas." con plural real y N igual a las tarjetas distintas de la sesión, el conteo por calificación (otra vez, difícil, bien, fácil; cuenta calificaciones, con sus marcas de color y el número visible), la nota "Las que más te costaron volverán antes." y el botón "Volver a Hoy", que lleva a Hoy. El cierre de un repaso NO SHALL mostrar ningún bloque de práctica con IA: esa pantalla la reutiliza la práctica de un paquete con su propio bloque (ver spec de práctica con IA). El número SHALL subir de 0 al total mientras el anillo se completa; con reducir movimiento SHALL mostrarse directo. Al terminar SHALL dejar de mostrar previsualizaciones y sugerencias.
 
 #### Scenario: Fin de sesión
 - **WHEN** el usuario califica la última tarjeta, esta sale de la sesión y el guardado se acepta
@@ -249,8 +253,12 @@ Al salir de la sesión la última tarjeta, el sistema SHALL mostrar una pantalla
 - **WHEN** el usuario tiene activada la preferencia de reducir movimiento
 - **THEN** el anillo, la marca y el número aparecen completos de inmediato
 
-### Requirement: La sesión recuerda sus tarjetas difíciles y las entrega a la práctica con IA
-El sistema SHALL conservar, durante la sesión, la lista de tarjetas cuya calificación guardada con éxito fue "Otra vez" (1) o "Difícil" (2), en orden de calificación y sin repetir una tarjeta. Al mostrar la pantalla de cierre y al pulsar "Salir", el sistema SHALL entregar esa lista a la práctica con IA (ver spec de práctica con IA), y la pantalla de cierre SHALL mostrar debajo del resumen el bloque "Práctica con IA". Al iniciar una sesión nueva la lista SHALL empezar vacía.
+#### Scenario: El cierre de un repaso no lleva práctica con IA
+- **WHEN** termina un repaso con tarjetas calificadas "Otra vez"
+- **THEN** el cierre no muestra ningún bloque de práctica con IA ni el botón "Copiar prompt"
+
+### Requirement: La sesión recuerda sus tarjetas difíciles
+El sistema SHALL conservar, durante la sesión, la lista de tarjetas cuya calificación guardada con éxito fue "Otra vez" (1) o "Difícil" (2), en orden de calificación y sin repetir una tarjeta, y SHALL entregarla junto con el motivo del final al terminar o al pulsar "Salir". La práctica con IA no la recibe: trabaja con paquetes propios (ver su spec), así que hoy ninguna pantalla la muestra. Al iniciar una sesión nueva la lista SHALL empezar vacía.
 
 #### Scenario: Difíciles de la sesión
 - **WHEN** en una sesión se califican con éxito tarjetas con grados 1, 3, 2 y 4
@@ -303,7 +311,7 @@ Tras guardar una calificación, el sistema SHALL comprobar si la tarjeta sigue l
 - **THEN** la sesión termina y se muestra el cierre
 
 ### Requirement: Un guardado rechazado devuelve la tarjeta a la sesión con aviso
-El sistema SHALL seguir el resultado de cada guardado en segundo plano. Si el almacén rechaza un guardado (por ejemplo, por permisos), el sistema SHALL devolver esa tarjeta al final de la sesión como una aparición nueva, descontarla del progreso, no contarla entre las difíciles por esa calificación, y mostrar como alerta accesible "No se guardó tu calificación de «{anverso}». Vuelve a calificarla.". Si la sesión ya terminó cuando llega el rechazo, la pantalla de cierre SHALL mostrar "N calificaciones no se guardaron. Esas tarjetas siguen pendientes." con plural real. El rechazo NO SHALL dejar nada a medias en el almacén: la tarjeta conserva su programación anterior, no hay registro nuevo y los indicadores no cambian.
+El sistema SHALL seguir el resultado de cada guardado en segundo plano. Si el almacén rechaza un guardado por un fallo pasajero (cualquiera salvo los dos permanentes: tarjeta borrada y acceso retirado, que describe el requisito siguiente), el sistema SHALL devolver esa tarjeta al final de la sesión como una aparición nueva, descontarla del progreso, no contarla entre las difíciles por esa calificación, y mostrar como alerta accesible "No se guardó tu calificación de «{anverso}». Vuelve a calificarla.". Si la sesión ya terminó cuando llega el rechazo, la pantalla de cierre SHALL mostrar "N calificaciones no se guardaron. Esas tarjetas siguen pendientes." con plural real. El rechazo NO SHALL dejar nada a medias en el almacén: la tarjeta conserva su programación anterior, no hay registro nuevo y los indicadores no cambian.
 
 #### Scenario: Rechazo durante la sesión
 - **WHEN** el usuario califica "Bien" la tarjeta «to give up», la sesión avanza y segundos después el almacén rechaza el guardado
@@ -346,3 +354,48 @@ El sistema SHALL permitir estudiar sin conexión con las mismas acciones y la mi
 #### Scenario: Vuelve la conexión
 - **WHEN** la conexión vuelve después de calificar sin red
 - **THEN** las calificaciones pendientes se envían en el orden en que se hicieron y el indicador desaparece
+
+### Requirement: El cierre recibe el foco
+Al mostrarse la pantalla de cierre de la sesión, el sistema SHALL mover el foco a su título, para que un lector de pantalla anuncie el cierre y Tab siga por sus controles en orden, en lugar de quedar perdido en el documento.
+
+#### Scenario: Cierre con teclado
+- **WHEN** el usuario califica con el teclado la última tarjeta y aparece el cierre
+- **THEN** el foco está en el título "Sesión terminada" y Tab lleva a los controles del cierre hasta "Volver a Hoy"
+
+### Requirement: Salir y volver a Hoy no dejan la sesión en el historial
+"Salir" y "Volver a Hoy" SHALL llevar a Hoy sin dejar la sesión detrás en el historial: si la sesión se abrió desde Hoy, regresan a Hoy como la entrada anterior del historial; si se abrió desde un capítulo o un libro, la sesión SHALL reemplazarse por Hoy, de modo que el siguiente "atrás" lleve a ese capítulo o libro.
+
+#### Scenario: Desde un capítulo
+- **WHEN** el usuario toca "Estudiar este capítulo" en "Unidad 1", toca "Salir" y pulsa "atrás"
+- **THEN** llega a "Unidad 1", no a la sesión ni a otra Hoy
+
+#### Scenario: Desde Hoy
+- **WHEN** el usuario empieza en Hoy, termina la sesión, toca "Volver a Hoy" y pulsa "atrás"
+- **THEN** llega a la pantalla anterior a Hoy, sin pasar por la sesión
+
+### Requirement: Un rechazo permanente no devuelve la tarjeta: tarjeta borrada o acceso retirado
+Reencolar solo sirve si el servidor puede aceptar el reintento. Si el almacén rechaza un guardado porque la tarjeta ya no existe (se borró en otro dispositivo), el sistema SHALL sacarla de la sesión sin devolverla a la cola (con todas sus apariciones pendientes), contarla como salida en la barra, descontar esa calificación del desglose y de las difíciles, y mostrar como alerta accesible "La tarjeta «{anverso}» se borró en otro dispositivo; su calificación no se guardó.". Si era la que se mostraba, SHALL pasar a la siguiente; si no queda ninguna, SHALL mostrarse el cierre. Con el cierre ya visible, ese rechazo NO SHALL contarse entre las calificaciones que "siguen pendientes". Si el almacén rechaza un guardado porque el usuario ya no tiene permiso (le retiraron el acceso), el sistema SHALL cerrar la sesión en ese momento, también con el cierre ya visible, y mostrar a pantalla completa, como alerta accesible, "Ya no tienes acceso" y "Lo que calificaste antes quedó guardado." con el botón "Continuar", que SHALL dejar la sesión de la app en "sin acceso" y llevar a `/sin-acceso` sin dejar el repaso en el historial. Ninguno de los dos rechazos deja nada a medias en el almacén.
+
+#### Scenario: La tarjeta se borró en otro dispositivo
+- **WHEN** el usuario califica «to give up», la sesión avanza y el almacén rechaza el guardado porque la tarjeta ya no existe
+- **THEN** aparece "La tarjeta «to give up» se borró en otro dispositivo; su calificación no se guardó.", la tarjeta no vuelve a mostrarse y la barra la cuenta como salida
+
+#### Scenario: Se borra la que se estaba mostrando
+- **WHEN** la tarjeta calificada volvió al final y ya es la que se muestra cuando llega el rechazo por tarjeta borrada
+- **THEN** se muestra la siguiente sin revelar; si no queda ninguna, el cierre
+
+#### Scenario: Tarjeta borrada con el cierre visible
+- **WHEN** la sesión terminó y llega el rechazo por tarjeta borrada
+- **THEN** el cierre no dice que esa tarjeta siga pendiente
+
+#### Scenario: Acceso retirado a mitad de la sesión
+- **WHEN** al usuario le retiran el acceso y el almacén rechaza el guardado de su siguiente calificación por permisos
+- **THEN** la sesión se cierra y muestra "Ya no tienes acceso", "Lo que calificaste antes quedó guardado." y "Continuar", sin la tarjeta ni los cerebros
+
+#### Scenario: Continuar tras perder el acceso
+- **WHEN** el usuario toca "Continuar"
+- **THEN** la sesión de la app queda en "sin acceso" con su correo y la app muestra `/sin-acceso`; "atrás" no vuelve al repaso
+
+#### Scenario: Acceso retirado con el cierre visible
+- **WHEN** la sesión terminó y llega un rechazo por permisos
+- **THEN** el cierre se sustituye por "Ya no tienes acceso" y "Continuar"

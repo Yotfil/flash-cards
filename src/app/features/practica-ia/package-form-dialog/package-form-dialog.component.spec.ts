@@ -103,6 +103,27 @@ describe('PackageFormDialogComponent', () => {
     expect(openDialog().textContent).toContain('Usa como máximo 120 caracteres.');
   });
 
+  it('si no confirma en 6 s, avisa que quedó guardado en el dispositivo y deja cerrar', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { ref, repository, update, submit } = await open();
+    vi.spyOn(repository, 'create').mockReturnValue(new Promise(() => undefined));
+    typeInto('#package-name', 'Reunión');
+    await update();
+    await submit();
+    await update();
+    vi.advanceTimersByTime(6000);
+    await update();
+
+    expect(openDialog().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Quedó guardado en este dispositivo; se enviará cuando vuelva la red.',
+    );
+    expect(dialogButton('Guardando…')?.disabled).toBe(true);
+    expect(dialogButton('Cerrar')?.disabled).toBe(false);
+    dialogButton('Cerrar')?.click();
+    await expect(ref.closed).resolves.toBeUndefined();
+    vi.useRealTimers();
+  });
+
   it('mientras guarda dice "Guardando…"; si falla avisa dentro y conserva el nombre', async () => {
     const { repository, update, submit } = await open();
     let fail!: (error: Error) => void;

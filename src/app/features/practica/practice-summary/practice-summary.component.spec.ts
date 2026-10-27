@@ -1,3 +1,4 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { PracticeSummaryComponent } from './practice-summary.component';
@@ -23,6 +24,15 @@ describe('PracticeSummaryComponent', () => {
     expect(button?.textContent?.trim()).toBe('Volver al capítulo');
     button?.click();
     expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it('al aparecer, el foco va a su título (que no es una parada de Tab)', async () => {
+    const { element } = render('chapter');
+    await TestBed.inject(ApplicationRef).whenStable();
+    const title = element.querySelector('h1');
+
+    expect(document.activeElement).toBe(title);
+    expect(title?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('desde un libro, vuelve al libro', () => {

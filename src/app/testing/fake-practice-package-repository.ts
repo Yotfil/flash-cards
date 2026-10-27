@@ -3,6 +3,7 @@ import type { PracticeItem, PracticePackage, TodaySet } from '@domain/models/pra
 import type { Rating } from '@domain/models/rating';
 import type { ReadSource } from '@domain/ports/read-source';
 import {
+  PackageCompletedError,
   PackageFullError,
   PracticePackageRepository,
 } from '@domain/ports/practice-package.repository';
@@ -110,6 +111,9 @@ export class FakePracticePackageRepository extends PracticePackageRepository {
   ): Promise<PracticeItem[]> {
     this.record('addItems');
     const pkg = this.require(packageId);
+    if (pkg.status !== 'open') {
+      throw new PackageCompletedError(packageId);
+    }
     if (pkg.itemOrder.length + drafts.length > pkg.capacity) {
       throw new PackageFullError(pkg.capacity);
     }

@@ -1,8 +1,9 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import type { Card } from '@domain/models/card.model';
 import type { Rating } from '@domain/models/rating';
-import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
+import { CardGoneError, GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
 import { SchedulingPort } from '@domain/ports/scheduling.port';
 import { CardCollectionChanges } from '@services/progress/card-collection-changes';
@@ -11,7 +12,9 @@ import { requireSessionUid, requireSessionUser } from '@services/session/require
 import { SessionService } from '@services/session/session.service';
 
 import {
+  closeForLostAccess,
   confirmSaved,
+  dropGoneCard,
   grade,
   progressPercent,
   rejectSaved,
@@ -22,7 +25,7 @@ import {
   type SessionState,
 } from './review-session-state';
 
-export type ReviewSessionStatus = 'idle' | 'active' | 'finished';
+export type ReviewSessionStatus = 'idle' | 'active' | 'finished' | 'accessLost';
 
 /** Cómo terminó la última sesión y sus tarjetas difíciles (lo consumirá la práctica con IA). */
 export interface ReviewSessionEnd {
@@ -32,8 +35,9 @@ export interface ReviewSessionEnd {
 
 // La sesión de repaso en curso: el núcleo puro más el reloj, el perfil y el guardado. Calificar
 // avanza al instante: el lote se envía SIN esperarlo, y su confirmación o su rechazo llegan
-// después y se aplican a la aparición que los produjo. Cada entrada a la pantalla arranca una
-// sesión nueva; nada se retoma.
+// después y se aplican a la aparición que los produjo. Un rechazo pasajero devuelve la tarjeta;
+// los permanentes no: la tarjeta borrada sale y, sin acceso, la sesión se cierra. Cada entrada a
+// la pantalla arranca una sesión nueva; nada se retoma.
 @Injectable({ providedIn: 'root' })
 export class ReviewSessionService {
   private readonly scheduling = inject(SchedulingPort);
@@ -124,13 +128,14 @@ export class ReviewSessionService {
     // Sin `await`: la sesión ya avanzó; el lote quedó guardado en el dispositivo.
     this.collectionChanges.afterWrite(this.persistence.persistGrade(uid, record)).then(
       () => this.applyToSession(session, (current) => confirmSaved(current, appearance.id)),
-      (error: unknown) => {
-        this.logger.error('No se guardó una calificación', error);
-        this.applyToSession(session, (current) =>
-          rejectSaved(current, appearance.id, new Date(), this.preview),
-        );
-      },
+      (error: unknown) => this.applyRejection(session, appearance.id, error),
     );
+  }
+
+  /** "Continuar" tras perder el acceso: vacía la sesión y deja la de la app en "sin acceso". */
+  acknowledgeLostAccess(): void {
+    this.clear();
+    this.session.markAccessRevoked();
   }
 
   /** "Salir": vacía la sesión sin cierre. Lo ya calificado sigue su guardado. */
@@ -151,11 +156,39 @@ export class ReviewSessionService {
     this.state.set(null);
   }
 
-  /** Aplica un resultado del guardado solo si la sesión que lo produjo sigue en pantalla. */
+  /** Cada rechazo según su causa: reintentar solo sirve si el servidor puede llegar a aceptarlo. */
+  private applyRejection(session: number, appearanceId: string, error: unknown): void {
+    if (error instanceof AccessRevokedError) {
+      this.logger.error('Sin acceso: el servidor negó el permiso a una calificación', error);
+      this.applyToSession(session, closeForLostAccess);
+      return;
+    }
+    if (error instanceof CardGoneError) {
+      this.logger.error('No se guardó una calificación: la tarjeta ya no existe', error);
+      this.applyToSession(session, (current) =>
+        dropGoneCard(current, appearanceId, new Date(), this.preview),
+      );
+      return;
+    }
+    this.logger.error('No se guardó una calificación', error);
+    this.applyToSession(session, (current) =>
+      rejectSaved(current, appearanceId, new Date(), this.preview),
+    );
+  }
+
+  /**
+   * Aplica un resultado del guardado solo si la sesión que lo produjo sigue en pantalla. Si con él
+   * termina (se borró la última tarjeta que quedaba), avisa del final como al calificar.
+   */
   private applyToSession(session: number, change: (state: SessionState) => SessionState) {
     const current = this.state();
-    if (current && session === this.sessionNumber) {
-      this.state.set(change(current));
+    if (!current || session !== this.sessionNumber) {
+      return;
+    }
+    const next = change(current);
+    this.state.set(next);
+    if (current.status === 'active' && next.status === 'finished') {
+      this.endSignal.set({ reason: 'finished', difficult: this.difficultCards() });
     }
   }
 }

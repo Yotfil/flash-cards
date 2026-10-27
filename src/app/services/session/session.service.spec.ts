@@ -184,6 +184,23 @@ describe('SessionService · registro', () => {
     expect(authPort.registrations).toEqual([]);
   });
 
+  it('el correo tecleado con mayúsculas o espacios se compara como lo guarda el proveedor (en minúsculas)', async () => {
+    const { session, authPort } = setup(['ana.perez@example.com']);
+    authPort.emit(null);
+    await settle();
+
+    const result = await session.register({
+      email: '  Ana.Perez@Example.COM ',
+      password: 'secreta',
+      displayName: 'Ana',
+    });
+
+    expect(result).toBe('registered');
+    expect(authPort.registrations.map((registration) => registration.email)).toEqual([
+      'ana.perez@example.com',
+    ]);
+  });
+
   it('con un correo autorizado crea la identidad y el perfil toma el nombre elegido', async () => {
     const { session, authPort, users } = setup(['ada@ejemplo.com']);
     authPort.emit(null);
@@ -230,6 +247,31 @@ describe('SessionService · registro', () => {
     expect(failure).toBeInstanceOf(AuthError);
     expect((failure as AuthError).kind).toBe('offline');
     expect(authPort.registrations).toEqual([]);
+  });
+});
+
+describe('SessionService · restablecer la contraseña', () => {
+  it('pide el correo de restablecimiento con el correo recortado y en minúsculas', async () => {
+    const { session, authPort } = setup();
+
+    await session.sendPasswordReset('  Ada@Ejemplo.com ');
+
+    expect(authPort.passwordResets).toEqual(['ada@ejemplo.com']);
+  });
+
+  it('un correo sin cuenta no se delata: "datos incorrectos" se calla', async () => {
+    const { session, authPort } = setup();
+    authPort.failWith.sendPasswordReset = new AuthError('invalidCredentials');
+
+    await expect(session.sendPasswordReset('nadie@ejemplo.com')).resolves.toBeUndefined();
+  });
+
+  it('sin red, el fallo sube para que la pantalla lo explique', async () => {
+    const { session, authPort } = setup();
+    const offline = new AuthError('offline');
+    authPort.failWith.sendPasswordReset = offline;
+
+    await expect(session.sendPasswordReset('ada@ejemplo.com')).rejects.toBe(offline);
   });
 });
 
@@ -343,6 +385,29 @@ describe('SessionService · inicio de sesión, Google y acceso retirado', () => 
 
     expect(authPort.deletions).toBe(0);
     expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
+  });
+
+  it('con la app abierta, un permiso negado por el servidor deja la sesión sin acceso con su correo', async () => {
+    const { session, authPort, users } = setup();
+    users.seed(aUser({ id: 'u1', email: 'ada@ejemplo.com' }));
+    authPort.emit(anIdentity({ uid: 'u1', email: 'ada@ejemplo.com' }));
+    await settle();
+
+    session.markAccessRevoked();
+
+    expect(session.state()).toEqual({ kind: 'noAccess', email: 'ada@ejemplo.com' });
+    expect(session.user()).toBeNull();
+    expect(authPort.deletions).toBe(0);
+  });
+
+  it('sin sesión activa, marcar el acceso retirado no cambia nada', async () => {
+    const { session, authPort } = setup();
+    authPort.emit(null);
+    await settle();
+
+    session.markAccessRevoked();
+
+    expect(session.state()).toEqual({ kind: 'signedOut' });
   });
 
   it('si borrar la identidad falla, se registra y la sesión queda igual sin acceso', async () => {

@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 
-import type { Card } from '@domain/models/card.model';
-import { GradePersistencePort } from '@domain/ports/grade-persistence.port';
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
+import type { Card, CardScheduling } from '@domain/models/card.model';
+import { RATINGS, type Rating } from '@domain/models/rating';
+import { CardGoneError, GradePersistencePort } from '@domain/ports/grade-persistence.port';
 import { Logger } from '@domain/ports/logger.port';
-import { SchedulingPort } from '@domain/ports/scheduling.port';
+import { SchedulingPort, type SchedulingPreview } from '@domain/ports/scheduling.port';
 import type { PreparedStudy } from '@services/queue/study-handoff.service';
 import { CardCollectionChanges } from '@services/progress/card-collection-changes';
 import { SessionService } from '@services/session/session.service';
@@ -32,21 +34,48 @@ function setup(autoGradeByTime = true) {
   const persistence = new FakeGradePersistence();
   const logger = new FakeLogger();
   const user = aUser();
+  const session = new FakeSessionService({
+    kind: 'active',
+    user: { ...user, settings: { ...user.settings, autoGradeByTime } },
+  });
   TestBed.configureTestingModule({
     providers: [
       { provide: SchedulingPort, useValue: scheduling },
       { provide: GradePersistencePort, useValue: persistence },
       { provide: Logger, useValue: logger },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({
-          kind: 'active',
-          user: { ...user, settings: { ...user.settings, autoGradeByTime } },
-        }),
-      },
+      { provide: SessionService, useValue: session },
     ],
   });
-  return { service: TestBed.inject(ReviewSessionService), scheduling, persistence, logger };
+  return {
+    service: TestBed.inject(ReviewSessionService),
+    scheduling,
+    persistence,
+    logger,
+    session,
+  };
+}
+
+/** Toda nota vence en un minuto: la tarjeta sigue lista hoy y vuelve al final de la sesión. */
+function comesBackInAMinute(scheduling: CardScheduling, now: Date) {
+  const due = new Date(now.getTime() + 60_000);
+  const preview = (): SchedulingPreview => ({
+    scheduling: { ...scheduling, due, lastReview: now },
+    intervalDays: 0,
+    due,
+    log: {
+      state: scheduling.state,
+      due: scheduling.due,
+      stability: scheduling.stability,
+      difficulty: scheduling.difficulty,
+      elapsedDays: scheduling.elapsedDays,
+      lastElapsedDays: 0,
+      scheduledDays: scheduling.scheduledDays,
+    },
+  });
+  return Object.fromEntries(RATINGS.map((rating) => [rating, preview()])) as Record<
+    Rating,
+    SchedulingPreview
+  >;
 }
 
 /** Deja que corran las promesas ya resueltas (confirmaciones y rechazos del guardado). */
@@ -132,7 +161,7 @@ describe('ReviewSessionService · rechazo tardío, fin y salida', () => {
     persistence.rejectNext(failure);
     await flush();
 
-    expect(service.alerts()).toEqual([{ cardId: 'A', front: 'to give up' }]);
+    expect(service.alerts()).toEqual([{ cardId: 'A', front: 'to give up', kind: 'failed' }]);
     expect(service.ratingCounts().good).toBe(0);
     expect(service.progress()).toBe(0);
     expect(service.remaining()).toBe(3);
@@ -196,6 +225,77 @@ describe('ReviewSessionService · rechazo tardío, fin y salida', () => {
     expect(service.difficultCards()).toEqual([]);
     expect(service.alerts()).toEqual([]);
     expect(service.distinctCount()).toBe(2);
+  });
+});
+
+describe('ReviewSessionService · rechazos permanentes', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  function gradeCurrent(service: ReviewSessionService, rating: Rating) {
+    service.reveal();
+    service.grade(rating);
+  }
+
+  it('una tarjeta borrada en otro dispositivo sale de la sesión con su aviso, sin volver', async () => {
+    const { service, persistence, logger } = setup();
+    service.start(prepared());
+    gradeCurrent(service, 3);
+    const gone = new CardGoneError('A');
+
+    persistence.rejectNext(gone);
+    await flush();
+
+    expect(service.alerts()).toEqual([{ cardId: 'A', front: 'to give up', kind: 'gone' }]);
+    expect(service.ratingCounts().good).toBe(0);
+    expect(service.progress()).toBe(33);
+    expect(service.remaining()).toBe(2);
+    expect(logger.entries.at(-1)?.cause).toBe(gone);
+  });
+
+  it('si la borrada era la única que quedaba, la sesión termina y avisa del final', async () => {
+    const { service, scheduling, persistence } = setup();
+    scheduling.setPreview(comesBackInAMinute);
+    service.start(prepared([A]));
+    gradeCurrent(service, 1);
+    expect(service.status()).toBe('active');
+
+    persistence.rejectNext(new CardGoneError('A'));
+    await flush();
+
+    expect(service.status()).toBe('finished');
+    expect(service.ended()).toEqual({ reason: 'finished', difficult: [] });
+  });
+
+  it('sin acceso, la sesión se cierra y ya no califica', async () => {
+    const { service, persistence, logger } = setup();
+    service.start(prepared());
+    gradeCurrent(service, 3);
+    const revoked = new AccessRevokedError();
+
+    persistence.rejectNext(revoked);
+    await flush();
+    gradeCurrent(service, 3);
+
+    expect(service.status()).toBe('accessLost');
+    expect(persistence.records).toHaveLength(1);
+    expect(logger.entries.at(-1)?.cause).toBe(revoked);
+  });
+
+  it('al reconocer el aviso, la sesión se vacía y la de la app queda sin acceso', async () => {
+    const { service, persistence, session } = setup();
+    service.start(prepared());
+    gradeCurrent(service, 3);
+    persistence.rejectNext(new AccessRevokedError());
+    await flush();
+
+    service.acknowledgeLostAccess();
+
+    expect(service.status()).toBe('idle');
+    expect(session.state()).toEqual({ kind: 'noAccess', email: aUser().email });
   });
 });
 

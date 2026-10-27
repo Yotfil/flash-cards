@@ -113,21 +113,39 @@ export class SessionService {
 
   /**
    * Crea una cuenta con correo y contraseña, solo si el correo está en la lista: fuera de ella no se
-   * crea ninguna identidad. La sesión llega después por el observador.
+   * crea ninguna identidad. La sesión llega después por el observador. El correo se recorta y pasa
+   * a minúsculas, como lo guarda el proveedor: la lista se escribe así y la comparación es literal.
    */
   async register(registration: Registration): Promise<'registered' | 'notAllowlisted'> {
-    if (!(await this.isAllowedForRegistration(registration.email))) {
+    const email = registration.email.trim().toLowerCase();
+    if (!(await this.isAllowedForRegistration(email))) {
       return 'notAllowlisted';
     }
-    const displayName = registration.displayName.trim() || displayNameFromEmail(registration.email);
+    const displayName = registration.displayName.trim() || displayNameFromEmail(email);
     this.pendingDisplayName = displayName;
     try {
-      await this.authPort.registerWithEmail({ ...registration, displayName });
+      await this.authPort.registerWithEmail({ ...registration, email, displayName });
     } catch (error) {
       this.pendingDisplayName = null;
       throw error;
     }
     return 'registered';
+  }
+
+  /**
+   * Pide el correo para crear una contraseña nueva, con el correo como lo guarda el proveedor. Un
+   * "datos incorrectos" (no hay cuenta con ese correo) se calla: la pantalla responde lo mismo haya
+   * o no cuenta, para no revelar quién la tiene. Los demás fallos suben.
+   */
+  async sendPasswordReset(email: string): Promise<void> {
+    try {
+      await this.authPort.sendPasswordReset(email.trim().toLowerCase());
+    } catch (error) {
+      if (error instanceof AuthError && error.kind === 'invalidCredentials') {
+        return;
+      }
+      throw error;
+    }
   }
 
   /** Inicia sesión en el proveedor; la sesión de la app llega por el observador. */
@@ -152,6 +170,18 @@ export class SessionService {
   /** Repite la carga del perfil de la identidad actual tras un error de perfil. */
   async retryProfile(): Promise<void> {
     await this.handleIdentity(this.currentIdentity);
+  }
+
+  /**
+   * El servidor negó el permiso a una escritura con la app abierta: el correo salió de la lista
+   * (las reglas no niegan por otra cosa al dueño). La sesión queda "sin acceso" con ese correo,
+   * como si se hubiera comprobado al arrancar; la identidad se conserva. Sin sesión activa, nada.
+   */
+  markAccessRevoked(): void {
+    const user = this.user();
+    if (user) {
+      this.setState({ kind: 'noAccess', email: user.email });
+    }
   }
 
   /**

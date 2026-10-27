@@ -33,8 +33,10 @@
   </button>
   <button
     type="button"
-    class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text"
+    class="press grid size-10 place-items-center rounded-xl text-text-faint hover:text-text disabled:opacity-50"
     [attr.aria-label]="copy.deleteOf(book().name)"
+    [attr.aria-busy]="preparingDelete() || null"
+    [disabled]="preparingDelete()"
     (click)="deleteRequested.emit()"
   >
     <app-icon name="trash" />

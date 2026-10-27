@@ -7,7 +7,11 @@ import { Logger } from '@domain/ports/logger.port';
 import { isDuplicateDraft } from '@services/cards/card-duplicates';
 import { CardsService } from '@services/cards/cards.service';
 import { AppDialogRef, DIALOG_DATA } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  NEEDS_CONNECTION_MESSAGE,
+  SAVED_ON_DEVICE_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { BIBLIOTECA_COPY } from '../biblioteca.copy';
 import { cardFormSchema, type CardFormValue } from '@services/cards/card-form.schema';
@@ -15,6 +19,8 @@ import { cardFormSchema, type CardFormValue } from '@services/cards/card-form.sc
 /** Guardar fuera de un capítulo (p. ej. un paquete de práctica): quien abre decide cómo. */
 export interface CustomCardSave {
   readonly save: (draft: CardContentDraft) => Promise<void>;
+  /** El texto de un fallo que el destino sabe explicar (p. ej. un paquete ya completado). */
+  readonly failureMessage?: (error: unknown) => string | undefined;
 }
 
 export type CardFormDialogData =
@@ -45,6 +51,10 @@ export class CardFormDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = BIBLIOTECA_COPY.cardForm;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly savedOnDevice = SAVED_ON_DEVICE_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: lo escrito ya está en el dispositivo y se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly isEdit = this.data.mode === 'edit';
 
   private readonly model = signal<CardFormValue>(initialValue(this.data));
@@ -56,6 +66,7 @@ export class CardFormDialogComponent {
   protected readonly showMore = signal(this.data.mode === 'edit' && !!this.data.card.example);
   protected readonly saving = signal(false);
   protected readonly failed = signal(false);
+  protected readonly errorText = signal<string>(this.copy.saveError);
   protected readonly canSubmit = computed(
     () => this.cardForm().valid() && !this.saving() && this.online(),
   );
@@ -111,11 +122,15 @@ export class CardFormDialogComponent {
   private async save(): Promise<void> {
     this.saving.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    // Un guardado propio (un ítem de paquete) va por transacción: no queda en el dispositivo y
+    // no se puede prometer; el de un capítulo, sí.
+    this.dialogRef.setPending(true, { releaseWhenSlow: !('save' in this.data) });
     try {
       await this.persist(this.model());
     } catch (error) {
       this.logger.error(this.copy.saveError, error);
+      const data = this.data;
+      this.errorText.set(('save' in data && data.failureMessage?.(error)) || this.copy.saveError);
       this.failed.set(true);
       this.saving.set(false);
       this.dialogRef.setPending(false);

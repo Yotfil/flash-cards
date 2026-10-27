@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, ElementRef, computed, effect, input, output, viewChild } from '@angular/core';
 
 import { IconComponent } from '@shared/icon/icon.component';
 
@@ -16,6 +16,8 @@ const STATE_CLASSES: Readonly<Record<OptionState, string>> = {
 
 // Una pregunta de opción múltiple: el anverso y cuatro opciones. Tras responder, todas se bloquean;
 // la correcta se resalta con acento y ✓, la elegida errónea se atenúa con ✗ y el resto se atenúa.
+// Cada pregunta nueva lleva el foco a su enunciado (no a la primera opción: un Intro de más tras
+// "Siguiente" respondería sin querer); el enunciado no es una parada de Tab.
 @Component({
   selector: 'app-multiple-choice-question',
   imports: [IconComponent],
@@ -23,6 +25,7 @@ const STATE_CLASSES: Readonly<Record<OptionState, string>> = {
   styleUrl: './multiple-choice-question.component.scss',
 })
 export class MultipleChoiceQuestionComponent {
+  readonly questionId = input.required<string>();
   readonly prompt = input.required<string>();
   readonly options = input.required<readonly string[]>();
   readonly answered = input<{ chosen: string; answer: string } | null>(null);
@@ -35,6 +38,15 @@ export class MultipleChoiceQuestionComponent {
       return { text, state, classes: STATE_CLASSES[state] };
     }),
   );
+  private readonly promptHeading =
+    viewChild.required<ElementRef<HTMLHeadingElement>>('promptHeading');
+
+  constructor() {
+    effect(() => {
+      this.questionId();
+      this.promptHeading().nativeElement.focus();
+    });
+  }
 
   private stateOf(option: string): OptionState {
     const answered = this.answered();

@@ -254,6 +254,32 @@ describe('BibliotecaPageComponent', () => {
     expect(names()).toEqual([]);
   });
 
+  it('mientras cuenta lo que se borrará, el botón queda ocupado y un segundo toque no abre otra confirmación', async () => {
+    const { page, update, repository } = await open({
+      books: [aBook({ id: 'b1', name: 'Inglés' })],
+    });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const count = repository.countContents.bind(repository);
+    repository.countContents = async (...args) => {
+      await gate;
+      return count(...args);
+    };
+    const deleteButton = () =>
+      page().querySelector<HTMLButtonElement>('[aria-label="Borrar Inglés"]');
+
+    deleteButton()?.click();
+    await update();
+    expect(deleteButton()?.getAttribute('aria-busy')).toBe('true');
+    expect(deleteButton()?.disabled).toBe(true);
+    deleteButton()?.click();
+    release();
+    await update();
+
+    expect(document.querySelectorAll('.cdk-overlay-container [role="dialog"]')).toHaveLength(1);
+    expect(deleteButton()?.hasAttribute('aria-busy')).toBe(false);
+  });
+
   it('si el conteo falla la confirmación se abre igual, sin números', async () => {
     const { page, update, repository } = await open({
       books: [aBook({ id: 'b1', name: 'Inglés' })],

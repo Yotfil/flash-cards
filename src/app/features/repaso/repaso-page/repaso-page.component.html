@@ -1,4 +1,4 @@
-<main class="safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4 pt-4">
+<main class="safe-top-gap safe-bottom mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4">
   @switch (session.status()) {
     @case ('active') {
       <app-session-top-bar
@@ -29,6 +29,19 @@
           />
         }
       }
+    }
+    @case ('accessLost') {
+      <div role="alert" class="flex flex-1 items-center justify-center">
+        <app-empty-state [title]="accessLost.title" [message]="accessLost.message">
+          <button
+            type="button"
+            class="press rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-btn"
+            (click)="continueWithoutAccess()"
+          >
+            {{ accessLost.continue }}
+          </button>
+        </app-empty-state>
+      </div>
     }
     @case ('finished') {
       <div class="flex flex-1 items-center">

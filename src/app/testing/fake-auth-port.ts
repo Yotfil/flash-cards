@@ -9,6 +9,7 @@ import {
 type FailableMethod =
   | 'registerWithEmail'
   | 'signInWithEmail'
+  | 'sendPasswordReset'
   | 'signInWithGoogle'
   | 'signOut'
   | 'deleteCurrentIdentity';
@@ -20,6 +21,7 @@ type FailableMethod =
 export class FakeAuthPort extends AuthPort {
   readonly registrations: Registration[] = [];
   readonly emailSignIns: EmailCredentials[] = [];
+  readonly passwordResets: string[] = [];
   googleSignIns = 0;
   signOuts = 0;
   deletions = 0;
@@ -61,6 +63,12 @@ export class FakeAuthPort extends AuthPort {
     this.emailSignIns.push(credentials);
     await this.gate;
     this.throwIfFailing('signInWithEmail');
+  }
+
+  async sendPasswordReset(email: string): Promise<void> {
+    this.passwordResets.push(email);
+    await this.gate;
+    this.throwIfFailing('sendPasswordReset');
   }
 
   async signInWithGoogle(): Promise<GoogleSignIn> {

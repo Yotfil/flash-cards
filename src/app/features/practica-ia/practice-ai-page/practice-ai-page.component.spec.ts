@@ -1,8 +1,10 @@
+import { Location } from '@angular/common';
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import { CardRepository } from '@domain/ports/card.repository';
 import type { UserSettings } from '@domain/models/user.model';
 import { ConnectivityPort } from '@domain/ports/connectivity.port';
@@ -42,7 +44,13 @@ const T0 = new Date('2026-10-25T15:00:00Z');
 const ITEMS = ['a', 'b', 'c'].map((id) => anItem({ id, front: `front ${id}`, back: `back ${id}` }));
 
 async function open(
-  options: { online?: boolean; handOff?: boolean; settings?: Partial<UserSettings> } = {},
+  options: {
+    online?: boolean;
+    handOff?: boolean;
+    settings?: Partial<UserSettings>;
+    /** Pantallas por las que pasó antes de practicar (la última, desde donde se abrió). */
+    from?: string[];
+  } = {},
 ) {
   const user = aUser();
   const repository = new FakePracticePackageRepository();
@@ -51,6 +59,10 @@ async function open(
   const stats = new FakeDailyStatsRepository();
   const grades = new FakeGradePersistence();
   const delivery = new FakeFileDelivery();
+  const appSession = new FakeSessionService({
+    kind: 'active',
+    user: { ...user, settings: { ...user.settings, ...options.settings } },
+  });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -64,13 +76,7 @@ async function open(
       { provide: FileDeliveryPort, useValue: delivery },
       { provide: ConnectivityPort, useValue: new FakeConnectivity(options.online ?? true) },
       { provide: Logger, useValue: new FakeLogger() },
-      {
-        provide: SessionService,
-        useValue: new FakeSessionService({
-          kind: 'active',
-          user: { ...user, settings: { ...user.settings, ...options.settings } },
-        }),
-      },
+      { provide: SessionService, useValue: appSession },
     ],
   });
   const settle = async () => {
@@ -81,11 +87,16 @@ async function open(
   const packages = TestBed.inject(PracticePackagesService);
   packages.reload();
   await settle();
+  const harness = await RouterTestingHarness.create();
+  // Lo hace el arranque de la app; sin esto el router de las pruebas no oye el "atrás".
+  TestBed.inject(Router).setUpLocationChangeListener();
+  for (const url of options.from ?? []) {
+    await harness.navigateByUrl(url);
+  }
   if (options.handOff ?? true) {
     await packages.prepareTodayPractice('p1');
   }
   const session = TestBed.inject(PracticeAiSessionService);
-  const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/practica-ia');
   const update = async () => {
     await settle();
@@ -105,7 +116,14 @@ async function open(
     Array.from(page().querySelectorAll<HTMLButtonElement>('app-rating-bar button')).find(
       (candidate) => candidate.querySelector('[data-label]')?.textContent?.trim() === label,
     );
+  const back = async () => {
+    TestBed.inject(Location).back();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await update();
+  };
   return {
+    appSession,
+    back,
     harness,
     repository,
     cards,
@@ -165,6 +183,33 @@ describe('PracticeAiPageComponent', () => {
     expect(repository.grades).toHaveLength(2);
   });
 
+  it('abierta desde el paquete, "Salir" regresa con el historial: atrás va a lo anterior al paquete', async () => {
+    // Antes del paquete, Progreso: así no se confunde con la redirección a la Biblioteca.
+    const { button, update, back, url } = await open({ from: ['/progreso', '/paquetes/p1'] });
+
+    button('Salir')?.click();
+    await update();
+    expect(url()).toBe('/paquetes/p1');
+
+    await back();
+    expect(url()).toBe('/progreso');
+  });
+
+  it('abierta desde Hoy, "Volver al paquete" reemplaza la práctica: atrás vuelve a Hoy', async () => {
+    const { press, button, update, back, url } = await open({ from: ['/biblioteca', '/hoy'] });
+    for (const key of ['1', '2', '3']) {
+      await press(' ');
+      await press(key);
+    }
+
+    button('Volver al paquete')?.click();
+    await update();
+    expect(url()).toBe('/paquetes/p1');
+
+    await back();
+    expect(url()).toBe('/hoy');
+  });
+
   it('"Salir" vuelve al paquete y vacía la práctica', async () => {
     const { button, update, url, session } = await open();
 
@@ -184,6 +229,7 @@ describe('PracticeAiPageComponent', () => {
 
     const summary = page().querySelector('app-session-summary');
     expect(summary?.querySelector('h1')?.textContent?.trim()).toBe('Práctica terminada');
+    expect(document.activeElement).toBe(summary?.querySelector('h1'));
     expect(summary?.textContent).toContain('Practicaste 3 ítems');
     expect(summary?.textContent).toContain('2 para reforzar con la IA');
     expect(summary?.textContent).not.toContain('Volver a Hoy');
@@ -215,6 +261,25 @@ describe('PracticeAiPageComponent', () => {
     page().querySelector<HTMLAnchorElement>('a[href="/biblioteca"]')?.click();
     await update();
     expect(url()).toBe('/biblioteca');
+  });
+
+  it('sin acceso: aviso con "Continuar", sin cerebros; "Continuar" lleva a sin-acceso', async () => {
+    const { press, page, update, repository, button, url, appSession } = await open();
+    await press(' ');
+    await press('3');
+
+    repository.rejectNext(new AccessRevokedError());
+    await update();
+
+    const alert = page().querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Ya no tienes acceso');
+    expect(alert?.textContent).toContain('Lo que calificaste antes quedó guardado.');
+    expect(page().querySelector('app-flip-card')).toBeNull();
+    expect(page().querySelector('app-session-top-bar')).toBeNull();
+    button('Continuar')?.click();
+    await update();
+    expect(url()).toBe('/sin-acceso');
+    expect(appSession.state()).toEqual({ kind: 'noAccess', email: aUser().email });
   });
 
   it('si la práctica cruza el inicio del día, el prompt del cierre lista los difíciles que anuncia', async () => {

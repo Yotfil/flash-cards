@@ -25,6 +25,8 @@ export abstract class AuthPort {
   /** Crea la identidad y fija su nombre visible en el proveedor. */
   abstract registerWithEmail(registration: Registration): Promise<void>;
   abstract signInWithEmail(credentials: EmailCredentials): Promise<void>;
+  /** Pide al proveedor que envíe el correo con el enlace para crear una contraseña nueva. */
+  abstract sendPasswordReset(email: string): Promise<void>;
   /**
    * Abre la ventana emergente de Google; la identidad llega por el observador (a veces antes de
    * que la ventana resuelva). Dice si la identidad es nueva.

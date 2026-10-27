@@ -4,8 +4,10 @@
       {{ copy.chooseAnswer }}
     </p>
     <h2
+      #promptHeading
       id="question-prompt"
-      class="mt-2 text-2xl font-extrabold tracking-tight break-words text-text"
+      tabindex="-1"
+      class="mt-2 text-2xl font-extrabold tracking-tight break-words text-text focus-visible:outline-none"
     >
       {{ prompt() }}
     </h2>

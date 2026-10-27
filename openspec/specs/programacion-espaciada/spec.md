@@ -130,7 +130,7 @@ Cada resultado previsualizado SHALL incluir, para el historial: el estado antes 
 - **THEN** los valores para el historial indican estado "repaso", 2 días programados y 7 días transcurridos
 
 ### Requirement: Los intervalos se muestran en formato humano por tramos
-El sistema SHALL convertir la distancia entre el instante de referencia y el vencimiento exacto a texto así: vencimiento igual o anterior al instante → "ahora"; menos de 60 minutos → minutos redondeados al entero más cercano, mínimo 1 ("1 min", "6 min", "10 min"); menos de 24 horas → horas redondeadas ("1 h", "N h"); menos de 2 días → "1 día"; de 2 a 29 días → "N días"; de 30 a 364 → meses redondeados al entero más cercano a partir de días/30 ("1 mes" o "N meses"); 365 o más → años redondeados a partir de días/365 ("1 año" o "N años"). Los días SHALL contarse como días completos entre ambos instantes.
+El sistema SHALL convertir la distancia entre el instante de referencia y el vencimiento exacto a texto así: vencimiento igual o anterior al instante → "ahora"; menos de 60 minutos → minutos redondeados al entero más cercano, mínimo 1 ("1 min", "6 min", "10 min"); menos de 24 horas → horas redondeadas ("1 h", "N h"); menos de 2 días → "1 día"; de 2 a 29 días → "N días"; de 30 a 364 → meses redondeados al entero más cercano a partir de días/30 ("1 mes" o "N meses"); 365 o más → años redondeados a partir de días/365 ("1 año" o "N años"). Los días SHALL contarse como días completos entre ambos instantes. Si el redondeo de un tramo llega al primer valor del tramo siguiente, SHALL mostrarse el tramo siguiente: nunca "60 min", "24 h" ni "12 meses".
 
 #### Scenario: Minutos
 - **WHEN** el vencimiento está 1, 5,5 o 10 minutos después del instante
@@ -155,3 +155,7 @@ El sistema SHALL convertir la distancia entre el instante de referencia y el ven
 #### Scenario: Años
 - **WHEN** el vencimiento está 365 días después del instante
 - **THEN** se muestra "1 año"
+
+#### Scenario: El redondeo llega al tramo siguiente
+- **WHEN** el vencimiento está 59,6 minutos, 23,7 horas o 345 días después del instante
+- **THEN** se muestra "1 h", "1 día" o "1 año" respectivamente

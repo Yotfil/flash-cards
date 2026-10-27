@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -28,13 +29,42 @@ const QUESTIONS: QuizQuestion[] = [
     type: 'multiple-choice',
     prompt: 'to give up',
     answer: 'rendirse',
+    acceptedAnswers: ['rendirse'],
     options: ['buscar', 'rendirse', 'posponer', 'continuar'],
   },
-  { id: 'q2', cardId: 'k2', type: 'written', prompt: 'to look up', answer: 'buscar' },
+  {
+    id: 'q2',
+    cardId: 'k2',
+    type: 'written',
+    prompt: 'to look up',
+    answer: 'buscar',
+    acceptedAnswers: ['buscar'],
+  },
 ];
 const CHAPTER: PracticeOrigin = { kind: 'chapter', bookId: 'b1', chapterId: 'c1' };
+/** Opción múltiple, escribir y otra vez opción múltiple: para seguir el foco al avanzar. */
+const THREE_QUESTIONS: QuizQuestion[] = [
+  ...QUESTIONS,
+  {
+    id: 'q3',
+    cardId: 'k3',
+    type: 'multiple-choice',
+    prompt: 'to put off',
+    answer: 'posponer',
+    acceptedAnswers: ['posponer'],
+    options: ['posponer', 'rendirse', 'buscar', 'continuar'],
+  },
+];
 
-async function open(options: { origin?: PracticeOrigin; handOff?: boolean } = {}) {
+async function open(
+  options: {
+    origin?: PracticeOrigin;
+    handOff?: boolean;
+    questions?: QuizQuestion[];
+    /** Pantallas por las que pasó antes de practicar (la última, el origen). */
+    from?: string[];
+  } = {},
+) {
   const cards = new FakeCardRepository();
   const stats = new FakeDailyStatsRepository();
   const grades = new FakeGradePersistence();
@@ -52,11 +82,16 @@ async function open(options: { origin?: PracticeOrigin; handOff?: boolean } = {}
     ],
   });
   const handoff = TestBed.inject(PracticeHandoffService);
+  const harness = await RouterTestingHarness.create();
+  // Lo hace el arranque de la app; sin esto el router de las pruebas no oye el "atrás".
+  TestBed.inject(Router).setUpLocationChangeListener();
+  for (const url of options.from ?? []) {
+    await harness.navigateByUrl(url);
+  }
   if (options.handOff ?? true) {
-    handoff.hand({ questions: QUESTIONS, origin: options.origin ?? CHAPTER });
+    handoff.hand({ questions: options.questions ?? QUESTIONS, origin: options.origin ?? CHAPTER });
   }
   const session = TestBed.inject(PracticeSessionService);
-  const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/practicar');
   const update = async () => {
     await new Promise((resolve) => setTimeout(resolve));
@@ -83,7 +118,13 @@ async function open(options: { origin?: PracticeOrigin; handOff?: boolean } = {}
     await update();
   };
   const url = () => TestBed.inject(Router).url;
+  const history = async (move: 'back' | 'forward') => {
+    TestBed.inject(Location)[move]();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await update();
+  };
   return {
+    history,
     harness,
     handoff,
     session,
@@ -151,6 +192,70 @@ describe('PracticaPageComponent', () => {
     expect(page().querySelector('app-practice-summary')?.textContent).toContain(
       'Acertaste 2 de 2.',
     );
+  });
+
+  it('el foco acompaña a la práctica: enunciado, "Siguiente", campo y enunciado de la siguiente', async () => {
+    const { page, click, write } = await open({ questions: THREE_QUESTIONS });
+    const focused = () => document.activeElement as HTMLElement | null;
+
+    expect(focused()?.tagName).toBe('H2');
+    expect(focused()?.textContent?.trim()).toBe('to give up');
+    await click('rendirse');
+    expect(focused()?.textContent?.trim()).toBe('Siguiente');
+    await click('Siguiente');
+    expect(focused()).toBe(page().querySelector('app-written-question input'));
+    await write('buscar');
+    expect(focused()?.textContent?.trim()).toBe('Siguiente');
+    await click('Siguiente');
+    expect(focused()?.tagName).toBe('H2');
+    expect(focused()?.textContent?.trim()).toBe('to put off');
+    await click('posponer');
+    expect(focused()?.textContent?.trim()).toBe('Ver resultado');
+  });
+
+  it('al ver el resultado, el foco va al título del resumen', async () => {
+    const { click, write } = await open();
+    await click('rendirse');
+    await click('Siguiente');
+    await write('buscar');
+    await click('Ver resultado');
+
+    expect(document.activeElement?.tagName).toBe('H1');
+    expect(document.activeElement?.textContent?.trim()).toBe('¡Práctica completada!');
+  });
+
+  it('"Salir" regresa al capítulo con el historial: atrás lleva al libro y adelante no muestra la práctica', async () => {
+    const { click, history, url } = await open({
+      from: ['/biblioteca', '/biblioteca/b1', '/biblioteca/b1/c1'],
+    });
+
+    await click('Salir');
+    expect(url()).toBe('/biblioteca/b1/c1');
+
+    await history('back');
+    expect(url()).toBe('/biblioteca/b1');
+
+    await history('forward');
+    await history('forward');
+    expect(url()).toBe('/biblioteca');
+  });
+
+  it('"Volver al libro" regresa con el historial: atrás lleva a lo anterior al libro', async () => {
+    const { click, write, history, url } = await open({
+      origin: { kind: 'book', bookId: 'b1' },
+      // Antes del libro, otro libro: así no se confunde con la redirección a la Biblioteca.
+      from: ['/biblioteca/b2', '/biblioteca/b1'],
+    });
+    await click('rendirse');
+    await click('Siguiente');
+    await write('buscar');
+    await click('Ver resultado');
+
+    await click('Volver al libro');
+    expect(url()).toBe('/biblioteca/b1');
+
+    await history('back');
+    expect(url()).toBe('/biblioteca/b2');
   });
 
   it('el resumen vuelve al capítulo de origen', async () => {

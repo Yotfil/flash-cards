@@ -1,6 +1,10 @@
 import type { BookPackage } from '@domain/models/book-package';
 import { parseImportText } from '@services/import/parse-import-text';
+import { aBook } from '@testing/fake-book-repository';
+import { aCard } from '@testing/fake-card-repository';
+import { aChapter } from '@testing/fake-chapter-repository';
 
+import { buildBookPackage } from './build-book-package';
 import { serializeBookPackage } from './serialize-book-package';
 
 const pkg = (chapters: BookPackage['chapters']): BookPackage => ({
@@ -64,6 +68,28 @@ describe('exportar e importar de nuevo', () => {
 
     expect(parsed.package.chapters[0]?.cards).toEqual([
       { cardType: 'basic', front: 'a', back: 'b | c' },
+    ]);
+  });
+
+  it('un capítulo sin nombre vuelve como capítulo aparte, sin mezclarse con el anterior', () => {
+    const exported = buildBookPackage(
+      aBook({ id: 'b1' }),
+      [
+        aChapter({ id: 'ch1', name: 'Básicos', order: 0 }),
+        aChapter({ id: 'ch2', name: '', order: 1 }),
+      ],
+      [
+        aCard({ id: 'k1', chapterId: 'ch1', front: 'hello', back: 'hola' }),
+        aCard({ id: 'k2', chapterId: 'ch2', front: 'bye', back: 'adiós' }),
+      ],
+    );
+
+    const parsed = roundTrip(exported);
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.package.chapters).toEqual([
+      { name: 'Básicos', cards: [{ cardType: 'basic', front: 'hello', back: 'hola' }] },
+      { name: 'Capítulo sin nombre', cards: [{ cardType: 'basic', front: 'bye', back: 'adiós' }] },
     ]);
   });
 });

@@ -9,7 +9,11 @@ import {
   type ConfirmDialogData,
 } from '@shared/confirm-dialog/confirm-dialog.component';
 import { AppDialogRef, DIALOG_DATA, DialogService } from '@shared/dialog/dialog.service';
-import { NEEDS_CONNECTION_MESSAGE } from '@shared/text/connection.copy';
+import {
+  CLOSE_LABEL,
+  IMPORT_WAITS_FOR_CONNECTION_MESSAGE,
+  NEEDS_CONNECTION_MESSAGE,
+} from '@shared/text/connection.copy';
 
 import { ImportPreviewComponent } from '../import-preview/import-preview.component';
 import {
@@ -42,6 +46,8 @@ export interface PackageImportTarget {
   /** Cuántos caben todavía: se importan las primeras válidas hasta ese número. */
   readonly remaining: number;
   readonly save: (drafts: readonly CardContentDraft[]) => Promise<void>;
+  /** El texto de un fallo que el destino sabe explicar (p. ej. un paquete ya completado). */
+  readonly failureMessage?: (error: unknown) => string | undefined;
   /** Los textos que nombran el destino (la importación no conoce los paquetes). */
   readonly texts: {
     readonly title: string;
@@ -75,6 +81,10 @@ export class CardImportDialogComponent {
   protected readonly online = inject(ConnectivityPort).online;
   protected readonly copy = IMPORTACION_COPY;
   protected readonly needsConnection = NEEDS_CONNECTION_MESSAGE;
+  protected readonly waitsForConnection = IMPORT_WAITS_FOR_CONNECTION_MESSAGE;
+  protected readonly closeLabel = CLOSE_LABEL;
+  /** Pasado el plazo sin confirmar: la importación seguirá al volver la red; se deja cerrar. */
+  protected readonly savingTooLong = this.dialogRef.savingTooLong;
   protected readonly text = signal('');
   protected readonly mode = signal<ImportMode>('append');
   protected readonly isPackage = this.target.kind === 'package';
@@ -84,6 +94,7 @@ export class CardImportDialogComponent {
     this.target.kind === 'package' ? this.target.texts.wording : CARD_WORDING;
   protected readonly errorMessage =
     this.target.kind === 'package' ? this.target.texts.error : this.copy.cardsError;
+  protected readonly errorText = signal<string>(this.errorMessage);
   protected readonly preview = computed(() =>
     this.importService.previewForChapter(this.text(), this.destinationName(), this.existing()),
   );
@@ -133,7 +144,8 @@ export class CardImportDialogComponent {
     }
     this.importing.set(true);
     this.failed.set(false);
-    this.dialogRef.setPending(true);
+    // En un paquete se guarda por transacción, que no sigue sola: ahí no se promete nada.
+    this.dialogRef.setPending(true, { releaseWhenSlow: target.kind === 'chapter' });
     try {
       if (target.kind === 'package') {
         await target.save(this.importable());
@@ -148,6 +160,9 @@ export class CardImportDialogComponent {
       this.dialogRef.close(true);
     } catch (error) {
       this.logger.error(this.errorMessage, error);
+      this.errorText.set(
+        (target.kind === 'package' && target.failureMessage?.(error)) || this.errorMessage,
+      );
       this.failed.set(true);
       this.importing.set(false);
       this.dialogRef.setPending(false);
@@ -178,6 +193,7 @@ export class CardImportDialogComponent {
         confirmLabel: this.copy.replaceConfirm,
         pendingLabel: this.copy.replacing,
         errorMessage: this.copy.cardsError,
+        slowNotice: IMPORT_WAITS_FOR_CONNECTION_MESSAGE,
         action: () =>
           this.importService.importIntoChapter(target.bookId, target.chapterId, drafts, 'replace'),
       },

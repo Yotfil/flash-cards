@@ -22,6 +22,17 @@ export const AUTH_COPY = {
     earlyAccessNote:
       'Cadence está en acceso anticipado: solo puedes crear cuenta si tu correo está en la lista.',
   },
+  reset: {
+    title: 'Restablecer contraseña',
+    subtitle: 'Te enviaremos un enlace para crear una contraseña nueva.',
+    submit: 'Enviar enlace',
+    submitting: 'Enviando…',
+    switchPrompt: '¿La recordaste?',
+    switchAction: 'Volver a iniciar sesión',
+    // Lo mismo haya o no cuenta con ese correo: la pantalla no revela quién la tiene.
+    sent: 'Si hay una cuenta con ese correo, te llegará un enlace para crear una contraseña nueva.',
+  },
+  forgotPassword: 'Olvidé mi contraseña',
   fields: {
     displayName: 'Nombre',
     email: 'Correo',

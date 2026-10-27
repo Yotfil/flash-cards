@@ -22,6 +22,24 @@ describe('tarjetas repetidas', () => {
     expect(findDuplicateCardIds(cards).size).toBe(0);
   });
 
+  it('el apóstrofo tipográfico y el recto marcan repetidas', () => {
+    const cards = [
+      aCard({ id: 'a', front: 'don’t', back: 'no hacer' }),
+      aCard({ id: 'b', front: "don't", back: 'no hacer' }),
+    ];
+
+    expect([...findDuplicateCardIds(cards)].sort()).toEqual(['a', 'b']);
+  });
+
+  it('la tilde escrita aparte también marca repetidas', () => {
+    const cards = [
+      aCard({ id: 'a', front: 'I gave up', back: 'me rendi\u0301' }),
+      aCard({ id: 'b', front: 'I gave up', back: 'me rendí' }),
+    ];
+
+    expect([...findDuplicateCardIds(cards)].sort()).toEqual(['a', 'b']);
+  });
+
   it('tres idénticas se marcan las tres', () => {
     const cards = ['a', 'b', 'c'].map((id) => aCard({ id, front: 'hola', back: 'hello' }));
 
@@ -33,5 +51,11 @@ describe('tarjetas repetidas', () => {
 
     expect(isDuplicateDraft({ front: ' TO give up', back: 'Rendirse ' }, cards)).toBe(true);
     expect(isDuplicateDraft({ front: 'to give up', back: 'abandonar' }, cards)).toBe(false);
+  });
+
+  it('un borrador con el apóstrofo recto repite una tarjeta con el tipográfico', () => {
+    const cards = [aCard({ front: 'don’t', back: 'no hacer' })];
+
+    expect(isDuplicateDraft({ front: "don't", back: 'no hacer' }, cards)).toBe(true);
   });
 });

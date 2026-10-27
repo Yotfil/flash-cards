@@ -25,6 +25,7 @@ export const PRACTICA_IA_COPY = {
   import: 'Importar',
   importTitle: 'Importar ítems',
   importError: 'No se pudieron agregar los ítems. Inténtalo de nuevo.',
+  packageCompleted: 'Este paquete ya está completado; no admite más ítems.',
   itemFormCreate: 'Nuevo ítem',
   duplicate: 'Ya tienes un ítem igual en este paquete.',
   full: 'Este paquete está lleno.',

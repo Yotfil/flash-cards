@@ -10,10 +10,12 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 
+import { AccessRevokedError } from '@domain/models/access-revoked-error';
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { CardState, type CardScheduling } from '@domain/models/card.model';
 import type { GradeRecord } from '@domain/models/grade-record';
 import type { Rating } from '@domain/models/rating';
+import { CardGoneError } from '@domain/ports/grade-persistence.port';
 import { FirestoreGradePersistence } from '@infrastructure/firestore/grade-persistence.firestore';
 
 import {
@@ -150,6 +152,30 @@ describe('FirestoreGradePersistence', () => {
     expect(failure).toBeInstanceOf(Error);
     expect(await logs()).toEqual([]);
     expect(await read(['dailyStats', DAY_ID])).toBeUndefined();
+  });
+
+  it('una tarjeta que se borró en otro dispositivo se rechaza con "la tarjeta ya no existe"', async () => {
+    await asAdmin((db) => deleteDoc(doc(db, 'users', OWNER_UID, 'cards', 'k1')));
+
+    const failure = await persistence
+      .persistGrade(OWNER_UID, aRecord(3, CardState.New))
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(CardGoneError);
+    expect((failure as CardGoneError).cardId).toBe('k1');
+    expect(await logs()).toEqual([]);
+    expect(await read(['dailyStats', DAY_ID])).toBeUndefined();
+  });
+
+  it('sin acceso (el correo salió de la lista) se rechaza con "acceso retirado"', async () => {
+    await asAdmin((db) => deleteDoc(doc(db, 'allowlist', OWNER_EMAIL)));
+
+    const failure = await persistence
+      .persistGrade(OWNER_UID, aRecord(3, CardState.New))
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(AccessRevokedError);
+    expect(await logs()).toEqual([]);
   });
 
   it('el registro del historial no se puede editar ni borrar', async () => {

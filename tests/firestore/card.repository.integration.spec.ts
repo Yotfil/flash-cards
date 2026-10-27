@@ -12,6 +12,7 @@ import {
 
 import { initialCardScheduling } from '@domain/models/card-scheduling';
 import { CardState, type NewCard } from '@domain/models/card.model';
+import { PartialCreationError } from '@domain/models/partial-creation-error';
 import { PartialDeletionError } from '@domain/models/partial-deletion-error';
 import { BatchCommitError } from '@infrastructure/firestore/batch-writer';
 import { FirestoreCardRepository } from '@infrastructure/firestore/card.repository.firestore';
@@ -242,6 +243,26 @@ describe('FirestoreCardRepository · contador del libro', () => {
 
     expect(deleted).toBe(2);
     expect(await bookCount()).toBe(10);
+  });
+
+  it('si agregar muchas se corta a mitad, el error trae las ya creadas y el contador cuadra', async () => {
+    // 600 altas son dos lotes; el segundo se rechaza (un documento de más de 1 MiB).
+    const drafts = Array.from({ length: 600 }, (_, index) =>
+      newCard({
+        front: `nueva ${index}`,
+        ...(index === 500 ? { example: 'x'.repeat(1_100_000) } : {}),
+      }),
+    );
+
+    const failure = await repository.createMany(OWNER_UID, drafts).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PartialCreationError);
+    const created = (failure as PartialCreationError).createdCards;
+    expect(created.length).toBeGreaterThan(0);
+    expect(created.length).toBeLessThan(500);
+    const stored = await repository.listByChapter(OWNER_UID, 'c1');
+    expect(stored.map((card) => card.id).sort()).toEqual(created.map((card) => card.id).sort());
+    expect(await bookCount()).toBe(10 + created.length);
   });
 
   it('si el borrado masivo se corta a mitad, el error nombra las ya borradas y el contador cuadra', async () => {
@@ -475,6 +496,46 @@ describe('FirestoreCardRepository · tarjetas de un libro', () => {
     const cards = await repository.listByBook(OWNER_UID, 'b1');
 
     expect(cards.map((card) => card.front).sort()).toEqual(['a0', 'a1', 'a2']);
+  });
+});
+
+describe('FirestoreCardRepository · tarjetas de un libro sin red', () => {
+  // Practicar un libro lee con listByBook: sin red, el mensaje de vacío depende de esto.
+  async function seedBookFromAnotherDevice() {
+    const otherDevice = new FirestoreCardRepository(
+      modularFirestore(ownerContext(environment, OWNER_UID, OWNER_EMAIL)),
+    );
+    await otherDevice.createMany(
+      OWNER_UID,
+      ['a', 'b', 'c'].map((front) => newCard({ front })),
+    );
+  }
+
+  it('leído con red, sin red da las mismas tarjetas desde lo guardado', async () => {
+    await seedBookFromAnotherDevice();
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const device = new FirestoreCardRepository(modularFirestore(context));
+    const online = await device.listByBook(OWNER_UID, 'b1');
+
+    await context.firestore().disableNetwork();
+    const offline = await device.listByBook(OWNER_UID, 'b1');
+    await context.firestore().enableNetwork();
+
+    expect(offline.map((card) => card.front).sort()).toEqual(['a', 'b', 'c']);
+    expect(offline.length).toBe(online.length);
+  });
+
+  it('nunca leído en este dispositivo, sin red da una lista vacía sin error', async () => {
+    await seedBookFromAnotherDevice();
+    const context = ownerContext(environment, OWNER_UID, OWNER_EMAIL);
+    const device = new FirestoreCardRepository(modularFirestore(context));
+
+    await context.firestore().disableNetwork();
+    const offline = await device.listByBook(OWNER_UID, 'b1');
+    await context.firestore().enableNetwork();
+
+    expect(offline).toEqual([]);
+    expect(await device.listByBook(OWNER_UID, 'b1')).toHaveLength(3);
   });
 });
 

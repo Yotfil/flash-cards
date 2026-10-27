@@ -15,6 +15,7 @@ import {
   type PracticeOrigin,
 } from '@services/practice/practice-handoff.service';
 import { PracticeSessionService } from '@services/practice/practice-session.service';
+import { ReturnNavigation } from '@shared/navigation/return-navigation.service';
 import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.component';
 
 import { MultipleChoiceQuestionComponent } from '../multiple-choice-question/multiple-choice-question.component';
@@ -24,8 +25,8 @@ import { PracticeSummaryComponent } from '../practice-summary/practice-summary.c
 import { WrittenQuestionComponent } from '../written-question/written-question.component';
 
 // La práctica a pantalla completa. Cada entrada toma el quiz entregado (una sola vez) y empieza de
-// cero; sin quiz, vuelve a la Biblioteca. Salir y volver llevan al origen (capítulo o libro) y al
-// cerrarse la pantalla la práctica se vacía: nunca se retoma.
+// cero; sin quiz, vuelve a la Biblioteca. Salir y volver regresan al origen (capítulo o libro) con
+// el historial, y al cerrarse la pantalla la práctica se vacía: nunca se retoma.
 @Component({
   selector: 'app-practica-page',
   imports: [
@@ -42,6 +43,7 @@ export class PracticaPageComponent implements OnInit {
   protected readonly session = inject(PracticeSessionService);
   private readonly handoff = inject(PracticeHandoffService);
   private readonly router = inject(Router);
+  private readonly returnNavigation = inject(ReturnNavigation);
 
   protected readonly copy = PRACTICA_COPY;
   protected readonly positionText = computed(() =>
@@ -74,7 +76,7 @@ export class PracticaPageComponent implements OnInit {
 
   protected leave(): void {
     const origin = this.session.origin();
-    void this.router.navigate(origin ? originPath(origin) : ['/biblioteca']);
+    this.returnNavigation.leaveTo(origin ? originPath(origin) : ['/biblioteca']);
   }
 }
 

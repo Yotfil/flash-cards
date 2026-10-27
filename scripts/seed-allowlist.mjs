@@ -1,14 +1,14 @@
 // Autoriza un correo en la lista de acceso del EMULADOR (nunca en la nube): escribe
 // `allowlist/<correo>` por la API REST del emulador de Firestore con el token `owner`, que salta
-// las reglas (el cliente no puede escribir en la lista). La comparación de la app es literal:
-// escribe el correo exactamente como lo entrega el proveedor (Google lo da en minúsculas).
+// las reglas (el cliente no puede escribir en la lista). La comparación de la app es literal y el
+// proveedor entrega los correos en minúsculas: se escribe recortado y en minúsculas.
 //
 // Uso: npm run seed:allowlist -- correo@ejemplo.com   (con `npm run emulators` corriendo)
 
 const EMULATOR = 'http://127.0.0.1:8080';
 const DOCUMENTS = '/v1/projects/demo-cadence/databases/(default)/documents/allowlist/';
 
-const email = process.argv[2];
+const email = process.argv[2]?.trim().toLowerCase();
 if (!email) {
   console.error('Falta el correo. Uso: npm run seed:allowlist -- correo@ejemplo.com');
   process.exit(1);

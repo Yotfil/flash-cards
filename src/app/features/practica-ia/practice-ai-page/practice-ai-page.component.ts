@@ -6,7 +6,9 @@ import { PracticeAiHandoffService } from '@services/practice-ai/practice-ai-hand
 import { PracticeAiSessionService } from '@services/practice-ai/practice-ai-session.service';
 import { PracticePackagesService } from '@services/practice-ai/practice-packages.service';
 import { EmptyStateComponent } from '@shared/empty-state/empty-state.component';
+import { ReturnNavigation } from '@shared/navigation/return-navigation.service';
 import { SessionTopBarComponent } from '@shared/session-top-bar/session-top-bar.component';
+import { ACCESS_LOST_COPY } from '@shared/text/access-lost.copy';
 
 import { positionLabel } from '../../practica/practica.copy';
 import { FlipCardComponent } from '../../repaso/flip-card/flip-card.component';
@@ -22,7 +24,8 @@ const RATING_KEYS: Readonly<Record<string, Rating>> = { '1': 1, '2': 2, '3': 3, 
 // La práctica de un paquete a pantalla completa, con las piezas del repaso (tarjeta, cuatro
 // cerebros sin intervalos, cierre) y sin programación. Cada entrada toma la práctica entregada
 // una sola vez; sin ella, vuelve a la Biblioteca. Si el paquete se borró en otro dispositivo, la
-// práctica se cierra con un aviso y el camino a la Biblioteca. Teclado: Espacio revela, 1-4 califican.
+// práctica se cierra con un aviso y el camino a la Biblioteca; si al usuario le retiraron el
+// acceso, con el aviso del repaso y "Continuar" a sin acceso. Teclado: Espacio revela, 1-4 califican.
 @Component({
   selector: 'app-practice-ai-page',
   imports: [
@@ -44,8 +47,10 @@ export class PracticeAiPageComponent implements OnInit {
   private readonly packages = inject(PracticePackagesService);
   private readonly handoff = inject(PracticeAiHandoffService);
   private readonly router = inject(Router);
+  private readonly returnNavigation = inject(ReturnNavigation);
 
   protected readonly copy = PRACTICA_IA_COPY;
+  protected readonly accessLost = ACCESS_LOST_COPY;
   protected readonly practicedLabel = practicedLabel;
   protected readonly positionText = computed(() =>
     positionLabel(this.session.position(), this.session.total()),
@@ -99,8 +104,17 @@ export class PracticeAiPageComponent implements OnInit {
     }
   }
 
-  /** "Salir" y "Volver al paquete": al detalle del paquete; la práctica se vacía al salir. */
+  /**
+   * "Salir" y "Volver al paquete": al detalle del paquete sin dejar la práctica en el historial
+   * (regresa si se abrió desde el paquete; la reemplaza si se abrió desde Hoy). Se vacía al salir.
+   */
   protected backToPackage(): void {
-    void this.router.navigate(this.packageId ? ['/paquetes', this.packageId] : ['/biblioteca']);
+    this.returnNavigation.leaveTo(this.packageId ? ['/paquetes', this.packageId] : ['/biblioteca']);
+  }
+
+  /** Sin acceso: la sesión de la app pasa a "sin acceso"; la práctica no queda en el historial. */
+  protected continueWithoutAccess(): void {
+    this.session.acknowledgeLostAccess();
+    void this.router.navigateByUrl('/sin-acceso', { replaceUrl: true });
   }
 }

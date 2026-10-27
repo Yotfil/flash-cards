@@ -66,6 +66,14 @@ export class FakeSessionService {
     this.profileRetries++;
   }
 
+  /** Como el real: con sesión activa, pasa a "sin acceso" con su correo. */
+  markAccessRevoked(): void {
+    const user = this.user();
+    if (user) {
+      this.setState({ kind: 'noAccess', email: user.email });
+    }
+  }
+
   /** Deja colgados los guardados de ajustes siguientes hasta soltar. */
   holdUpdates(): () => void {
     let release!: () => void;

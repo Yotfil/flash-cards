@@ -5,6 +5,7 @@ import {
   deleteUser,
   getAdditionalUserInfo,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -45,6 +46,10 @@ export class FirebaseAuthAdapter extends AuthPort {
 
   async signInWithEmail({ email, password }: EmailCredentials): Promise<void> {
     await this.translateErrors(() => signInWithEmailAndPassword(this.auth, email, password));
+  }
+
+  async sendPasswordReset(email: string): Promise<void> {
+    await this.translateErrors(() => sendPasswordResetEmail(this.auth, email));
   }
 
   async signInWithGoogle(): Promise<GoogleSignIn> {

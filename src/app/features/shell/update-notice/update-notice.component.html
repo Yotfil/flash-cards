@@ -1,0 +1,15 @@
+@if (update.updateReady()) {
+  <p
+    role="status"
+    class="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-glass-border bg-surface py-2 ps-4 pe-2 text-sm text-text"
+  >
+    {{ copy.newVersion }}
+    <button
+      type="button"
+      class="press rounded-xl px-3 py-1.5 font-semibold text-accent-text hover:bg-accent-tint"
+      (click)="update.reload()"
+    >
+      {{ copy.reload }}
+    </button>
+  </p>
+}

@@ -1,5 +1,8 @@
 import {
+  IMPORTACION_COPY,
+  chapterCountLine,
   countsLine,
+  importBookLabel,
   importLabel,
   omittedHeading,
   omittedLine,
@@ -23,8 +26,21 @@ describe('textos de la importación', () => {
     expect(omittedLine(3, 'Anverso o reverso vacío.')).toBe('Línea 3: Anverso o reverso vacío.');
   });
 
+  it('cada capítulo con su número de tarjetas, bajo su título', () => {
+    expect(IMPORTACION_COPY.chaptersTitle).toBe('Tarjetas por capítulo');
+    expect(chapterCountLine('Unidad 1', 24)).toBe('Unidad 1 · 24');
+    expect(chapterCountLine('Pendiente', 0)).toBe('Pendiente · 0');
+  });
+
   it('el botón dice cuántas importa', () => {
     expect(importLabel(4)).toBe('Importar 4');
+  });
+
+  it('al importar un libro sin tarjetas, el botón dice cuántos capítulos', () => {
+    expect(importBookLabel(3, 2)).toBe('Importar 3');
+    expect(importBookLabel(0, 1)).toBe('Importar 1 capítulo');
+    expect(importBookLabel(0, 8)).toBe('Importar 8 capítulos');
+    expect(importBookLabel(0, 0)).toBe('Importar 0');
   });
 
   it('el aviso de reemplazo, en singular y en plural, con el progreso y "Editar"', () => {
