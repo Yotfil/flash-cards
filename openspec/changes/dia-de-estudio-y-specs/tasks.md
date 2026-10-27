@@ -4,8 +4,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 1. El día de estudio con el reloj local (cerebro, CD-03)
 
-- [ ] 1.1 Pruebas en rojo en `study-day.spec`: los dos escenarios de `studyDayId` en Madrid; los cuatro de `endOfStudyDay` (23 h, 25 h, salto, repetida); y la coherencia día/fin en Madrid y Bogotá. Verificar: fallan las de Madrid por una hora de desfase.
-- [ ] 1.2 Implementar D1 y D2 (`localDateTime`, `shiftDate`, `instantOfLocalTime`) con sus comentarios. Verificar: 1.1 en verde y el resto de pruebas que usan el día de estudio (cola, sesión, práctica, progreso) en verde.
+- [x] 1.1 Pruebas en rojo en `study-day.spec`: los dos escenarios de `studyDayId` en Madrid; los cuatro de `endOfStudyDay` (23 h, 25 h, salto, repetida); y la coherencia día/fin en Madrid y Bogotá. Verificar: fallan las de Madrid por una hora de desfase.
+- [x] 1.2 Implementar D1 y D2 (`localDateTime`, `shiftDate`, `instantOfLocalTime`) con sus comentarios. Verificar: 1.1 en verde y el resto de pruebas que usan el día de estudio (cola, sesión, práctica, progreso) en verde.
 
 ## 2. El redondeo que llega al tramo siguiente (cerebro, PE-02)
 

@@ -1,22 +1,16 @@
 // El "día de estudio" (puro). No rueda a medianoche sino a `dayStartHour` (por defecto, las 4):
-// repasar a la 1 de la madrugada todavía cuenta para "ayer". Todo se calcula en la zona horaria
-// del perfil, que puede no ser la del dispositivo.
+// repasar a la 1 de la madrugada todavía cuenta para "ayer". Todo se calcula con el reloj de la
+// zona horaria del perfil, que puede no ser la del dispositivo, y nunca sumando o restando horas
+// reales: la noche del cambio de hora dura 23 o 25.
 
 const SECOND_MS = 1000;
-const HOUR_MS = 60 * 60 * SECOND_MS;
-const DAY_SECONDS = 24 * 60 * 60;
+const HOUR_SECONDS = 60 * 60;
+const DAY_MS = 24 * HOUR_SECONDS * SECOND_MS;
 
 /** Id del día de estudio ("YYYY-MM-DD"): también es el id del documento de indicadores diarios. */
 export function studyDayId(now: Date, timezone: string, dayStartHour: number): string {
-  // Se corre el instante hacia atrás `dayStartHour` horas: las horas anteriores al inicio del día
-  // caen así en la fecha anterior. 'en-CA' formatea como YYYY-MM-DD.
-  const shifted = new Date(now.getTime() - dayStartHour * HOUR_MS);
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(shifted);
+  const local = localDateTime(now, timezone);
+  return local.secondsOfDay < dayStartHour * HOUR_SECONDS ? shiftDate(local.date, -1) : local.date;
 }
 
 /**
@@ -24,12 +18,10 @@ export function studyDayId(now: Date, timezone: string, dayStartHour: number): s
  * `dayStartHour`. La cola lo usa como tope (`due ≤ fin del día`) para no adelantar las de mañana.
  */
 export function endOfStudyDay(now: Date, timezone: string, dayStartHour: number): Date {
-  let secondsUntilStart = dayStartHour * 3600 - localSecondsOfDay(now, timezone);
-  if (secondsUntilStart <= 0) {
-    secondsUntilStart += DAY_SECONDS;
-  }
-  const startOfCurrentSecond = now.getTime() - (now.getTime() % SECOND_MS);
-  return new Date(startOfCurrentSecond + secondsUntilStart * SECOND_MS);
+  const local = localDateTime(now, timezone);
+  const startIsStillAhead = local.secondsOfDay < dayStartHour * HOUR_SECONDS;
+  const date = startIsStillAhead ? local.date : shiftDate(local.date, 1);
+  return instantOfLocalTime(date, dayStartHour, timezone);
 }
 
 /** Un día de estudio: su id y el instante en que termina. */
@@ -46,11 +38,9 @@ export function studyDayAt(now: Date, timezone: string, dayStartHour: number): S
   };
 }
 
-/** El día de estudio anterior. La cadena ya es una fecha local: se resta como fecha UTC. */
+/** El día de estudio anterior. */
 export function previousStudyDayId(dayId: string): string {
-  const date = new Date(`${dayId}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
+  return shiftDate(dayId, -1);
 }
 
 /**
@@ -67,16 +57,65 @@ export function formatLocalDate(now: Date, timezone: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** Segundos transcurridos del día en el reloj de la zona (formato de 24 h). */
-function localSecondsOfDay(now: Date, timezone: string): number {
+/** Lo que marca el reloj de la zona en un instante: la fecha y los segundos del día (24 h). */
+interface LocalDateTime {
+  readonly date: string;
+  readonly secondsOfDay: number;
+}
+
+function localDateTime(now: Date, timezone: string): LocalDateTime {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(now);
   const part = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((candidate) => candidate.type === type)?.value ?? '0');
-  return part('hour') * 3600 + part('minute') * 60 + part('second');
+    parts.find((candidate) => candidate.type === type)?.value ?? '00';
+  return {
+    date: `${part('year')}-${part('month')}-${part('day')}`,
+    secondsOfDay:
+      Number(part('hour')) * HOUR_SECONDS + Number(part('minute')) * 60 + Number(part('second')),
+  };
+}
+
+/** Suma (o resta) días a una fecha "YYYY-MM-DD". La fecha ya es local: se opera como fecha UTC. */
+function shiftDate(date: string, days: number): string {
+  const shifted = new Date(`${date}T00:00:00Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * El primer instante en que el reloj de la zona marca `hour`:00 de esa fecha, o más. Se prueba el
+ * desfase de la zona de un día antes y el de un día después (ninguna zona cambia dos veces en 48 h)
+ * y gana el candidato más temprano que ya llegó a esa hora: una noche normal, los dos coinciden; si
+ * esa hora no existe (el reloj salta por encima), el instante del salto; si se repite (el reloj
+ * vuelve atrás), la primera vez.
+ */
+function instantOfLocalTime(date: string, hour: number, timezone: string): Date {
+  const wall = Date.parse(`${date}T${String(hour).padStart(2, '0')}:00:00Z`);
+  const candidates = [offsetMs(wall - DAY_MS, timezone), offsetMs(wall + DAY_MS, timezone)]
+    .map((offset) => wall - offset)
+    .filter((candidate) => wallClockMs(candidate, timezone) >= wall);
+  if (candidates.length === 0) {
+    // Con un solo cambio por noche siempre hay uno; si no, mejor fallar que un día inválido.
+    throw new Error(`No se pudo situar las ${hour}:00 del ${date} en ${timezone}.`);
+  }
+  return new Date(Math.min(...candidates));
+}
+
+/** El reloj de la zona en un instante, leído como si fuera una hora UTC. */
+function wallClockMs(instant: number, timezone: string): number {
+  const { date, secondsOfDay } = localDateTime(new Date(instant), timezone);
+  return Date.parse(`${date}T00:00:00Z`) + secondsOfDay * SECOND_MS;
+}
+
+/** Cuánto adelanta (o atrasa) el reloj de la zona a UTC en un instante. */
+function offsetMs(instant: number, timezone: string): number {
+  return wallClockMs(instant, timezone) - instant;
 }
