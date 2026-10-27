@@ -74,6 +74,20 @@ describe('ExportService · cargar el paquete', () => {
     ]);
     expect(preview.text.startsWith('# Movement\nword 0 | palabra 0\n')).toBe(true);
     expect(preview.text.endsWith('\n\n# Grammar\nI {{have}} eaten\n')).toBe(true);
+    expect(preview.cardsThatWontReturn).toEqual([]);
+  });
+
+  it('nombra las tarjetas que no volverán igual al importar el texto', async () => {
+    const { service, cards } = setup();
+    cards.seed(aCard({ id: 'h1', chapterId: 'c2', front: '#include', back: 'incluye un archivo' }));
+
+    const preview = await service.loadPackage('b1');
+
+    // "#include" se volvería capítulo y la cloze que la sigue en "Grammar" caería en él.
+    expect(preview.cardsThatWontReturn.map((card) => card.front)).toEqual([
+      '#include',
+      'I {{have}} eaten',
+    ]);
   });
 
   it('un libro que no existe no se exporta', async () => {

@@ -18,8 +18,8 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 - [x] 3.2 Implementar D1 en `buildBookPackage`. Verificar: 3.1 en verde.
 - [x] 3.3 Pruebas en rojo en `cards-that-wont-return.spec` (función aún sin implementar, que devuelve `[]`): todo vuelve igual → `[]`; `map | map :: …` → "map"; Preprocesador → `#define`, `#include`, `pragma` y no la de un capítulo posterior; `ls | grep`; reverso con salto de línea → `[]`; capítulo de 121 caracteres → todas sus tarjetas; la matriz de 10 casos de la sonda 1; e invariante: lista vacía ⇔ el texto entero vuelve idéntico. Verificar: fallan las que esperan tarjetas.
 - [x] 3.4 Implementar D2: `serializeCardLine`, `serializeChapterHeader` y `writtenCard` exportados por el serializador (que los usa él mismo) y `cardsThatWontReturn`. Verificar: 3.3 en verde y el resto de pruebas de exportación en verde.
-- [ ] 3.5 Prueba en rojo en `export.service.spec`: `loadPackage` de un libro con `#include | …` devuelve `cardsThatWontReturn` con esa tarjeta; uno sin problemas, `[]`. Verificar: falla.
-- [ ] 3.6 Añadir `cardsThatWontReturn` a `ExportPreview` y calcularlo en `loadPackage` (D3). Verificar: 3.5 en verde.
+- [x] 3.5 Prueba en rojo en `export.service.spec`: `loadPackage` de un libro con `#include | …` devuelve `cardsThatWontReturn` con esa tarjeta; uno sin problemas, `[]`. Verificar: falla.
+- [x] 3.6 Añadir `cardsThatWontReturn` a `ExportPreview` y calcularlo en `loadPackage` (D3). Verificar: 3.5 en verde.
 
 ## 4. Las primeras 100 (UI compartida, IM-10)
 
