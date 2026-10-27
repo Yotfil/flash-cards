@@ -138,6 +138,108 @@ describe('LoginPageComponent · formulario', () => {
   });
 });
 
+describe('LoginPageComponent · restablecer la contraseña', () => {
+  const NEUTRAL =
+    'Si hay una cuenta con ese correo, te llegará un enlace para crear una contraseña nueva.';
+
+  it('"Olvidé mi contraseña" solo está al iniciar sesión', async () => {
+    const { button, update } = await render();
+    expect(button('Olvidé mi contraseña')).toBeDefined();
+
+    button('Crear una')?.click();
+    await update();
+
+    expect(button('Olvidé mi contraseña')).toBeUndefined();
+  });
+
+  it('pasa a "Restablecer contraseña" con el correo escrito, sin contraseña ni Google', async () => {
+    const { button, type, update, query, element } = await render();
+    type('#email', 'ada@ejemplo.com');
+
+    button('Olvidé mi contraseña')?.click();
+    await update();
+
+    expect(query('h1')?.textContent?.trim()).toBe('Restablecer contraseña');
+    expect(element.textContent).toContain(
+      'Te enviaremos un enlace para crear una contraseña nueva.',
+    );
+    expect(query<HTMLInputElement>('#email')?.value).toBe('ada@ejemplo.com');
+    expect(query('#password')).toBeNull();
+    expect(button('Continuar con Google')).toBeUndefined();
+    expect(query('button[type="submit"]')?.textContent?.trim()).toBe('Enviar enlace');
+  });
+
+  it('enviar pide el enlace y responde lo mismo haya o no cuenta', async () => {
+    const { button, type, submit, update, query, authPort } = await render();
+    type('#email', 'ada@ejemplo.com');
+    button('Olvidé mi contraseña')?.click();
+    await update();
+
+    submit();
+    await update();
+
+    expect(authPort.passwordResets).toEqual(['ada@ejemplo.com']);
+    expect(query('[role="status"]')?.textContent?.trim()).toBe(NEUTRAL);
+    expect(query('[role="alert"]')).toBeNull();
+  });
+
+  it('con un correo inválido marca el campo y no envía nada', async () => {
+    const { button, type, submit, update, query, authPort } = await render();
+    button('Olvidé mi contraseña')?.click();
+    await update();
+    type('#email', 'correo-sin-arroba');
+
+    submit();
+    await update();
+
+    expect(query('#email')?.getAttribute('aria-invalid')).toBe('true');
+    expect(authPort.passwordResets).toEqual([]);
+    expect(query('[role="status"]')).toBeNull();
+  });
+
+  it('mientras envía dice "Enviando…" y bloquea; sin red, lo explica', async () => {
+    const { button, type, submit, update, query, authPort } = await render();
+    type('#email', 'ada@ejemplo.com');
+    button('Olvidé mi contraseña')?.click();
+    await update();
+    authPort.failWith.sendPasswordReset = new AuthError('offline');
+    const release = authPort.hold();
+
+    submit();
+    submit();
+    await update();
+    const main = query<HTMLButtonElement>('button[type="submit"]');
+    expect(main?.textContent?.trim()).toBe('Enviando…');
+    expect(main?.disabled).toBe(true);
+    expect(button('Volver a iniciar sesión')?.disabled).toBe(true);
+
+    release();
+    await update();
+    expect(authPort.passwordResets).toHaveLength(1);
+    expect(query('[role="alert"]')?.textContent?.trim()).toBe(
+      'Sin conexión. Inténtalo cuando vuelva la red.',
+    );
+    expect(query('[role="status"]')).toBeNull();
+  });
+
+  it('"Volver a iniciar sesión" regresa con el correo y sin mensajes', async () => {
+    const { button, type, submit, update, query } = await render();
+    type('#email', 'ada@ejemplo.com');
+    button('Olvidé mi contraseña')?.click();
+    await update();
+    submit();
+    await update();
+
+    button('Volver a iniciar sesión')?.click();
+    await update();
+
+    expect(query('h1')?.textContent?.trim()).toBe('Iniciar sesión');
+    expect(query<HTMLInputElement>('#email')?.value).toBe('ada@ejemplo.com');
+    expect(query('#password')).not.toBeNull();
+    expect(query('[role="status"]')).toBeNull();
+  });
+});
+
 describe('LoginPageComponent · avisos', () => {
   it('un correo fuera de la lista se avisa en el formulario y la pantalla no se mueve', async () => {
     const { button, type, submit, update, query, authPort } = await render();

@@ -70,25 +70,37 @@
         }
       </div>
 
-      <div class="flex flex-col gap-1.5">
-        <label for="password" class="text-sm font-semibold text-text">
-          {{ copy.fields.password }}
-        </label>
-        <input
-          id="password"
-          type="password"
-          class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
-          [autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'"
-          [formField]="authForm.password"
-          [attr.aria-invalid]="authForm.password().touched() && authForm.password().invalid()"
-          aria-describedby="password-hint"
-        />
-        @if (authForm.password().touched() && authForm.password().invalid()) {
-          <p id="password-hint" class="text-xs text-danger">{{ copy.fields.passwordInvalid }}</p>
-        } @else {
-          <p id="password-hint" class="text-xs text-text-faint">{{ copy.fields.passwordHint }}</p>
-        }
-      </div>
+      @if (mode() !== 'reset') {
+        <div class="flex flex-col gap-1.5">
+          <label for="password" class="text-sm font-semibold text-text">
+            {{ copy.fields.password }}
+          </label>
+          <input
+            id="password"
+            type="password"
+            class="rounded-xl border border-glass-border bg-surface px-3.5 py-2.5 text-text"
+            [autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'"
+            [formField]="authForm.password"
+            [attr.aria-invalid]="authForm.password().touched() && authForm.password().invalid()"
+            aria-describedby="password-hint"
+          />
+          @if (authForm.password().touched() && authForm.password().invalid()) {
+            <p id="password-hint" class="text-xs text-danger">{{ copy.fields.passwordInvalid }}</p>
+          } @else {
+            <p id="password-hint" class="text-xs text-text-faint">{{ copy.fields.passwordHint }}</p>
+          }
+          @if (mode() === 'signIn') {
+            <button
+              type="button"
+              class="self-end text-xs font-semibold text-accent-text underline-offset-4 hover:underline disabled:opacity-60"
+              [disabled]="pending() !== null"
+              (click)="forgotPassword()"
+            >
+              {{ copy.forgotPassword }}
+            </button>
+          }
+        </div>
+      }
 
       @if (mode() === 'register') {
         <p class="text-xs leading-relaxed text-text-dim">{{ copy.register.earlyAccessNote }}</p>
@@ -96,6 +108,9 @@
 
       @if (noticeMessage(); as message) {
         <p role="alert" class="text-sm text-danger">{{ message }}</p>
+      }
+      @if (resetSent()) {
+        <p role="status" class="text-sm text-text-dim">{{ copy.reset.sent }}</p>
       }
 
       <button
@@ -107,20 +122,22 @@
       </button>
     </form>
 
-    <div class="my-5 flex items-center gap-3" aria-hidden="true">
-      <span class="h-px flex-1 bg-glass-border"></span>
-      <span class="text-xs text-text-faint">{{ copy.separator }}</span>
-      <span class="h-px flex-1 bg-glass-border"></span>
-    </div>
+    @if (mode() !== 'reset') {
+      <div class="my-5 flex items-center gap-3" aria-hidden="true">
+        <span class="h-px flex-1 bg-glass-border"></span>
+        <span class="text-xs text-text-faint">{{ copy.separator }}</span>
+        <span class="h-px flex-1 bg-glass-border"></span>
+      </div>
 
-    <button
-      type="button"
-      class="press w-full rounded-xl border border-glass-border bg-surface px-4 py-3 font-semibold text-text disabled:opacity-60"
-      [disabled]="pending() !== null"
-      (click)="continueWithGoogle()"
-    >
-      {{ pending() === 'google' ? copy.googleConnecting : copy.google }}
-    </button>
+      <button
+        type="button"
+        class="press w-full rounded-xl border border-glass-border bg-surface px-4 py-3 font-semibold text-text disabled:opacity-60"
+        [disabled]="pending() !== null"
+        (click)="continueWithGoogle()"
+      >
+        {{ pending() === 'google' ? copy.googleConnecting : copy.google }}
+      </button>
+    }
 
     <p class="mt-6 text-center text-sm text-text-dim">
       {{ modeCopy().switchPrompt }}
