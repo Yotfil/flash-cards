@@ -239,6 +239,16 @@ tiempos: la **latencia de recuerdo** (mostrar → revelar) solo sugiere un grado
 repaso** (mostrar → calificar) se guarda en cada registro. El cierre cuenta las tarjetas distintas
 y las calificaciones por grado, y deja el hueco `[practice]` para la práctica con IA.
 
+**Práctica.** Un mini-quiz aparte del repaso (`/practicar`), sin tocar la programación ni el día.
+`services/practice/generate-quiz.ts` arma una pregunta por **anverso normalizado** (las acepciones
+de "bank" y las tarjetas repetidas no se preguntan dos veces), alterna opción múltiple y escribir y,
+en opción múltiple, nunca usa otra acepción del mismo anverso como distractor. Al escribir vale
+cualquier acepción, completa o por fragmentos separados por `,` `;` `/` (salvo entre dos dígitos:
+"3,14" no se parte). Toda comparación de textos de tarjeta (práctica, repetidas del listado y de la
+importación, orden) pasa por `normalizeCardText`: recorta, baja a minúsculas, colapsa espacios,
+iguala apóstrofos y comillas tipográficos con los rectos y une las tildes escritas aparte (NFC). El
+texto guardado no cambia.
+
 **Importar.** "Un archivo = un libro" (`/importar`) o pegar en un capítulo ("Importar tarjetas").
 La convención, línea a línea: `# Nombre` abre un capítulo; `anverso | reverso` (o separado por
 tabulador) es una tarjeta básica; un texto con huecos `{{así}}` es una cloze; y `::` con un

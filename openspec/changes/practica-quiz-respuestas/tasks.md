@@ -20,7 +20,7 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 - [x] 3.4 Implementar en `practice-state.answerCurrent`, `PracticeSessionService.feedback` y `wrongAnswerLabel(answers)`. Verificar: 3.3 en verde.
 - [x] 3.5 Prueba en rojo en `practice-feedback.component.spec`: con `correctAnswers ['banco','orilla']` pinta "La respuesta era «banco» o «orilla»."; la de una respuesta sigue igual. Verificar: falla.
 - [x] 3.6 Pasar `correctAnswers` al feedback (entrada del componente y plantilla). Verificar: 3.5 en verde y `practica-page.component.spec` en verde.
-- [ ] 3.7 README: un párrafo "Práctica" (una pregunta por anverso, la normalización única de `normalizeCardText` y los separadores con dígitos). Verificar: `npx prettier --check README.md`.
+- [x] 3.7 README: un párrafo "Práctica" (una pregunta por anverso, la normalización única de `normalizeCardText` y los separadores con dígitos). Verificar: `npx prettier --check README.md`.
 
 ## 4. Libro sin red y sin nada guardado (PQ-06)
 
