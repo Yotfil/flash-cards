@@ -256,9 +256,14 @@ final como aparición nueva; si no, sale. El guardado es **optimista**: `ReviewS
 avanza al instante y envía sin esperar un lote atómico (`GradePersistencePort`: tarjeta, historial
 e indicadores del día) que el SDK guarda en el dispositivo y sincroniza al volver la red; si el
 servidor lo rechaza, la tarjeta vuelve al final con su programación anterior y un aviso. Dos
-tiempos: la **latencia de recuerdo** (mostrar → revelar) solo sugiere un grado; la **duración del
-repaso** (mostrar → calificar) se guarda en cada registro. El cierre cuenta las tarjetas distintas
-y las calificaciones por grado, y deja el hueco `[practice]` para la práctica con IA.
+rechazos son permanentes y el adaptador los nombra: `CardGoneError` (la tarjeta se borró en otro
+dispositivo: sale de la sesión con su aviso) y `AccessRevokedError` (`permission-denied`, el correo
+salió de la lista: la sesión, y también la práctica con IA, se cierra con "Ya no tienes acceso" y
+"Continuar" lleva a `/sin-acceso` con `SessionService.markAccessRevoked`). Dos tiempos: la
+**latencia de recuerdo** (mostrar → revelar) solo sugiere un grado; la **duración del repaso**
+(mostrar → calificar) se guarda en cada registro. La sesión acredita todo al día de estudio en que
+empezó. El cierre cuenta las tarjetas distintas y las calificaciones por grado; su hueco
+`[practice]` solo lo llena la práctica con IA.
 
 **Práctica.** Un mini-quiz aparte del repaso (`/practicar`), sin tocar la programación ni el día.
 `services/practice/generate-quiz.ts` arma una pregunta por **anverso normalizado** (las acepciones

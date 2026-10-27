@@ -36,5 +36,5 @@ Orden TDD: cada tarea de código va precedida por su prueba vista en rojo por el
 
 ## 7. Cierre
 
-- [ ] 7.1 `openspec archive rechazos-permanentes -y`. Verificar: `openspec validate --specs --strict` en verde.
-- [ ] 7.2 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 8 hecho.
+- [x] 7.1 `openspec archive rechazos-permanentes -y`. Verificar: `openspec validate --specs --strict` en verde.
+- [x] 7.2 Bitácora de `MEMORY.md` y `docs/retome.md` con el punto 8 hecho.
